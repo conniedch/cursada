@@ -657,5 +657,6 @@ details.study[open] > summary .chev { transform: rotate(-135deg); margin-top: 4p
 /* ---- marca: el OK va resaltado, como con un marcador */
 .brand { font-style: normal; letter-spacing: -.02em; }
 .brand-logo { color: var(--accent); flex: none; }
-.brand-ok { background: var(--hi-strong); color: #121A2C; padding: 0 3px 1px 1px; border-radius: 0 4px 4px 0; font-style: normal; }
+.brand > span { font-weight: 500; color: var(--ink-2); }
+.brand-ok { font-weight: 800; color: var(--accent); letter-spacing: -.01em; }
 .brand-logo { width: 30px; height: 22px; }
