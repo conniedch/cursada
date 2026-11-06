@@ -626,3 +626,36 @@ details.pr + .mat-row, .mat-row + details.pr { border-top: 1px solid var(--line)
 .sched-ai { margin: 14px 0 6px; }
 .sched-in { min-height: 120px; margin-top: 10px; }
 .prog-choice button[aria-pressed="true"] { background: var(--card); color: var(--ink); border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+
+/* ---- estudio: una solapa por materia ---- */
+.study-list { padding: 4px 20px; }
+details.study { border-top: 1px solid var(--line); }
+details.study:first-child { border-top: 0; }
+details.study > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: minmax(120px, 220px) minmax(0, 1fr) auto 18px; gap: 16px; align-items: center; padding: 15px 0; }
+details.study > summary::-webkit-details-marker { display: none; }
+details.study > summary:hover .study-name { text-decoration: underline; text-underline-offset: 3px; }
+.study-name { display: inline-flex; align-items: center; gap: 8px; font: 700 17px/1.2 var(--display); }
+.study-count { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.chev { width: 9px; height: 9px; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(45deg); transition: transform .15s; justify-self: center; margin-top: -4px; }
+details.study[open] > summary .chev { transform: rotate(-135deg); margin-top: 4px; }
+.study-body { padding: 0 0 16px 18px; }
+.study-cols { display: flex; align-items: flex-end; gap: 3px; height: 26px; }
+.study-cols i { width: 9px; height: 26px; border-radius: 2px; background: linear-gradient(to top, var(--accent) calc(var(--v) * 100%), var(--none) 0); }
+.study-cols i.full { background: var(--accent); }
+.study-cols i.unknown { background: repeating-linear-gradient(45deg, var(--none), var(--none) 2px, transparent 2px, transparent 4px); box-shadow: inset 0 0 0 1px var(--line); }
+.cols-empty { font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+@media (max-width: 760px) {
+  .study-list { padding: 2px 14px; }
+  details.study > summary { grid-template-columns: minmax(0, 1fr) 18px; gap: 6px 10px; }
+  .study-cols { grid-column: 1; grid-row: 2; }
+  .study-count { grid-column: 1; grid-row: 3; }
+  .chev { grid-column: 2; grid-row: 1; }
+  .study-body { padding-left: 2px; }
+}
+
+/* ---- marca: el OK va resaltado, como con un marcador */
+.brand { font-style: normal; letter-spacing: -.02em; }
+.brand-logo { color: var(--accent); flex: none; }
+.brand-ok { background: var(--hi-strong); color: #121A2C; padding: 0 3px 1px 1px; border-radius: 0 4px 4px 0; font-style: normal; }
+.brand-logo { width: 30px; height: 22px; }

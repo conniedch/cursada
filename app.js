@@ -1,6 +1,6 @@
-// Cursada: pantallas y acciones. Los datos de cada usuario viven en el servidor.
+// CursadOK: pantallas y acciones. Los datos de cada usuario viven en el servidor.
 (function () {
-  const APP_NAME = 'Cursada'; // el nombre se cambia acá, en index.html y en el título
+  const APP_NAME = 'CursadOK'; // el nombre se cambia acá, en index.html y en el título
   const L = window.CursadaLogic;
   const $ = (q, el = document) => el.querySelector(q);
   const h = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -9,7 +9,7 @@
   // ---------- Estado y guardado
   let S = null; let me = null; let rev = 0;
   let dirty = false; let inflight = false; let saveTimer = null; let deferring = false;
-  const ui = { kindFilter: null, authMode: 'login', authNotice: '', recovery: false, pracFilter: null, openPrac: new Set(), phoneWeek: null, msgI: Math.floor(Math.random() * 100), planDraft: '' };
+  const ui = { kindFilter: null, openSubj: new Set(), authMode: 'login', authNotice: '', recovery: false, pracFilter: null, openPrac: new Set(), phoneWeek: null, msgI: Math.floor(Math.random() * 100), planDraft: '' };
 
   const Backend = window.CursadaBackend;
   const api = (method, url, body) => Backend.request(method, url, body);
@@ -443,9 +443,9 @@
     }).join('');
     const dueRows = pendingDated().filter((p) => L.daysBetween(t, L.parseDate(p.date)) >= 0).sort((a, b) => a.date.localeCompare(b.date)).map((p) => {
       const n = L.daysBetween(t, L.parseDate(p.date));
-      return `<li><span>${h(p.name)} <span class="pill">${h(kindOf(p).n)}</span><br><span class="sub">${h(matLabel(subjOfPractice(p)))} · ${cap(longDate(L.parseDate(p.date)))}</span></span><a class="days-to" href="#material">${n === 0 ? 'hoy' : n === 1 ? 'mañana' : `${n} días`}</a></li>`;
+      return `<li><span>${h(p.name)} <span class="pill">${h(kindOf(p).n)}</span><br><span class="sub">${h(matLabel(subjOfPractice(p)))} · ${cap(longDate(L.parseDate(p.date)))}</span></span><a class="days-to" href="#estudio">${n === 0 ? 'hoy' : n === 1 ? 'mañana' : `${n} días`}</a></li>`;
     }).join('');
-    const lateDue = pendingDated().filter((p) => L.daysBetween(t, L.parseDate(p.date)) < 0).map((p) => `<li><span>${h(p.name)} <span class="pill bad">! venció</span><br><span class="sub">${h(matLabel(subjOfPractice(p)))} · ${cap(longDate(L.parseDate(p.date)))}</span></span><a class="days-to" href="#material">ver</a></li>`).join('');
+    const lateDue = pendingDated().filter((p) => L.daysBetween(t, L.parseDate(p.date)) < 0).map((p) => `<li><span>${h(p.name)} <span class="pill bad">! venció</span><br><span class="sub">${h(matLabel(subjOfPractice(p)))} · ${cap(longDate(L.parseDate(p.date)))}</span></span><a class="days-to" href="#estudio">ver</a></li>`).join('');
     const finalsRow = finalsDate && L.daysBetween(t, finalsDate) >= 0 ? `<li><span>Semana de finales<br><span class="sub">Desde el ${longDate(finalsDate)}</span></span><span class="days-to">${L.daysBetween(t, finalsDate)} días</span></li>` : '';
 
     const prRows = pracSubjects().map((k) => {
@@ -477,7 +477,7 @@
       </section>
       <section class="card"><div class="card-head"><h2>Nota rápida</h2><span class="sub">Se guarda sola</span></div><textarea class="scratch" data-change="scratch" aria-label="Nota rápida" placeholder="Lo que no te querés olvidar para la próxima clase">${h(S.scratch)}</textarea></section>
       <section class="stack">
-        <div class="card"><div class="card-head"><h2>Material</h2><a class="linkish" href="#material">Abrir</a></div>${prRows || '<p class="sub">Sumá prácticas, lecturas, videos o TP de cada materia y seguí tu avance.</p>'}</div>
+        <div class="card"><div class="card-head"><h2>Estudio</h2><a class="linkish" href="#estudio">Abrir</a></div>${prRows || '<p class="sub">Sumá prácticas, lecturas, videos o TP de cada materia y seguí tu avance.</p>'}</div>
         <div class="card"><div class="card-head"><h2>Accesos</h2><button class="btn ghost small" data-act="add-link">Agregar</button></div>${links ? `<div class="links">${links}</div>` : '<p class="sub">El campus, el mail, el Drive: lo que abrís todos los días.</p>'}</div>
       </section>
     </div>
@@ -714,31 +714,39 @@
     <div class="pr-body"><div class="pr-meta"><span class="pill">${h(k.n)}</span>${dateTxt}</div><div class="ex-grid">${p.items.map((v, i) => `<button class="ex" aria-pressed="${!!v}" data-act="ex" data-id="${h(p.id)}" data-i="${i}" aria-label="${h(k.one)} ${i + 1}, ${h(p.name)}">${i + 1}</button>`).join('')}${p.known ? '' : `<button class="ex add" data-act="ex-add" data-id="${h(p.id)}" aria-label="Sumar ${h(k.one)} hecho en ${h(p.name)}">+</button>`}</div>
     <div class="pr-tools"><label>Tiene <input class="grade-in" inputmode="numeric" data-change="prac-total" data-id="${h(p.id)}" value="${p.known ? p.items.length : ''}" placeholder="?" aria-label="Cantidad de ${h(k.unit)} de ${h(p.name)}"> ${h(k.unit)}</label><button class="linkish" data-act="prac-all" data-id="${h(p.id)}">Tildar todo</button>${linkTxt}${edit}<button class="linkish danger" data-act="del-prac" data-id="${h(p.id)}">Borrar</button></div></div></details>`;
   }
+  // Una columna por material: la altura es cuánto hiciste. Se distingue de las barras de Hoy.
+  function studyColumns(list) {
+    if (!list.length) return '<span class="cols-empty">Sin material todavía</span>';
+    return `<span class="study-cols" role="img" aria-label="${h(list.map((p) => `${p.name}: ${p.known && p.items.length ? L.pct(p.items.filter(Boolean).length / p.items.length) : 'sin total'}`).join(', '))}">${list.map((p) => {
+      const v = p.known && p.items.length ? p.items.filter(Boolean).length / p.items.length : null;
+      return `<i class="${v === null ? 'unknown' : v === 1 ? 'full' : ''}" style="--v:${v === null ? 0 : v}"></i>`;
+    }).join('')}</span>`;
+  }
   function viewMaterial() {
     const subs = pracSubjects();
     const all = pracStats(S.practices);
-    const filter = subs.includes(ui.pracFilter) ? ui.pracFilter : null;
     const present = Object.keys(KINDS).filter((k) => S.practices.some((p) => (p.kind || 'practica') === k));
     const kindF = present.includes(ui.kindFilter) ? ui.kindFilter : null;
-    const summary = subs.map((k) => {
-      const p = pracStats(S.practices.filter((x) => subjOfPractice(x) === k));
-      const line = !p.count ? 'Sin material todavía' : p.pct !== null ? `<b>${p.complete} de ${p.count}</b> ${p.count === 1 ? 'terminado' : 'terminados'}${p.unknown ? ` · ${p.unknown} sin total` : ` · ${L.pct(p.pct)}`}` : `<b>${p.done}</b> ejercicios hechos · falta cargar los totales`;
-      return `<button class="pr-card" data-act="prac-filter" data-k="${h(k)}" aria-pressed="${filter === k}"><h3><span class="dot" style="--mc:${colorOf(k)}"></span>${h(matLabel(k))}</h3>${stitch(p.pct || 0, { n: 30, label: `Avance de ${matLabel(k)}: ${L.pct(p.pct || 0)}` })}<p>${line}</p></button>`;
-    }).join('');
     const chips = present.length > 1 ? `<div class="choice kind-chips" role="group" aria-label="Filtrar por tipo"><button data-act="kind-filter" data-k="" aria-pressed="${!kindF}">Todo</button>${present.map((k) => `<button data-act="kind-filter" data-k="${k}" aria-pressed="${kindF === k}">${h(KINDS[k].many)}</button>`).join('')}</div>` : '';
-    const shown = filter ? [filter] : subs;
-    const sections = shown.map((k) => {
-      const list = S.practices.filter((p) => subjOfPractice(p) === k && (!kindF || (p.kind || 'practica') === kindF));
+    const sections = subs.map((k) => {
+      const full = S.practices.filter((p) => subjOfPractice(p) === k);
+      const list = full.filter((p) => !kindF || (p.kind || 'practica') === kindF);
       if (kindF && !list.length) return '';
+      const st = pracStats(full);
       const co = latestOf(k);
-      return `<section class="card mt"><div class="card-head"><h2 style="display:flex;align-items:center;gap:8px"><span class="dot" style="--mc:${colorOf(k)}"></span>${h(matLabel(k))}</h2><button class="btn ghost small" data-act="add-prac" data-course="${h(co ? co.id : '')}">Agregar material</button></div>${list.map(materialRow).join('') || '<p class="sub">Sumá lo primero de esta materia: una práctica, una lectura, un video o un TP.</p>'}</section>`;
+      const line = !st.count ? '' : `${st.complete} de ${st.count} ${st.count === 1 ? 'terminado' : 'terminados'}${st.unknown ? ` · ${st.unknown} sin total` : ''}`;
+      const open = ui.openSubj.has(k) || !!kindF;
+      return `<details class="study" data-subj="${h(k)}"${open ? ' open' : ''}>
+        <summary><span class="study-name"><span class="dot" style="--mc:${colorOf(k)}"></span>${h(matLabel(k))}</span>${studyColumns(full)}<span class="study-count">${line}</span><span class="chev" aria-hidden="true"></span></summary>
+        <div class="study-body">${list.map(materialRow).join('') || '<p class="sub">Sumá lo primero de esta materia: una práctica, una lectura, un video o un TP.</p>'}
+          <div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost small" data-act="add-prac" data-course="${h(co ? co.id : '')}">Agregar material</button></div></div>
+      </details>`;
     }).join('');
     return `
-    <header class="head"><div><h1>Material</h1><p class="lead">Todo lo que tenés que hacer de cada materia. Tocá una para ver solo esa.</p></div>
+    <header class="head"><div><h1>Estudio</h1><p class="lead">Prácticas, lecturas, videos y TP de cada materia. Abrí una para ver lo que tenés que hacer.</p></div>
       ${all.count ? `<div class="figs"><div class="fig"><b>${all.complete}<small> de ${all.count}</small></b><span>terminados</span></div></div>` : ''}</header>
-    ${subs.length ? `<div class="pr-sum">${summary}</div>` : '<section class="card"><div class="empty"><b>Todavía no hay materias en curso.</b>Marcá qué estás cursando en Carrera, o agregá material a cualquier materia.</div></section>'}
     ${chips}
-    ${sections}
+    ${subs.length ? `<section class="card study-list mt">${sections}</section>` : '<section class="card"><div class="empty"><b>Todavía no hay materias en curso.</b>Marcá qué estás cursando en Carrera, o agregá material a cualquier materia.</div></section>'}
     <div class="actions" style="justify-content:flex-start"><button class="btn ghost" data-act="add-prac" data-course="">Agregar material de otra materia</button></div>`;
   }
 
@@ -979,7 +987,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       extra += `<p class="section-label">Asistencia</p><div style="margin:6px 0">${stitch(m.pct, { mark: S.settings.minAtt, warn: m.left < 0, n: 40 })}</div><p class="sub"><span class="num">${L.pct(m.pct)}</span> · faltaste ${m.a} de ${m.taken} · ${leftPill(m)}</p>`;
     }
     const prs = S.practices.filter((p) => p.course === id);
-    if (prs.length) extra += `<p class="section-label">Material</p><p class="sub">${pracStats(prs).complete} de ${pl(prs.length, 'material terminado', 'materiales terminados')}. <a href="#material" data-act="close-go">Abrir material</a></p>`;
+    if (prs.length) extra += `<p class="section-label">Estudio</p><p class="sub">${pracStats(prs).complete} de ${pl(prs.length, 'material terminado', 'materiales terminados')}. <a href="#estudio" data-act="close-go">Abrir estudio</a></p>`;
     const attempts = S.courses.filter((x) => x.subj === c.subj);
     const active = hasClass || prs.length || L.isCurrent(c);
     openModal(`<h2 id="modal-title">${h(c.name)}</h2><p class="sub">${h(termShort(c.year, c.sem))}${attempts.length > 1 ? ` · intento ${attempts.indexOf(c) + 1} de ${attempts.length}` : ''}</p>
@@ -1063,8 +1071,8 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   }
 
   // ---------- Render
-  const VIEWS = { hoy: ['Hoy', viewHoy], asistencia: ['Asistencia', viewAsistencia], notas: ['Notas', viewNotas], carrera: ['Carrera', viewCarrera], material: ['Material', viewMaterial] };
-  const route = () => { const r = location.hash.slice(1); if (r === 'practicas') return 'material'; return VIEWS[r] ? r : 'hoy'; };
+  const VIEWS = { hoy: ['Hoy', viewHoy], asistencia: ['Asistencia', viewAsistencia], notas: ['Notas', viewNotas], carrera: ['Carrera', viewCarrera], estudio: ['Estudio', viewMaterial] };
+  const route = () => { const r = location.hash.slice(1); if (r === 'practicas' || r === 'material') return 'estudio'; return VIEWS[r] ? r : 'hoy'; };
   const inWizard = () => S && !S.settings.onboarded;
   function render() {
     if (deferring) { setTimeout(render); return; }
@@ -1122,7 +1130,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     settings: settingsDialog,
     schedule: scheduleDialog,
     close: closeModal,
-    'close-go': () => { closeModal(); location.hash = 'material'; },
+    'close-go': () => { closeModal(); location.hash = 'estudio'; },
     undo() { if (!undoSnap) return; S = JSON.parse(undoSnap); undoSnap = null; save(); render(); $('#toast').hidden = true; },
     theme(el) { S.settings.theme = el.dataset.id; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     font(el) { S.settings.font = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
@@ -1142,7 +1150,6 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     'del-prac'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); closeModal(); mutate(() => { S.practices = S.practices.filter((x) => x !== p); }, `${p.name}: borrado`); },
     'kind-filter'(el) { ui.kindFilter = el.dataset.k || null; render(); },
     'edit-prac': (el) => pracDialog('', el.dataset.id),
-    'prac-filter'(el) { ui.pracFilter = ui.pracFilter === el.dataset.k ? null : el.dataset.k; render(); },
     'pick-week'(el) { ui.phoneWeek = +el.dataset.w; render(); },
     'del-class'(el) { mutate(() => { S.classes = S.classes.filter((c) => c.id !== el.dataset.id); }, 'Clase borrada'); reopen(scheduleDialog); },
     'new-sem'() {
@@ -1174,7 +1181,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     },
     export() {
       const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `cursada-${L.iso(today())}.json`;
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `cursadok-${L.iso(today())}.json`;
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     },
     async logout() { clearTimeout(saveTimer); await flush(); await api('POST', '/api/logout', {}); location.href = location.pathname; },
@@ -1242,6 +1249,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   document.addEventListener('toggle', (e) => {
     const d = e.target;
     if (d.matches && d.matches('details.pr')) { if (d.open) ui.openPrac.add(d.dataset.id); else ui.openPrac.delete(d.dataset.id); }
+    if (d.matches && d.matches('details.study') && !ui.kindFilter) { if (d.open) ui.openSubj.add(d.dataset.subj); else ui.openSubj.delete(d.dataset.subj); }
   }, true);
 
   function gradeChange(el) {
@@ -1447,6 +1455,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       } else {
         closeModal();
         ui.openPrac.add(id);
+        ui.openSubj.add(co.subj);
         mutate(() => {
           ensureColor(co.subj);
           const single = n <= 1 && d.kind !== 'practica' || n === 1;
