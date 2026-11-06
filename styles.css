@@ -1,7 +1,18 @@
 /* Cursada. Paleta sacada de la hoja de cálculo original: tinta violeta, lavanda, manteca, menta, rosa. */
-:root { --display: "Playfair Display", Georgia, serif; }
-[data-font="moderna"] { --display: "Instrument Sans", system-ui, sans-serif; }
+:root { --display: "Instrument Sans", system-ui, sans-serif; --body: "Instrument Sans", system-ui, sans-serif; }
+[data-font="clasica"] { --display: "Playfair Display", Georgia, serif; }
+[data-font="editorial"] { --display: "Fraunces", Georgia, serif; }
+[data-font="redonda"] { --display: "Nunito", system-ui, sans-serif; --body: "Nunito", system-ui, sans-serif; }
 [data-font="maquina"] { --display: "DM Mono", ui-monospace, monospace; }
+[data-font="simple"] { --display: system-ui, -apple-system, "Segoe UI", sans-serif; --body: system-ui, -apple-system, "Segoe UI", sans-serif; }
+/* Tinta: neutro, tinta azul noche y resaltador amarillo. Es el tema de quien entra por primera vez. */
+:root[data-theme="tinta"] {
+  --bg: #ECEEF2; --card: #FFFFFF; --card-2: #F3F4F7; --ink: #121A2C; --ink-2: #3B4459; --muted: #5C6578;
+  --line: #D9DDE5; --accent: #22305A; --accent-ink: #FFFFFF;
+  --hi: #FFF6B8; --hi-strong: #FFE14D; --hi-ink: #4A3C00;
+  --ok: #D3ECD8; --ok-ink: #1C5230; --bad: #F8D5D3; --bad-ink: #8A1F1A; --none: #E4E7ED; --none-ink: #4F586B;
+  color-scheme: light;
+}
 :root, [data-theme="lavanda"] {
   --bg: #ECE7F6; --card: #FBFAFE; --card-2: #F4F1FA; --ink: #21134F; --ink-2: #4F4080; --muted: #675B90;
   --line: #D9D2E9; --accent: #674EA7; --accent-ink: #FFFFFF;
@@ -33,7 +44,7 @@
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.45 "Instrument Sans", system-ui, sans-serif; min-height: 100dvh; padding-bottom: 72px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.45 var(--body); min-height: 100dvh; padding-bottom: 72px; }
 h1, h2, h3, p { margin: 0; }
 button, input, select, textarea { font: inherit; color: inherit; }
 a { color: inherit; }
@@ -577,3 +588,41 @@ details.pr + .mat-row, .mat-row + details.pr { border-top: 1px solid var(--line)
 
 .result-cell { text-align: right; }
 .need-row .pill { white-space: normal; }
+
+/* ---- letra: con la Moderna, los títulos van firmes sin itálica */
+[data-font="moderna"] .head h1, [data-font="moderna"] .hello, [data-font="moderna"] .auth h1 { letter-spacing: -.03em; font-weight: 700; }
+[data-font="moderna"] .hello em, [data-font="moderna"] .auth h1 em, [data-font="moderna"] .head h1 em { font-weight: 700; font-style: italic; color: var(--ink-2); }
+[data-font="simple"] .hello em, [data-font="simple"] .auth h1 em { font-style: normal; color: var(--ink-2); }
+.font-choice button[data-font-sample="clasica"] { font-family: "Playfair Display", Georgia, serif; }
+.font-choice button[data-font-sample="editorial"] { font-family: "Fraunces", Georgia, serif; }
+.font-choice button[data-font-sample="redonda"] { font-family: "Nunito", system-ui, sans-serif; }
+.font-choice button[data-font-sample="maquina"] { font-family: "DM Mono", monospace; }
+.font-choice button[data-font-sample="simple"] { font-family: system-ui, -apple-system, sans-serif; }
+
+/* ---- cómo se ve el progreso ---- */
+.prog-choice button { display: inline-flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 92px; }
+.prog-sample { display: flex; align-items: flex-start; height: 13px; width: 70px; }
+[data-progress="bloques"] .stitch i:nth-child(even), [data-progress="barra"] .stitch i:nth-child(even), [data-progress="puntos"] .stitch i:nth-child(even),
+[data-progress="bloques"] .weeks i:nth-child(even), [data-progress="barra"] .weeks i:nth-child(even), [data-progress="puntos"] .weeks i:nth-child(even),
+[data-progress="bloques"] .zig-tiles .tile:nth-child(even), [data-progress="barra"] .zig-tiles .tile:nth-child(even), [data-progress="puntos"] .zig-tiles .tile:nth-child(even),
+[data-progress="bloques"] .wiz-steps i:nth-child(even), [data-progress="barra"] .wiz-steps i:nth-child(even), [data-progress="puntos"] .wiz-steps i:nth-child(even),
+[data-progress="bloques"] .auth-zig i:nth-child(even), [data-progress="barra"] .auth-zig i:nth-child(even), [data-progress="puntos"] .auth-zig i:nth-child(even),
+[data-progress="bloques"] .brand-mark i:nth-child(even), [data-progress="barra"] .brand-mark i:nth-child(even), [data-progress="puntos"] .brand-mark i:nth-child(even) { margin-top: 0; }
+[data-progress]:not([data-progress="zigzag"]) .stitch { height: 9px; align-items: center; }
+[data-progress]:not([data-progress="zigzag"]) .stitch i { height: 8px; }
+[data-progress]:not([data-progress="zigzag"]) .weeks { height: 12px; }
+[data-progress]:not([data-progress="zigzag"]) .zig-tiles { height: 30px; }
+[data-progress]:not([data-progress="zigzag"]) .wiz-steps, [data-progress]:not([data-progress="zigzag"]) .auth-zig { height: auto; }
+[data-progress]:not([data-progress="zigzag"]) .brand-mark { align-items: center; height: 18px; }
+[data-progress="barra"] .stitch { gap: 0; }
+[data-progress="barra"] .stitch i { border-radius: 0; }
+[data-progress="barra"] .stitch i:first-child { border-radius: 4px 0 0 4px; }
+[data-progress="barra"] .stitch i:last-child { border-radius: 0 4px 4px 0; }
+[data-progress="barra"] .weeks { gap: 1px; }
+[data-progress="puntos"] .stitch { justify-content: space-between; gap: 2px; }
+[data-progress="puntos"] .stitch i { flex: 0 1 8px; height: 8px; border-radius: 50%; }
+[data-progress="puntos"] .weeks i, [data-progress="puntos"] .wiz-steps i { border-radius: 999px; }
+[data-progress="puntos"] .tile, [data-progress="puntos"] .auth-zig i { border-radius: 50%; aspect-ratio: 1; height: auto; max-width: 28px; }
+.sched-ai { margin: 14px 0 6px; }
+.sched-in { min-height: 120px; margin-top: 10px; }
+.prog-choice button[aria-pressed="true"] { background: var(--card); color: var(--ink); border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }

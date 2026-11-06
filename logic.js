@@ -207,6 +207,66 @@
     });
   }
 
+  // Horario pegado (de una IA o escrito a mano): día como título y "Tipo - Materia" por renglón.
+  const DAY_RE = /^(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado)\b[\s:.-]*/i;
+  const DAY_IDX = { lunes: 0, martes: 1, miercoles: 2, 'miércoles': 2, jueves: 3, viernes: 4, sabado: 5, 'sábado': 5 };
+  const TIME_RE = /\b\d{1,2}([:.h]\d{2})?\s*(hs?)?\s*([-–a]+\s*\d{1,2}([:.h]\d{2})?\s*(hs?)?)?/gi;
+  const plain = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  // Palabras que aparecen en muchas materias y no sirven para reconocer una.
+  const GENERIC = new Set(['general', 'generales', 'introduccion', 'fundamentos', 'taller', 'seminario', 'teoria', 'practica', 'aplicada', 'aplicadas', 'aplicado', 'avanzado', 'avanzada', 'principios', 'elementos', 'nociones', 'para', 'sobre', 'desde', 'entre']);
+  function matchScore(text, c) {
+    const t = plain(text);
+    let best = 0;
+    for (const n of [c.name, c.short].filter(Boolean).map(plain)) {
+      if (!n) continue;
+      if (t === n) best = Math.max(best, 3);
+      else if (t.includes(n) || n.includes(t)) best = Math.max(best, 2);
+      else {
+        const words = n.split(' ').filter((w) => w.length > 3 && !GENERIC.has(w));
+        const hit = words.filter((w) => t.split(' ').includes(w)).length;
+        if (words.length && hit / words.length >= 0.5) best = Math.max(best, 1 + hit / words.length / 2);
+      }
+    }
+    return best;
+  }
+  // Lo que sobra del renglón, sacando las palabras de la materia, es el tipo de clase.
+  function restOf(text, c) {
+    const nameWords = new Set([c.name, c.short].filter(Boolean).flatMap((n) => plain(n).split(' ')));
+    return text.split(/\s+/).filter((w) => !nameWords.has(plain(w))).join(' ');
+  }
+  function parseSchedule(text, courses) {
+    let dow = null;
+    const items = []; const unknown = [];
+    for (const original of String(text).split(/\r?\n/)) {
+      if (/^\s*(```|~~~)/.test(original)) continue;
+      let line = original.replace(/^\s*#{1,6}\s*/, '').replace(/\*\*|__/g, '').replace(/^\s*(?:[-*•·]|\d+[.)])\s+/, '').trim();
+      const d = DAY_RE.exec(line);
+      if (d) { dow = DAY_IDX[d[1].toLowerCase()] ?? DAY_IDX[d[1].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')]; line = line.slice(d[0].length).trim(); }
+      line = line.replace(TIME_RE, ' ').replace(/\s+/g, ' ').replace(/^[\s:,-]+|[\s:,-]+$/g, '');
+      if (!line || dow === null || line.endsWith(':') || line.split(' ').length > 16) continue;
+      const parts = line.split(/\s+[-–—|]\s+|\t+|:\s+/).map((x) => x.trim()).filter(Boolean);
+      let found = null; let score = 0; let tipo = '';
+      parts.forEach((part, i) => {
+        for (const c of courses) {
+          const sc = matchScore(part, c);
+          if (sc > score) { score = sc; found = c; tipo = parts.filter((_, j) => j !== i).join(' ') || restOf(part, c); }
+        }
+      });
+      if (!found) {
+        for (const c of courses) {
+          const sc = matchScore(line, c);
+          if (sc > score) {
+            score = sc; found = c;
+            tipo = restOf(line, c);
+          }
+        }
+      }
+      if (!found || score < 1.25) { unknown.push(line); continue; }
+      items.push({ dow, courseId: found.id, tipo: (tipo || 'Clase').replace(/^\w/, (ch) => ch.toUpperCase()) });
+    }
+    return { items, unknown };
+  }
+
   function parseGrade(raw) {
     const t = String(raw).trim().replace(',', '.');
     if (t === '') return { ok: true, value: null };
@@ -215,5 +275,5 @@
     return { ok: true, value: n };
   }
 
-  root.CursadaLogic = { DIAS, MESES, parseDate, iso, addDays, daysBetween, dow, avg, fmt, pct, weekNumber, weekStart, cellDate, classWeeks, lastClassWeek, firstWeekOf, allCells, tally, materiaStats, streaks, absencesByDay, pendingPast, isApproved, isCurrent, estimate, subjects, careerStats, semesterAverages, needed, parseGrade, improvements, slug, parsePlan, parseWeekList, buildWeeks };
+  root.CursadaLogic = { DIAS, MESES, parseDate, iso, addDays, daysBetween, dow, avg, fmt, pct, weekNumber, weekStart, cellDate, classWeeks, lastClassWeek, firstWeekOf, allCells, tally, materiaStats, streaks, absencesByDay, pendingPast, isApproved, isCurrent, estimate, subjects, careerStats, semesterAverages, needed, parseGrade, parseSchedule, improvements, slug, parsePlan, parseWeekList, buildWeeks };
 })(typeof window !== 'undefined' ? window : globalThis);

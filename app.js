@@ -53,7 +53,7 @@
   function emptyState(user) {
     return {
       v: 2,
-      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'lavanda', font: 'clasica', custom: { accent: '#674EA7', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Semestre', onboarded: false, wizStep: 0 },
+      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', custom: { accent: '#674EA7', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Semestre', onboarded: false, wizStep: 0 },
       classes: [], weeks: L.buildWeeks(16, [], []), att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', matColors: {}, history: [],
     };
   }
@@ -79,6 +79,17 @@
     }
     out.matColors = colors;
     out.practices = out.practices.map((p) => ({ kind: 'practica', ...p }));
+    // Una clase "x2" son dos bloques: cada uno con su casilla. Lo ya cargado se copia a los dos.
+    if (out.classes.some((c) => c.x2)) {
+      const att = { ...out.att };
+      out.classes = out.classes.flatMap((c) => {
+        if (!c.x2) return [c];
+        const b2 = { ...c, id: `${c.id}-b2`, name: `${c.name} · bloque 2`, x2: false };
+        Object.keys(out.att).filter((k) => k.endsWith(`:${c.id}`)).forEach((k) => { att[`${k.split(':')[0]}:${b2.id}`] = out.att[k]; });
+        return [{ ...c, name: `${c.name} · bloque 1`, x2: false }, b2];
+      });
+      out.att = att;
+    }
     return out;
   }
 
@@ -121,8 +132,27 @@
   const GREETS = ['Bienvenida', 'Bienvenido', 'Hola'];
 
   // ---------- Temas
+  const FONTS = [
+    { id: 'moderna', n: 'Moderna', css: null },
+    { id: 'clasica', n: 'Clásica', css: 'family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500;1,700' },
+    { id: 'editorial', n: 'Editorial', css: 'family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,500' },
+    { id: 'redonda', n: 'Redonda', css: 'family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,900;1,700' },
+    { id: 'maquina', n: 'A máquina', css: null },
+    { id: 'simple', n: 'Simple', css: null },
+  ];
+  const PROGRESS = [['zigzag', 'Zigzag'], ['bloques', 'Bloques'], ['barra', 'Barra'], ['puntos', 'Puntos']];
+  function progressSample(kind) {
+    const n = 10; const on = 6;
+    const items = Array.from({ length: n }, (_, i) => {
+      const c = i < on ? 'var(--accent)' : 'var(--none)';
+      if (kind === 'barra') return `<i style="flex:1;height:8px;background:${c};${i === 0 ? 'border-radius:4px 0 0 4px;' : ''}${i === n - 1 ? 'border-radius:0 4px 4px 0;' : ''}"></i>`;
+      if (kind === 'puntos') return `<i style="width:7px;height:7px;border-radius:50%;background:${c}"></i>`;
+      return `<i style="flex:1;height:6px;border-radius:1.5px;background:${c};${kind === 'zigzag' && i % 2 ? 'margin-top:7px;' : ''}"></i>`;
+    }).join('');
+    return `<span class="prog-sample" style="gap:${kind === 'barra' ? 0 : 2}px">${items}</span>`;
+  }
   const THEMES = [
-    { id: 'lavanda', n: 'Lavanda', c: '#D9D2E9' }, { id: 'noche', n: 'Noche', c: '#1D1440' }, { id: 'manteca', n: 'Manteca', c: '#FFF2CC' }, { id: 'menta', n: 'Menta', c: '#CFE8C3' },
+    { id: 'tinta', n: 'Tinta', c: '#1C2541' }, { id: 'lavanda', n: 'Lavanda', c: '#D9D2E9' }, { id: 'noche', n: 'Noche', c: '#1D1440' }, { id: 'manteca', n: 'Manteca', c: '#FFF2CC' }, { id: 'menta', n: 'Menta', c: '#CFE8C3' },
     { id: 'cielo', n: 'Cielo', c: '#BBD7F5', accent: '#2F6DB5', mode: 'light' }, { id: 'frambuesa', n: 'Frambuesa', c: '#F4BFD3', accent: '#B0306A', mode: 'light' }, { id: 'grafito', n: 'Grafito', c: '#2B3138', accent: '#8FA3B8', mode: 'dark' },
   ];
   const rgb = (x) => [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16));
@@ -146,21 +176,30 @@
   function applyTheme() {
     const root = document.documentElement;
     root.removeAttribute('style');
-    const st = S ? S.settings : { theme: 'lavanda', font: 'clasica' };
-    root.dataset.font = st.font || 'clasica';
+    const st = S ? S.settings : { theme: 'tinta', font: 'moderna', progress: 'zigzag' };
+    const font = FONTS.find((f) => f.id === st.font) || FONTS[0];
+    root.dataset.font = font.id;
+    root.dataset.progress = st.progress || 'zigzag';
+    let link = document.getElementById('font-extra');
+    if (font.css) {
+      const href = `https://fonts.googleapis.com/css2?${font.css}&display=swap`;
+      if (!link) { link = document.createElement('link'); link.id = 'font-extra'; link.rel = 'stylesheet'; document.head.append(link); }
+      if (link.getAttribute('href') !== href) link.href = href;
+    }
     const preset = THEMES.find((t) => t.id === st.theme);
     let accent = null; let mode = null;
     if (st.theme === 'custom') { accent = st.custom.accent; mode = st.custom.mode; } else if (preset && preset.accent) { accent = preset.accent; mode = preset.mode; }
     if (accent) {
       root.dataset.theme = mode === 'dark' ? 'noche' : 'lavanda';
       Object.entries(deriveVars(accent, mode)).forEach(([k, v]) => root.style.setProperty(k, v));
-    } else root.dataset.theme = preset ? preset.id : 'lavanda';
+    } else root.dataset.theme = preset ? preset.id : 'tinta';
   }
   function themePicker() {
     const st = S.settings;
     return `<div class="themes" style="margin-top:6px">${THEMES.map((t) => `<button type="button" data-act="theme" data-id="${t.id}" aria-pressed="${st.theme === t.id}"><i style="background:${t.c}"></i>${t.n}</button>`).join('')}<button type="button" data-act="theme" data-id="custom" aria-pressed="${st.theme === 'custom'}"><i style="background:${h(st.custom.accent)}"></i>Mi color</button></div>
     ${st.theme === 'custom' ? `<div class="color-row"><label style="display:inline-flex;gap:8px;align-items:center">Tu color <input type="color" value="${h(st.custom.accent)}" data-change="custom-accent" aria-label="Elegí tu color"></label><div class="choice">${[['light', 'Claro'], ['dark', 'Oscuro']].map(([v, n]) => `<button type="button" data-act="custom-mode" data-v="${v}" aria-pressed="${st.custom.mode === v}">${n}</button>`).join('')}</div></div>` : ''}
-    <p class="section-label">Títulos</p><div class="choice" style="margin-top:6px">${[['clasica', 'Clásicos'], ['moderna', 'Modernos'], ['maquina', 'A máquina']].map(([v, n]) => `<button type="button" data-act="font" data-v="${v}" aria-pressed="${st.font === v}">${n}</button>`).join('')}</div>`;
+    <p class="section-label">Letra</p><div class="choice font-choice" style="margin-top:6px">${FONTS.map((f) => `<button type="button" data-act="font" data-v="${f.id}" data-font-sample="${f.id}" aria-pressed="${(st.font || 'moderna') === f.id}">${h(f.n)}</button>`).join('')}</div>
+    <p class="section-label">Cómo se ve el progreso</p><div class="choice prog-choice" style="margin-top:6px">${PROGRESS.map(([v, n]) => `<button type="button" data-act="progress" data-v="${v}" aria-pressed="${(st.progress || 'zigzag') === v}">${progressSample(v)}<span>${n}</span></button>`).join('')}</div>`;
   }
 
   // ---------- Selectores de perfil
@@ -271,7 +310,7 @@
     return `<div class="seg" role="group" aria-label="Estado de la clase">${['p', 'a', 'n'].map((s) => `<button data-act="mark" data-key="${key}" data-s="${s}" aria-pressed="${state === s}" aria-label="${STATE_WORD[s]}"><span class="g" aria-hidden="true">${STATE_GLYPH[s]}</span><span class="w">${STATE_WORD[s]}</span></button>`).join('')}</div>`;
   }
   function classRow(c, extra) {
-    return `<div class="class-row" style="--mc:${colorOf(c.cls.mat)}"><span class="dot"></span><div><b>${h(c.cls.name)}${c.cls.x2 ? ' <span class="pill">x2</span>' : ''}</b>${extra ? `<small>${h(extra)}</small>` : ''}</div>${segButtons(c.key, c.state)}</div>`;
+    return `<div class="class-row" style="--mc:${colorOf(c.cls.mat)}"><span class="dot"></span><div><b>${h(c.cls.name)}</b>${extra ? `<small>${h(extra)}</small>` : ''}</div>${segButtons(c.key, c.state)}</div>`;
   }
   function leftPill(m) {
     if (m.left < 0) return `<span class="pill bad">! pasaste el límite por ${-m.left}</span>`;
@@ -522,7 +561,7 @@
     ${phone}
     <section class="card mt att-desk"><div class="card-head"><h2>Grilla</h2><button class="btn ghost small" data-act="schedule">Editar horario</button></div><div class="table-wrap"><table class="att">
       <thead><tr class="day"><th class="sticky"></th>${groups.map((g) => `<th colspan="${g.n}" scope="colgroup">${L.DIAS[g.dow]}</th>`).join('')}<th></th></tr>
-      <tr class="cl"><th class="sticky"></th>${S.classes.map((c) => `<th scope="col" style="--mc:${colorOf(c.mat)}">${h(c.name)}${c.x2 ? ' x2' : ''}<i></i></th>`).join('')}<th class="sub">Semana</th></tr></thead>
+      <tr class="cl"><th class="sticky"></th>${S.classes.map((c) => `<th scope="col" style="--mc:${colorOf(c.mat)}">${h(c.name)}<i></i></th>`).join('')}<th class="sub">Semana</th></tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr><th class="sticky">Por clase</th>${foot}<td></td></tr></tfoot>
     </table></div>
@@ -831,6 +870,30 @@ Reglas:
     return added;
   }
   const PLAN_HINT = '1er año\nSemestre A\nÁlgebra\nEconomía I\nSemestre B\nCálculo\n\n2do año\n...';
+  function schedPrompt() {
+    const names = S.courses.filter(L.isCurrent).map((c) => c.name);
+    return `Te paso mi horario de cursada de este cuatrimestre. Armalo con este formato exacto:
+
+Lunes
+Teórica - Nombre de la materia
+Práctica - Nombre de la materia
+Martes
+Tutorial - Nombre de la materia
+
+Reglas:
+- Un renglón por clase: primero el tipo (Teórica, Práctica, Tutorial, Taller, Problemas…), un guion y la materia.
+- Si una materia tiene dos bloques el mismo día, escribí ese renglón dos veces.
+- Sin horarios, aulas ni profesores. Los días sin clases no los pongas.
+${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; ')}.\n` : ''}- No inventes clases. Si algo no se lee, avisame antes de la lista.
+- Respondé con la lista dentro de un solo bloque de código.`;
+  }
+  function schedPreviewHtml(text) {
+    if (!text.trim()) return '';
+    const r = L.parseSchedule(text, L.subjects(S));
+    const days = [...new Set(r.items.map((i) => i.dow))];
+    const list = days.map((d) => `<li><b>${cap(L.DIAS[d])}</b>${r.items.filter((i) => i.dow === d).map((i) => `${h(i.tipo)} ${h(label(course(i.courseId)))}`).join(' · ')}</li>`).join('');
+    return `${r.items.length ? `Encontré <b>${pl(r.items.length, 'clase', 'clases')}</b>.` : 'No encontré clases. Revisá que cada día esté como título.'}${r.unknown.length ? `<p class="auth-note">No reconocí estas materias: ${r.unknown.map(h).join(', ')}. Fijate que estén en tu plan, en Carrera.</p>` : ''}<ul class="plan-list">${list}</ul>${r.items.length ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><button type="button" class="btn" data-act="sched-apply">Agregar ${pl(r.items.length, 'clase', 'clases')}</button></div>` : ''}`;
+  }
   function scheduleHtml() {
     const st = S.settings;
     const nums = (k) => S.weeks.filter((w) => w.kind === k).map((w) => w.n).join(', ');
@@ -843,13 +906,19 @@ Reglas:
       <label class="field">Semanas de finales<input data-change="sem" data-f="finales" value="${h(nums('finales'))}" placeholder="18, 19"></label>
       <label class="field">Asistencia mínima (%)<input inputmode="numeric" data-change="sem" data-f="minAtt" value="${Math.round(st.minAtt * 100)}"></label>
     </div><p class="err" id="sem-err" role="alert"></p>
+    <section class="plan-way sched-ai"><h3>Cargalo con tu IA <span class="pill ok">la más fácil</span></h3>
+      <ol><li>Sacale una captura a tu horario del campus o del sistema de tu facu.</li><li>Copiá esta instrucción, pegala en ChatGPT, Claude o Gemini y adjuntá la captura.</li><li>Pegá la respuesta acá abajo y tocá <b>Agregar</b>.</li></ol>
+      <div class="plan-ai"><button type="button" class="btn ghost" data-act="copy-prompt" data-prompt="sched">Copiar instrucción</button><details><summary>Ver la instrucción</summary><pre class="prompt-box" id="sched-prompt" tabindex="0">${h(schedPrompt())}</pre></details></div>
+      <textarea class="plan-in sched-in" id="sched-text" aria-label="Horario pegado" placeholder="Lunes&#10;Teórica - Cálculo&#10;Tutorial - Cálculo&#10;Martes&#10;..."></textarea>
+      <div class="ok-line" id="sched-preview" aria-live="polite"></div>
+    </section>
     <p class="section-label">Tus clases</p>
-    <div>${S.classes.map((c) => `<div class="cls-row"><span style="display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="dot" style="--mc:${colorOf(c.mat)}"></span>${h(c.name)}${c.x2 ? ' <span class="pill">x2</span>' : ''} <span class="sub">${L.DIAS[c.dow]}</span></span><button class="linkish" data-act="del-class" data-id="${h(c.id)}" aria-label="Borrar ${h(c.name)}">Borrar</button></div>`).join('') || '<p class="sub">Todavía no agregaste clases.</p>'}</div>
+    <div>${S.classes.map((c) => `<div class="cls-row"><span style="display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="dot" style="--mc:${colorOf(c.mat)}"></span>${h(c.name)} <span class="sub">${L.DIAS[c.dow]}</span></span><button class="linkish" data-act="del-class" data-id="${h(c.id)}" aria-label="Borrar ${h(c.name)}">Borrar</button></div>`).join('') || '<p class="sub">Todavía no agregaste clases.</p>'}</div>
     ${cur.length ? `<form data-form="class"><div class="fields c2" style="margin-top:12px">
       <label class="field">Materia<select name="course">${cur.map((c) => `<option value="${h(c.id)}">${h(label(c))}</option>`).join('')}</select></label>
       <label class="field">Tipo de clase<input name="tipo" required value="Teórica" list="tipos"><datalist id="tipos"><option value="Teórica"><option value="Práctica"><option value="Tutorial"><option value="Problemas"><option value="Taller"></datalist></label>
       <label class="field">Día<select name="dow">${days.map((d, i) => `<option value="${i}">${d}</option>`).join('')}</select></label>
-      <label class="field" style="align-content:end"><span style="display:flex;gap:7px;align-items:center;min-height:38px"><input type="checkbox" name="x2" style="width:auto"> Es doble</span></label>
+      <label class="field" style="align-content:end"><span style="display:flex;gap:7px;align-items:center;min-height:38px"><input type="checkbox" name="x2" style="width:auto"> Son dos bloques</span></label>
     </div><div class="actions" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost" type="submit">Agregar clase</button></div></form>` : '<p class="sub" style="margin-top:8px">Marcá qué estás cursando en Carrera para poder agregar sus clases.</p>'}`;
   }
   function viewWizard() {
@@ -1057,6 +1126,7 @@ Reglas:
     undo() { if (!undoSnap) return; S = JSON.parse(undoSnap); undoSnap = null; save(); render(); $('#toast').hidden = true; },
     theme(el) { S.settings.theme = el.dataset.id; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     font(el) { S.settings.font = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
+    progress(el) { S.settings.progress = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     'custom-mode'(el) { S.settings.custom.mode = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     resolve(el) { mutate(() => { delete S.cellNotes[el.dataset.key].check; }, 'Nota marcada como revisada'); closeModal(); },
     'add-agenda': agendaDialog,
@@ -1107,7 +1177,7 @@ Reglas:
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `cursada-${L.iso(today())}.json`;
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     },
-    async logout() { clearTimeout(saveTimer); await flush(); await api('POST', '/api/logout', {}); location.href = '/'; },
+    async logout() { clearTimeout(saveTimer); await flush(); await api('POST', '/api/logout', {}); location.href = location.pathname; },
     'del-account': deleteDialog,
     'auth-to'(el) { ui.authMode = el.dataset.to; ui.authNotice = ''; render(); },
     async google() {
@@ -1115,15 +1185,37 @@ Reglas:
     },
     async 'copy-prompt'(el) {
       try {
-        await navigator.clipboard.writeText(AI_PROMPT);
+        await navigator.clipboard.writeText(el.dataset.prompt === 'sched' ? schedPrompt() : AI_PROMPT);
         el.textContent = 'Copiada';
         setTimeout(() => { el.textContent = 'Copiar instrucción'; }, 2000);
       } catch (e) {
         const d = el.parentElement.querySelector('details'); d.open = true;
         const sel = getSelection(); const r = document.createRange();
-        r.selectNodeContents($('#ai-prompt')); sel.removeAllRanges(); sel.addRange(r);
+        r.selectNodeContents($(el.dataset.prompt === 'sched' ? '#sched-prompt' : '#ai-prompt')); sel.removeAllRanges(); sel.addRange(r);
         el.textContent = 'Copiala con Cmd o Ctrl + C';
       }
+    },
+    'sched-apply'() {
+      const t = $('#sched-text');
+      const r = L.parseSchedule(t.value, L.subjects(S));
+      if (!r.items.length) return;
+      const n = r.items.length;
+      mutate(() => {
+        const groups = {};
+        r.items.forEach((it) => { const k = `${it.dow}|${it.courseId}|${it.tipo}`; groups[k] = (groups[k] || 0) + 1; });
+        const seen = {};
+        r.items.forEach((it) => {
+          const co = course(it.courseId);
+          if (!L.isCurrent(co)) co.status = 'cursando';
+          ensureColor(co.subj);
+          const k = `${it.dow}|${it.courseId}|${it.tipo}`;
+          seen[k] = (seen[k] || 0) + 1;
+          const base = `${it.tipo} ${label(co)}`;
+          S.classes.push({ id: uid('c'), name: groups[k] > 1 ? `${base} · bloque ${seen[k]}` : base, mat: co.subj, course: co.id, dow: it.dow });
+        });
+        S.classes.sort((a, b) => a.dow - b.dow);
+      }, inWizard() ? null : `${pl(n, 'clase agregada', 'clases agregadas')}`);
+      reopen(scheduleDialog);
     },
     'change-password': passwordDialog,
     'change-email': emailDialog,
@@ -1253,6 +1345,7 @@ Reglas:
   document.addEventListener('input', (e) => {
     const t = e.target;
     if (t.dataset && t.dataset.change === 'scratch') { S.scratch = t.value; clearTimeout(scratchTimer); scratchTimer = setTimeout(save, 300); }
+    if (t.id === 'sched-text') { const pv = $('#sched-preview'); if (pv) pv.innerHTML = schedPreviewHtml(t.value); }
     if (t.id === 'plan-text') {
       if (inWizard()) ui.planDraft = t.value;
       const pv = $('#plan-preview'); if (pv) pv.innerHTML = planPreviewHtml(t.value);
@@ -1318,14 +1411,16 @@ Reglas:
       if (d.confirm !== undefined && d.confirm.trim().toUpperCase() !== 'BORRAR') { $('#del-err').textContent = 'Escribí BORRAR para confirmar.'; return; }
       delete d.confirm;
       const r = await api('POST', '/api/account/delete', d);
-      if (r.status === 200) { clearTimeout(saveTimer); dirty = false; location.href = '/'; } else $('#del-err').textContent = r.data.error || 'No se pudo borrar la cuenta.';
+      if (r.status === 200) { clearTimeout(saveTimer); dirty = false; location.href = location.pathname; } else $('#del-err').textContent = r.data.error || 'No se pudo borrar la cuenta.';
       return;
     }
     if (kind === 'class') {
       const co = course(d.course);
       mutate(() => {
         ensureColor(co.subj);
-        S.classes.push({ id: uid('c'), name: `${d.tipo.trim()} ${label(co)}`, mat: co.subj, course: co.id, dow: +d.dow, x2: !!d.x2 });
+        const base = `${d.tipo.trim()} ${label(co)}`;
+        if (d.x2) [1, 2].forEach((b) => S.classes.push({ id: uid('c'), name: `${base} · bloque ${b}`, mat: co.subj, course: co.id, dow: +d.dow }));
+        else S.classes.push({ id: uid('c'), name: base, mat: co.subj, course: co.id, dow: +d.dow });
         S.classes.sort((a, b) => a.dow - b.dow);
       }, inWizard() ? null : 'Clase agregada');
       reopen(scheduleDialog);
