@@ -574,3 +574,6 @@ details.pr + .mat-row, .mat-row + details.pr { border-top: 1px solid var(--line)
 @media (max-width: 760px) { .cur-row { grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px 10px; } .cur-in .grade-in { width: 58px; } }
 .cur-name { background: none; border: 0; padding: 0; text-align: left; font-weight: 600; cursor: pointer; color: var(--ink); }
 .cur-name:hover { text-decoration: underline; }
+
+.result-cell { text-align: right; }
+.need-row .pill { white-space: normal; }

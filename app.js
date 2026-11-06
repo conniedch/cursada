@@ -556,42 +556,53 @@
       ${imp.best ? `<p class="sub" style="margin-bottom:8px">Tu mayor salto: ${h(label(imp.best.course))}, de ${L.fmt(imp.best.p1)} a ${L.fmt(imp.best.p2)}.</p>` : ''}
       ${rows}</section>`;
   }
-  // Lo que dice cada materia según las notas que tenga cargadas.
-  function partialsHtml(p1, p2) {
-    if (p1 == null && p2 == null) return '<span class="sub">Cargá la nota del parcial 1 y te digo cuánto necesitás en el 2.</span>';
-    if (p1 == null) return '<span class="sub">Falta la nota del parcial 1.</span>';
-    if (p2 == null) {
-      const chips = [4, 6, 8].map((t) => {
-        const need = 2 * t - p1;
-        if (need <= 0) return `<span class="need ok">Para promediar ${t}: <b>ya llegás</b></span>`;
-        if (need > 10) return `<span class="need no">Para promediar ${t}: no alcanza</span>`;
-        return `<span class="need">Para promediar ${t}: sacá <b>${L.fmt(need, 1)}</b></span>`;
-      }).join('');
-      return `<span class="sub">En el parcial 2 necesitás:</span><div class="need-list">${chips}</div>`;
-    }
+  // Tabla de parciales: estimado y cuánto falta, según lo que haya cargado.
+  const avgOf = (p1, p2) => (p1 == null && p2 == null ? null : p1 == null ? p2 : p2 == null ? p1 : (p1 + p2) / 2);
+  function needWord(p1, t) {
+    const n = 2 * t - p1;
+    if (n <= 0) return { txt: 'ya llegás', cls: 'ok' };
+    if (n > 10) return { txt: 'no alcanza', cls: 'bad' };
+    return { txt: L.fmt(n, 1), cls: '' };
+  }
+  function resultPill(p1, p2) {
     const a = (p1 + p2) / 2;
-    const ok = a >= 4;
-    return `<span class="avg-line">Promedio de parciales: <b>${L.fmt(a)}</b></span> <span class="pill ${ok ? 'ok' : 'bad'}">${ok ? 'llegás a 4' : `te falta ${L.fmt(4 - a)} para 4`}</span>`;
+    const best = [8, 6, 4].find((t) => a >= t);
+    return best ? `<span class="pill ok">✓ promediás ${L.fmt(a)}: llegás a ${best}</span>` : `<span class="pill bad">promediás ${L.fmt(a)}: te falta ${L.fmt(4 - a)} para 4</span>`;
+  }
+  function gradeTail(p1, p2) {
+    const est = `<td class="n" data-tail>${L.fmt(avgOf(p1, p2))}</td>`;
+    if (p1 != null && p2 == null) return est + [4, 6, 8].map((t) => { const w = needWord(p1, t); return `<td class="n hide-sm" data-tail>${w.cls ? `<span class="pill ${w.cls}">${w.txt}</span>` : w.txt}</td>`; }).join('');
+    if (p1 != null && p2 != null) return `${est}<td colspan="3" class="hide-sm result-cell" data-tail>${resultPill(p1, p2)}</td>`;
+    return `${est}<td colspan="3" class="hide-sm sub result-cell" data-tail>Cargá el parcial 1</td>`;
+  }
+  function gradeNeedRow(p1, p2) {
+    let inner;
+    if (p1 != null && p2 == null) inner = `En el parcial 2 necesitás ${[4, 6, 8].map((t) => { const w = needWord(p1, t); return `<span>para ${t}: <b>${w.txt}</b></span>`; }).join('')}`;
+    else if (p1 != null && p2 != null) inner = resultPill(p1, p2);
+    else inner = 'Cargá el parcial 1 para ver cuánto necesitás en el 2.';
+    return `<tr class="need-row" data-tail-row><td colspan="4">${inner}</td></tr>`;
   }
   // Recalcula mientras escribís, sin esperar a salir del casillero.
   document.addEventListener('input', (e) => {
-    const row = e.target.closest && e.target.closest('.cur-row');
+    const row = e.target.closest && e.target.closest('tr[data-row]');
     if (!row || e.target.dataset.change !== 'grade') return;
-    const val = (f) => { const r = L.parseGrade(row.querySelector(`[data-f="${f}"]`).value); return r.ok ? { v: r.value } : null; };
+    const val = (f) => L.parseGrade(row.querySelector(`[data-f="${f}"]`).value);
     const a = val('p1'); const b = val('p2');
-    const out = row.querySelector('[data-live]');
-    if (!a || !b) { out.innerHTML = '<span class="sub">La nota tiene que ser un número de 0 a 10.</span>'; return; }
-    out.innerHTML = partialsHtml(a.v, b.v);
+    if (!a.ok || !b.ok) return;
+    row.querySelectorAll('[data-tail]').forEach((x) => x.remove());
+    row.insertAdjacentHTML('beforeend', gradeTail(a.value, b.value));
+    const next = row.nextElementSibling;
+    if (next && next.hasAttribute('data-tail-row')) next.outerHTML = gradeNeedRow(a.value, b.value);
   });
   function viewNotas() {
     const cs = L.careerStats(S);
     const current = S.courses.filter(L.isCurrent);
-    const curRows = current.map((c) => `<div class="cur-row" data-row="${h(c.id)}">
-      <button class="name-btn cur-name" data-act="course" data-id="${h(c.id)}">${h(label(c))}</button>
-      <label class="cur-in">Parcial 1<input class="grade-in" inputmode="decimal" data-change="grade" data-id="${h(c.id)}" data-f="p1" value="${h(c.p1 == null ? '' : L.fmt(c.p1))}" aria-label="Parcial 1 de ${h(label(c))}"></label>
-      <label class="cur-in">Parcial 2<input class="grade-in" inputmode="decimal" data-change="grade" data-id="${h(c.id)}" data-f="p2" value="${h(c.p2 == null ? '' : L.fmt(c.p2))}" aria-label="Parcial 2 de ${h(label(c))}"></label>
-      <div class="cur-msg" data-live aria-live="polite">${partialsHtml(c.p1, c.p2)}</div>
-    </div>`).join('');
+    const curRows = current.map((c) => `<tr data-row="${h(c.id)}">
+      <td><button class="name-btn" data-act="course" data-id="${h(c.id)}">${h(label(c))}</button></td>
+      <td class="n"><input class="grade-in" inputmode="decimal" aria-label="Parcial 1 de ${h(label(c))}" data-change="grade" data-id="${h(c.id)}" data-f="p1" value="${h(c.p1 == null ? '' : L.fmt(c.p1))}"></td>
+      <td class="n"><input class="grade-in" inputmode="decimal" aria-label="Parcial 2 de ${h(label(c))}" data-change="grade" data-id="${h(c.id)}" data-f="p2" value="${h(c.p2 == null ? '' : L.fmt(c.p2))}"></td>
+      ${gradeTail(c.p1, c.p2)}
+    </tr>${gradeNeedRow(c.p1, c.p2)}`).join('');
 
     const finals = S.courses.filter((c) => c.final != null);
     const axis = '<div class="axis"><span></span><div><span>0</span><span>5</span><span>10</span></div><span></span></div>';
@@ -608,9 +619,9 @@
     return `
     <header class="head"><div><h1>Notas</h1></div>
       ${cs.avgAll !== null ? `<div class="figs"><div class="fig"><b>${L.fmt(cs.avgAll)}</b><span>con desaprobados</span></div><div class="fig"><b>${L.fmt(cs.avgApproved)}</b><span>solo aprobadas</span></div></div>` : ''}</header>
-    <section class="card"><div class="card-head"><h2>Tus parciales de este cuatrimestre</h2></div>
-      <p class="sub" style="margin:-4px 0 6px">Cargá tus notas y te digo cuánto necesitás. Se calcula como el promedio de los dos parciales; tu materia puede tener otra regla.</p>
-      ${current.length ? `${curRows}<p class="err" id="grade-err" role="alert"></p>` : '<p class="sub">Marcá en Carrera qué materias estás cursando y aparecen acá.</p>'}</section>
+    <section class="card"><div class="card-head"><h2>Este cuatrimestre</h2></div>
+      <p class="sub" style="margin:-4px 0 8px">Cuánto necesitás en el parcial 2 para que el promedio de los dos te dé 4, 6 u 8. Tu materia puede tener otra regla.</p>
+      ${current.length ? `<div class="table-wrap"><table class="t"><thead><tr><th>Materia</th><th class="n">Parcial 1</th><th class="n">Parcial 2</th><th class="n">Estimado</th>${[4, 6, 8].map((t) => `<th class="n hide-sm">Para ${t}</th>`).join('')}</tr></thead><tbody>${curRows}</tbody></table></div><p class="err" id="grade-err" role="alert"></p>` : '<p class="sub">Marcá en Carrera qué materias estás cursando y aparecen acá.</p>'}</section>
     ${triesHtml}
     <div class="grid g-2 mt">
       <div class="stack">
