@@ -704,3 +704,68 @@ details.no-ai > summary { cursor: pointer; font-weight: 600; color: var(--ink-2)
 .ben-top { display: flex; align-items: center; gap: 10px; }
 .ben-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: contain; background: #fff; box-shadow: 0 0 0 1px var(--line); flex: none; }
 .ben-org { font-size: 13px; font-weight: 600; color: var(--ink-2); flex: 1; min-width: 0; }
+
+/* ---- íconos ---- */
+.ico { width: 1.15em; height: 1.15em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.btn.has-ico, .linkish.has-ico { display: inline-flex; align-items: center; gap: 6px; }
+.tabs a { display: inline-flex; align-items: center; gap: 6px; }
+.tabs a .ico { width: 17px; height: 17px; opacity: .85; }
+.seg .g { display: inline; margin-right: 5px; font-family: "DM Mono", monospace; }
+
+/* ---- pendientes ---- */
+.todo-list li { justify-content: flex-start; gap: 10px; }
+.todo-check { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid color-mix(in oklab, var(--muted) 60%, var(--line)); background: var(--card); color: transparent; cursor: pointer; display: grid; place-items: center; padding: 0; }
+.todo-check .ico { width: 15px; height: 15px; stroke-width: 3; }
+.todo-check:hover { border-color: var(--ok-ink); color: var(--ok-ink); background: var(--ok); }
+.todo-txt { flex: 1; min-width: 0; }
+.todo-txt .sub { display: block; font-size: 12.5px; }
+.days-to.late { color: var(--bad-ink); }
+.todo-add { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.todo-add input { border: 1px solid var(--line); background: var(--card); border-radius: 6px; padding: 7px 9px; font-size: 14px; color: var(--ink); min-width: 0; }
+.todo-add input[name="text"] { flex: 1 1 180px; }
+.todo-add input[type="date"] { flex: 0 1 150px; }
+
+/* ---- gráfico semana a semana ---- */
+.week-chart { position: relative; display: flex; align-items: flex-end; gap: 4px; height: 150px; padding: 0 0 18px; border-bottom: 1px solid var(--line); }
+.wc-col { flex: 1; height: calc(100% - 0px); display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; min-width: 0; }
+.wc-col i { display: block; width: 100%; max-width: 34px; background: var(--accent); border-radius: 4px 4px 0 0; }
+.wc-col i.low { background: var(--bad-ink); }
+.wc-col span { position: absolute; bottom: -18px; font: 400 11px "DM Mono", monospace; color: var(--muted); }
+.wc-min { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--ink-2); margin-bottom: 18px; pointer-events: none; z-index: 1; }
+.wc-min span { position: absolute; right: 0; top: -18px; font-size: 11.5px; color: var(--ink-2); background: var(--card); padding: 0 4px; }
+
+/* ---- carrera año por año ---- */
+.yc-row { display: grid; grid-template-columns: 60px minmax(0, 1fr) 56px; gap: 12px; align-items: center; padding: 6px 0; font-size: 14px; }
+.yc-bar { display: flex; height: 16px; background: var(--none); border-radius: 4px; overflow: hidden; gap: 2px; }
+.yc-bar i { display: block; height: 100%; }
+.yc-bar i.a { background: var(--accent); }
+.yc-bar i.c { background: var(--hi-strong); }
+.yc-val { text-align: right; font: 400 13px "DM Mono", monospace; color: var(--ink-2); }
+
+/* ---- parciales: frase y barras ---- */
+.imp-explain { margin: 4px 0 10px; padding: 9px 12px; border-radius: 8px; background: var(--card-2); font-size: 14.5px; }
+.pair-bars { display: grid; gap: 6px; margin-bottom: 12px; }
+.pair-bars div { display: grid; grid-template-columns: 70px minmax(0, 1fr) 40px; gap: 10px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.pair-bars i { display: block; height: 14px; border-radius: 0 4px 4px 0; }
+.pair-bars i.p1 { background: color-mix(in oklab, var(--accent) 45%, var(--line)); }
+.pair-bars i.p2 { background: var(--accent); }
+.pair-bars b { font: 500 14px "DM Mono", monospace; color: var(--ink); text-align: right; }
+
+/* ---- guía de uso ---- */
+.tour { text-align: center; padding-top: 6px; }
+.tour-ico { width: 64px; height: 64px; margin: 0 auto 10px; border-radius: 18px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; }
+.tour-ico .ico { width: 32px; height: 32px; }
+.tour-step { font-size: 12.5px; color: var(--muted); }
+.tour h2 { padding-right: 0; margin: 2px 0 8px; }
+.tour > p:not(.tour-step) { color: var(--ink-2); font-size: 15.5px; max-width: 42ch; margin: 0 auto; }
+.tour-dots { display: flex; justify-content: center; gap: 6px; margin: 16px 0 4px; }
+.tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.tour-dots i.on { background: var(--accent); width: 18px; border-radius: 4px; }
+
+@media (max-width: 760px) {
+  .tabs a { flex-direction: column; gap: 2px; padding: 7px 1px 6px; font-size: 10.5px; }
+  .tabs a .ico { width: 20px; height: 20px; }
+  .week-chart { height: 120px; gap: 2px; }
+  .wc-col span { font-size: 9.5px; }
+  .yc-row { grid-template-columns: 52px minmax(0, 1fr) 48px; gap: 8px; }
+}

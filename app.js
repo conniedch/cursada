@@ -54,7 +54,7 @@
     return {
       v: 2,
       settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', custom: { accent: '#674EA7', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
-      classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', matColors: {}, history: [],
+      classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], todos: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', matColors: {}, history: [],
     };
   }
   // Acepta datos viejos o importados y los deja en la forma actual.
@@ -130,6 +130,33 @@
   }
 
   const GREETS = ['Bienvenida', 'Bienvenido', 'Hola'];
+  const ICON_PATHS = {
+    hoy: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
+    asistencia: 'M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM9 15l2 2 4-4',
+    notas: 'M4 20V11M10 20V5M16 20v-6M2 20h20',
+    carrera: 'M22 10 12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5',
+    estudio: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5',
+    beneficios: 'M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01',
+    plus: 'M12 5v14M5 12h14',
+    copy: 'M9 9h11v11H9zM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1',
+    download: 'M12 3v12M7 10l5 5 5-5M4 21h16',
+    upload: 'M12 21V9M7 14l5-5 5 5M4 3h16',
+    calendar: 'M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+    logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
+    guide: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01',
+    settings: 'M4 7h10M18 7h2M4 17h2M10 17h10M16 4v6M8 14v6',
+    check: 'M5 12l5 5 9-10',
+  };
+  const icon = (name) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON_PATHS[name]}"/></svg>`;
+  // Les pone ícono a los botones que más se usan, sin tocar el texto.
+  const BUTTON_ICONS = [['[data-act^="add-"]', 'plus'], ['[data-act="copy-prompt"]', 'copy'], ['[data-act="export"]', 'download'], ['label.plan-file', 'upload'], ['[data-act="logout"]', 'logout'], ['[data-act="schedule"]', 'calendar'], ['[data-act="tour"]', 'guide'], ['form[data-form="todo"] button[type="submit"]', 'plus']];
+  function decorate(root) {
+    BUTTON_ICONS.forEach(([sel, name]) => root.querySelectorAll(`${sel}.btn:not(.has-ico), ${sel}.linkish:not(.has-ico)`).forEach((el) => {
+      el.classList.add('has-ico');
+      el.insertAdjacentHTML('afterbegin', icon(name));
+    }));
+  }
+  function setBtnText(el, text) { const ico = el.querySelector('.ico'); el.textContent = text; if (ico) el.prepend(ico); }
 
   // ---------- Temas
   const FONTS = [
@@ -443,6 +470,15 @@
       const n = L.daysBetween(t, L.parseDate(a.date));
       return `<li><span>${h(a.title)}<br><span class="sub">${cap(longDate(L.parseDate(a.date)))}</span></span><span style="display:flex;align-items:center;gap:4px"><span class="days-to">${n === 0 ? 'hoy' : n === 1 ? 'mañana' : `${n} días`}</span><button class="x" data-act="del-agenda" data-id="${h(a.id)}" aria-label="Borrar ${h(a.title)}">×</button></span></li>`;
     }).join('');
+    const pend = [
+      ...pendingDated().filter((p) => L.daysBetween(t, L.parseDate(p.date)) >= 0).map((p) => ({ kind: 'mat', id: p.id, text: p.name, meta: `${kindOf(p).n} · ${matLabel(subjOfPractice(p))}`, date: p.date })),
+      ...(S.todos || []).map((x) => ({ kind: 'todo', id: x.id, text: x.text, meta: '', date: x.date || '' })),
+    ].sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+    const due = (d) => { if (!d) return ''; const n = L.daysBetween(t, L.parseDate(d)); return n < 0 ? '<span class="days-to late">venció</span>' : `<span class="days-to">${n === 0 ? 'hoy' : n === 1 ? 'mañana' : `${n} días`}</span>`; };
+    const pendHtml = `<section class="card"><div class="card-head"><h2>Pendientes</h2>${pend.length ? `<span class="sub">${pl(pend.length, 'cosa', 'cosas')}</span>` : ''}</div>
+      ${pend.length ? `<ul class="list todo-list">${pend.map((x) => `<li><button class="todo-check" data-act="${x.kind === 'mat' ? 'mat-done' : 'todo-done'}" data-id="${h(x.id)}" aria-label="Marcar como hecho: ${h(x.text)}">${icon('check')}</button><span class="todo-txt">${h(x.text)}${x.meta || x.date ? `<span class="sub">${h(x.meta)}${x.meta && x.date ? ' · ' : ''}${x.date ? `para el ${shortDate(L.parseDate(x.date))}` : ''}</span>` : ''}</span>${due(x.date)}</li>`).join('')}</ul>` : '<p class="sub">Nada pendiente. Sumá algo, o ponele fecha a un material en Estudio y aparece acá hasta que lo termines.</p>'}
+      <form data-form="todo" class="todo-add"><input name="text" required maxlength="120" placeholder="Agregá algo para hacer" aria-label="Nuevo pendiente"><input name="date" type="date" aria-label="Para cuándo (opcional)"><button class="btn small" type="submit">Agregar</button></form>
+    </section>`;
     const dueRows = pendingDated().filter((p) => L.daysBetween(t, L.parseDate(p.date)) >= 0).sort((a, b) => a.date.localeCompare(b.date)).map((p) => {
       const n = L.daysBetween(t, L.parseDate(p.date));
       return `<li><span>${h(p.name)} <span class="pill">${h(kindOf(p).n)}</span><br><span class="sub">${h(matLabel(subjOfPractice(p)))} · ${cap(longDate(L.parseDate(p.date)))}</span></span><a class="days-to" href="#estudio">${n === 0 ? 'hoy' : n === 1 ? 'mañana' : `${n} días`}</a></li>`;
@@ -469,13 +505,13 @@
       ${cs.total ? `${careerStrip(!viewHoy.played)}<div class="zig-foot">${careerKey()}${milestoneChips()}</div>` : '<div class="empty"><b>Cargá tu plan de estudios.</b>Cada materia va a ser una baldosa que se llena a medida que aprobás.</div><div class="actions" style="justify-content:flex-start"><button class="btn" data-act="add-plan">Cargar plan de estudios</button></div>'}
     </section>
     <div class="grid g-hoy hoy-main">
-      <div class="stack"><section class="card">${todayHtml}</section>${lateHtml}</div>
+      <div class="stack"><section class="card">${todayHtml}</section>${lateHtml}${pendHtml}</div>
       ${matCards ? `<section class="card"><div class="card-head"><h2>Este cuatrimestre</h2><a class="linkish" href="#asistencia">Ver asistencia</a></div><div class="mat-grid">${matCards}</div></section>` : ''}
     </div>
     <div class="grid g-3 hoy-rest">
       <section class="card"><div class="card-head"><h2>Se viene</h2><button class="btn ghost small" data-act="add-agenda">Agregar fecha</button></div>
-        ${agendaRows || dueRows || lateDue || finalsRow ? `<ul class="list">${lateDue}${agendaRows}${dueRows}${finalsRow}</ul>` : ''}
-        ${!agendaRows && !dueRows && !lateDue ? '<p class="sub" style="margin-top:6px">Cargá parciales, entregas o inscripciones y aparecen acá con la cuenta regresiva.</p>' : ''}
+        ${agendaRows || finalsRow ? `<ul class="list">${agendaRows}${finalsRow}</ul>` : ''}
+        ${!agendaRows ? '<p class="sub" style="margin-top:6px">Cargá parciales, inscripciones o fechas de examen y aparecen acá con la cuenta regresiva.</p>' : ''}
       </section>
       <section class="card"><div class="card-head"><h2>Nota rápida</h2><span class="sub">Se guarda sola</span></div><textarea class="scratch" data-change="scratch" aria-label="Nota rápida" placeholder="Lo que no te querés olvidar para la próxima clase">${h(S.scratch)}</textarea></section>
       <section class="stack">
@@ -487,6 +523,19 @@
   }
 
   // ---------- ASISTENCIA
+  // Una columna por semana: qué porcentaje de las clases fuiste. La línea marca el mínimo.
+  function weekChart() {
+    const t = today();
+    const cells = L.allCells(S);
+    const cw = L.classWeeks(S).filter((w) => L.daysBetween(L.weekStart(S, w.n), t) >= 0);
+    const data = cw.map((w) => ({ ...L.tally(cells.filter((c) => c.week === w.n)), week: w.n })).filter((d) => d.taken);
+    if (data.length < 2) return '';
+    const min = S.settings.minAtt;
+    const bars = data.map((d) => `<div class="wc-col" data-tip="Semana ${d.week} · ${L.pct(d.pct)} (fuiste a ${d.p} de ${d.taken})"><i class="${d.pct < min ? 'low' : ''}" style="height:${Math.max(d.pct * 100, 2)}%"></i><span>${d.week}</span></div>`).join('');
+    return `<section class="card mt"><div class="card-head"><h2>Semana a semana</h2><span class="sub">Cuánto fuiste cada semana</span></div>
+      <div class="week-chart" role="img" aria-label="${h(data.map((d) => `Semana ${d.week}: ${L.pct(d.pct)}`).join(', '))}"><div class="wc-min" style="bottom:${min * 100}%"><span>mínimo ${L.pct(min)}</span></div>${bars}</div>
+      <div class="key" style="margin-top:8px"><span><i style="background:var(--accent)"></i>llegaste al mínimo</span><span><i style="background:var(--bad-ink)"></i>por debajo</span></div></section>`;
+  }
   function viewAsistencia() {
     if (!S.classes.length) {
       return '<header class="head"><div><h1>Asistencia</h1><p class="lead">Armá tu horario una vez y después solo marcás si fuiste.</p></div></header><section class="card"><div class="empty"><b>Todavía no hay clases cargadas.</b>Agregá las clases de cada materia con su día.</div><div class="actions" style="justify-content:flex-start"><button class="btn" data-act="schedule">Armar horario</button></div></section>';
@@ -552,6 +601,7 @@
     <header class="head"><div><h1>Asistencia</h1><p class="lead">Mínimo ${L.pct(S.settings.minAtt)} por materia. Las clases que todavía no pasaron no cuentan como falta.</p></div>
       <div class="figs"><div class="fig"><b>${L.pct(total.pct)}</b><span>${total.p} de ${total.taken} clases</span></div></div></header>
     <section class="card"><div class="grid g-2" style="gap:16px 28px">${matCards}</div></section>
+    ${weekChart()}
     ${phone}
     <section class="card mt att-desk"><div class="card-head"><h2>Grilla</h2><button class="btn ghost small" data-act="schedule">Editar horario</button></div><div class="table-wrap"><table class="att">
       <thead><tr class="day"><th class="sticky"></th>${groups.map((g) => `<th colspan="${g.n}" scope="colgroup">${L.DIAS[g.dow]}</th>`).join('')}<th></th></tr>
@@ -581,6 +631,11 @@
     }).join('');
     return `<section class="card"><div class="card-head"><h2>Del parcial 1 al 2</h2></div>
       <p class="imp-head">${headline}</p>
+      <p class="imp-explain">${imp.up > imp.down ? `Te suele ir mejor en los <b>segundos</b> parciales: subiste en ${imp.up} de ${imp.n} materias.` : imp.down > imp.up ? `Te suele ir mejor en los <b>primeros</b> parciales: en ${imp.down} de ${imp.n} materias bajaste en el segundo.` : 'Te va parecido en los dos parciales.'}</p>
+      <div class="pair-bars" role="img" aria-label="Promedio del parcial 1: ${L.fmt(imp.avgP1)}. Promedio del parcial 2: ${L.fmt(imp.avgP2)}.">
+        <div><span>Parcial 1</span><i style="width:${imp.avgP1 * 10}%" class="p1"></i><b>${L.fmt(imp.avgP1)}</b></div>
+        <div><span>Parcial 2</span><i style="width:${imp.avgP2 * 10}%" class="p2"></i><b>${L.fmt(imp.avgP2)}</b></div>
+      </div>
       <div class="imp-big">
         <div><b>${imp.up} de ${imp.n}</b><span>materias en las que mejoraste</span></div>
         <div><b>${L.fmt(imp.avgP1)} → ${L.fmt(imp.avgP2)}</b><span>tu promedio, de un parcial al otro</span></div>
@@ -667,6 +722,17 @@
   }
 
   // ---------- CARRERA
+  function yearChart() {
+    const subj = L.subjects(S);
+    const yrs = [...new Set(subj.map((c) => c.year))].sort((a, b) => a - b);
+    const rows = yrs.map((y) => {
+      const list = subj.filter((c) => c.year === y);
+      const a = list.filter(L.isApproved).length; const c = list.filter(L.isCurrent).length; const n = list.length;
+      return `<div class="yc-row" data-tip="${y}° año: ${a} aprobadas, ${c} cursando, ${n - a - c} por hacer"><span class="yc-lbl">${y}° año</span><span class="yc-bar"><i class="a" style="width:${ratio(a, n) * 100}%"></i><i class="c" style="width:${ratio(c, n) * 100}%"></i></span><span class="yc-val">${a} de ${n}</span></div>`;
+    }).join('');
+    return `<section class="card mt"><div class="card-head"><h2>Año por año</h2><span class="sub">Materias aprobadas de cada año</span></div>${rows}
+      <div class="key" style="margin-top:8px"><span><i style="background:var(--accent)"></i>aprobadas</span><span><i style="background:var(--hi-strong)"></i>cursando</span><span><i style="background:var(--none)"></i>por hacer</span></div></section>`;
+  }
   function viewCarrera() {
     const cs = L.careerStats(S);
     const st = S.settings;
@@ -689,7 +755,7 @@
     return `
     <header class="head"><div><h1>${h(st.career || 'Tu carrera')}</h1><p class="lead">${lead}</p></div>
       ${cs.total ? `<div class="figs"><div class="fig"><b>${L.pct(ratio(cs.approved, cs.total))}</b><span>de la carrera</span></div></div>` : ''}</header>
-    ${cs.total ? `<section class="card career">${careerStrip(false)}<div class="zig-foot">${careerKey()}</div></section>` : ''}
+    ${cs.total ? `<section class="card career">${careerStrip(false)}<div class="zig-foot">${careerKey()}</div></section>${yearChart()}` : ''}
     <section class="card mt"><div class="card-head"><h2>Plan de estudios</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost small" data-act="add-plan">Agregar materias</button>${cs.total ? '<button class="btn ghost small" data-act="add-mile">Agregar hito</button>' : ''}</span></div>${body || '<p class="sub">Todavía no hay materias. Pegá la lista de tu plan y se arma sola.</p>'}</section>`;
   }
 
@@ -1122,7 +1188,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
 
   // ---------- Diálogos
   const modal = () => $('#modal');
-  function openModal(html) { const m = modal(); m.innerHTML = `<button class="icon-btn close" data-act="close" aria-label="Cerrar">×</button>${html}`; if (!m.open) m.showModal(); }
+  function openModal(html) { const m = modal(); m.innerHTML = `<button class="icon-btn close" data-act="close" aria-label="Cerrar">×</button>${html}`; decorate(m); if (!m.open) m.showModal(); }
   function closeModal() { const m = modal(); if (m.open) m.close(); }
 
   function cellDialog(key) {
@@ -1166,6 +1232,21 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <div class="fields c2"><label class="field">Año<input inputmode="numeric" data-change="course" data-id="${h(id)}" data-f="year" value="${c.year}"></label><label class="field">${h(S.settings.termWord)}<select data-change="course" data-id="${h(id)}" data-f="sem">${['A', 'B', 'Anual'].map((v) => `<option value="${v}"${v === c.sem ? ' selected' : ''}>${v}</option>`).join('')}</select></label></div>
       <div class="actions"><button class="btn ghost small" data-act="retry" data-id="${h(id)}">Sumar otro intento</button><button class="btn ghost small danger" data-act="del-course" data-id="${h(id)}">Borrar materia</button></div>`);
   }
+  const TOUR = [
+    { i: 'hoy', t: 'Hoy', d: 'Tu día de un vistazo: las clases de hoy para marcar si fuiste, tus pendientes y lo que se viene. Es la pestaña para dejar siempre abierta.' },
+    { i: 'asistencia', t: 'Asistencia', d: 'Marcá Fui, Falté o No hubo. Te avisa cuántas faltas te quedan en cada materia. Tocá una clase para dejarle una nota.' },
+    { i: 'notas', t: 'Notas', d: 'Cargá tus parciales y te dice cuánto necesitás en el segundo. Ves tu promedio y cómo te va de un parcial al otro.' },
+    { i: 'carrera', t: 'Carrera', d: 'Tu plan de estudios entero: cada cuadradito es una materia. Tocala para cargar notas o cambiar si la aprobaste.' },
+    { i: 'estudio', t: 'Estudio', d: 'Prácticas, lecturas, videos y TP de cada materia. Si les ponés fecha, aparecen en Hoy hasta que los termines o venza el plazo.' },
+    { i: 'beneficios', t: 'Beneficios', d: 'Descuentos y cosas gratis por ser estudiante: transporte, cultura y programas.' },
+    { i: 'settings', t: 'Ajustes', d: 'Arriba a la derecha: colores, letra, tu horario y cómo instalarla en el celular. Esta guía también está ahí.' },
+  ];
+  function tourDialog(i) {
+    const s2 = TOUR[i]; const last = i === TOUR.length - 1;
+    openModal(`<div class="tour"><div class="tour-ico">${icon(s2.i)}</div><p class="tour-step">${i + 1} de ${TOUR.length}</p><h2 id="modal-title">${h(s2.t)}</h2><p>${h(s2.d)}</p>
+      <div class="tour-dots" aria-hidden="true">${TOUR.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
+      <div class="actions" style="justify-content:space-between">${i ? `<button class="btn ghost" data-act="tour-go" data-i="${i - 1}">Anterior</button>` : '<button class="linkish" data-act="tour-end">Saltar guía</button>'}<button class="btn" data-act="${last ? 'tour-end' : 'tour-go'}" data-i="${i + 1}">${last ? 'Empezar' : 'Siguiente'}</button></div></div>`);
+  }
   function settingsDialog() {
     const st = S.settings;
     openModal(`<h2 id="modal-title">Ajustes</h2><p class="sub">${h(me.email)}</p>
@@ -1178,6 +1259,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         ${yearField(st.entryYear)}
       </div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Colores</p>${themePicker()}
+      <hr class="divider"><p class="section-label" style="margin-top:0">¿Cómo se usa?</p><div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost" data-act="tour">Ver guía de uso</button></div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Tenela como app en el celular</p>${installHtml()}
       <hr class="divider"><p class="section-label" style="margin-top:0">Cuatrimestre</p><div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost" data-act="schedule">Editar horario</button></div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Tus datos</p>
@@ -1244,14 +1326,14 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     const v = $('#view');
     if (ui.recovery) { document.body.classList.add('bare'); v.innerHTML = viewRecovery(); return; }
     if (!S) { document.body.classList.add('bare'); v.innerHTML = viewAuth(); return; }
-    if (inWizard()) { document.body.classList.add('bare'); keepFocus(() => { v.innerHTML = viewWizard(); }); return; }
+    if (inWizard()) { document.body.classList.add('bare'); keepFocus(() => { v.innerHTML = viewWizard(); decorate(v); }); return; }
     document.body.classList.remove('bare');
     const r = route();
-    $('#tabs').innerHTML = Object.entries(VIEWS).map(([k, [n]]) => `<a href="#${k}"${k === r ? ' aria-current="page"' : ''}>${n}</a>`).join('');
+    $('#tabs').innerHTML = Object.entries(VIEWS).map(([k, [n]]) => `<a href="#${k}"${k === r ? ' aria-current="page"' : ''}>${icon(k)}<span>${n}</span></a>`).join('');
     const a = document.activeElement;
     if (a && a.dataset && a.dataset.change === 'scratch') return;
     const wrap = $('.table-wrap'); const sx = wrap ? wrap.scrollLeft : 0;
-    keepFocus(() => { v.innerHTML = VIEWS[r][1](); });
+    keepFocus(() => { v.innerHTML = VIEWS[r][1](); decorate(v); });
     if (r === 'hoy') viewHoy.played = true;
     const w2 = $('.table-wrap'); if (w2) w2.scrollLeft = sx;
   }
@@ -1357,13 +1439,13 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     async 'copy-prompt'(el) {
       try {
         await navigator.clipboard.writeText(el.dataset.prompt === 'sched' ? schedPrompt() : el.dataset.prompt === 'all' ? allPrompt() : AI_PROMPT);
-        el.textContent = 'Copiada';
-        setTimeout(() => { el.textContent = 'Copiar instrucción'; }, 2000);
+        setBtnText(el, 'Copiada');
+        setTimeout(() => { setBtnText(el, 'Copiar instrucción'); }, 2000);
       } catch (e) {
         const d = el.parentElement.querySelector('details'); d.open = true;
         const sel = getSelection(); const r = document.createRange();
         r.selectNodeContents($(el.dataset.prompt === 'sched' ? '#sched-prompt' : el.dataset.prompt === 'all' ? '#all-prompt' : '#ai-prompt')); sel.removeAllRanges(); sel.addRange(r);
-        el.textContent = 'Copiala con Cmd o Ctrl + C';
+        setBtnText(el, 'Copiala con Cmd o Ctrl + C');
       }
     },
     'sched-apply'() {
@@ -1375,6 +1457,19 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       reopen(scheduleDialog);
     },
     async install() { if (!installEvent) return; installEvent.prompt(); await installEvent.userChoice; installEvent = null; if (openDialogName() === 'Ajustes') settingsDialog(); },
+    'todo-done'(el) {
+      const x = (S.todos || []).find((y) => y.id === el.dataset.id);
+      if (!x) return;
+      mutate(() => { S.todos = S.todos.filter((y) => y !== x); }, `Hecho: ${x.text}`);
+    },
+    'mat-done'(el) {
+      const p = S.practices.find((y) => y.id === el.dataset.id);
+      if (!p) return;
+      mutate(() => { p.known = true; if (!p.items.length) { p.items = [true]; p.single = true; } else p.items = p.items.map(() => true); }, `Terminado: ${p.name}`);
+    },
+    tour: () => tourDialog(0),
+    'tour-go'(el) { tourDialog(+el.dataset.i); },
+    'tour-end'() { S.settings.tourDone = true; save(); closeModal(); },
     'change-password': passwordDialog,
     'change-email': emailDialog,
     greet(el) { S.settings.greet = el.dataset.v; save(); render(); },
@@ -1394,7 +1489,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       if (S.settings.wizStep === 1 && ui.planDraft.trim()) { applyPlan(ui.planDraft); ui.planDraft = ''; }
       S.settings.wizStep++; save(); render(); scrollTo(0, 0);
     },
-    'wiz-finish'() { S.settings.onboarded = true; S.courses.filter(L.isCurrent).forEach((c) => ensureColor(c.subj)); save(); location.hash = 'hoy'; render(); scrollTo(0, 0); },
+    'wiz-finish'() { S.settings.onboarded = true; S.courses.filter(L.isCurrent).forEach((c) => ensureColor(c.subj)); save(); location.hash = 'hoy'; render(); scrollTo(0, 0); if (!S.settings.tourDone) tourDialog(0); },
   };
 
   document.addEventListener('click', (e) => {
@@ -1601,8 +1696,9 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       reopen(scheduleDialog);
       return;
     }
-    if (kind !== 'prac') closeModal();
+    if (kind !== 'prac' && kind !== 'todo') closeModal();
     const id = uid(kind);
+    if (kind === 'todo') { mutate(() => { S.todos = S.todos || []; S.todos.push({ id, text: d.text.trim(), date: d.date || '' }); }, 'Pendiente agregado'); return; }
     if (kind === 'agenda') mutate(() => { S.agenda.push({ id, title: d.title.trim(), date: d.date }); }, 'Fecha agregada');
     if (kind === 'link') mutate(() => { S.links.push({ id, name: d.name.trim(), url: d.url.trim() }); }, 'Acceso agregado');
     if (kind === 'prac') {
