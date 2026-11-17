@@ -1,11 +1,12 @@
 // Beneficios para estudiantes. Revisados en noviembre de 2026 con fuentes oficiales o notas periodísticas.
 // Cambian seguido: cada uno lleva su link para confirmar antes de usarlo.
-// Para sumar uno, agregá un objeto a la lista con la misma forma.
+// Para sumar uno, agregá un objeto a la lista con la misma forma. `logo` es un archivo de icons/benefits/.
+// Los logos son de sus dueños y se muestran solo para reconocer cada lugar: no auspician CursadOK.
 window.CursadaBenefits = {
   checked: 'noviembre de 2026',
   items: [
     {
-      cat: 'transporte', where: 'CABA',
+      cat: 'transporte', where: 'CABA', logo: 'buenosaires', org: 'Gobierno de la Ciudad',
       title: 'Boleto Educativo de nivel superior',
       what: 'Viajes gratis en colectivo, subte y premetro los días de cursada presencial.',
       need: 'Alumno regular de una institución de la Ciudad, vivir en CABA y cumplir el requisito de ingresos del hogar. Se pide con DNI, certificado de alumno regular y comprobantes de ingresos.',
@@ -13,7 +14,7 @@ window.CursadaBenefits = {
       url: 'https://buenosaires.gob.ar/gcaba_historico/educacion/boleto-educativo',
     },
     {
-      cat: 'transporte', where: 'Provincia de Buenos Aires',
+      cat: 'transporte', where: 'Provincia de Buenos Aires', logo: 'gba', org: 'Provincia de Buenos Aires',
       title: 'Boleto Especial Educativo universitario',
       what: 'Viajes con descuento o gratis en colectivo: según el gobierno bonaerense, 45 viajes por mes.',
       need: 'Alumno regular de una universidad nacional o provincial con convenio y una SUBE a tu nombre. Algunas universidades piden materias aprobadas el año anterior.',
@@ -21,7 +22,7 @@ window.CursadaBenefits = {
       url: 'https://www.gba.gob.ar/transporte/boleto_estudiantil',
     },
     {
-      cat: 'transporte', where: 'Todo el país',
+      cat: 'transporte', where: 'Todo el país', logo: 'argentina', org: 'Gobierno nacional',
       title: '20% en micros de larga distancia',
       what: 'Descuento del 20% sobre la tarifa en servicios de ómnibus interurbanos, todo el año y sin restricción de recorrido.',
       need: 'DNI y certificado de alumno regular (y libreta universitaria si tu facu la emite).',
@@ -29,7 +30,60 @@ window.CursadaBenefits = {
       url: 'https://www.argentina.gob.ar/node/117837',
     },
     {
-      cat: 'programas', where: 'Online',
+      cat: 'cultura', where: 'CABA', logo: 'bellasartes', org: 'Museo Nacional de Bellas Artes',
+      title: 'Museo Nacional de Bellas Artes, gratis',
+      what: 'Entrada libre y gratuita para todo el mundo, con visitas guiadas también gratis.',
+      need: 'Nada: no hace falta ser estudiante.',
+      how: 'Revisá en la web del museo si piden reservar turno antes de ir.',
+      url: 'https://www.argentina.gob.ar/noticias/mayo-en-el-museo-nacional-de-bellas-artes',
+    },
+    {
+      cat: 'cultura', where: 'CABA', logo: 'malba', org: 'MALBA',
+      title: 'MALBA los miércoles',
+      what: 'Según la prensa, los miércoles estudiantes, docentes y jubilados entran sin cargo, y para el resto la entrada es reducida.',
+      need: 'Acreditar que sos estudiante.',
+      how: 'Se presenta la credencial o el certificado en la entrada.',
+      url: 'https://www.cronista.com/informacion-gral/el-museo-porteno-que-recibe-turistas-de-todo-el-mundo-y-tiene-un-precio-promocional-para-jubilados',
+      note: 'Fuente periodística: confirmalo en malba.org.ar antes de ir.',
+    },
+    {
+      cat: 'cultura', where: 'CABA', logo: 'colon', org: 'Teatro Colón',
+      title: 'Teatro Colón: visitas guiadas y funciones',
+      what: 'Según una nota de enero de 2026, estudiantes y jubilados tienen 50% de descuento en entradas y visitas guiadas.',
+      need: 'Credencial de estudiante y DNI.',
+      how: 'Se pide en la boletería del teatro. Los precios cambiaron en noviembre de 2026.',
+      url: 'https://www.canal26.com/turismo/2026/01/23/conoce-el-teatro-colon-por-menos-de-10000-la-oportunidad-ideal-para-recorrer-el-emblematico-recinto-de-caba/',
+      note: 'Fuente periodística: confirmalo en la boletería o en teatrocolon.org.ar.',
+    },
+    {
+      cat: 'cultura', where: 'CABA', logo: 'complejoteatral', org: 'Complejo Teatral de Buenos Aires',
+      title: 'Teatros San Martín, Alvear, Regio, Sarmiento y de la Ribera',
+      what: 'Descuento para estudiantes en las salas del Complejo Teatral de la Ciudad.',
+      need: 'Credencial o certificado de estudiante y DNI.',
+      how: 'El descuento se aplica solo en la boletería, no en la compra online. No se suma a otras promociones y depende de la disponibilidad.',
+      url: 'https://complejoteatral.gob.ar/',
+      note: 'El porcentaje no figura en una fuente oficial: preguntalo en la boletería.',
+    },
+    {
+      cat: 'cultura', where: 'CABA', logo: 'fortabat', org: 'Colección Fortabat',
+      title: 'Colección Fortabat: media entrada',
+      what: 'Según una guía de viaje, estudiantes con documento pagan la mitad, y los jueves la entrada es más barata para todos.',
+      need: 'Credencial o certificado de estudiante.',
+      how: 'Se presenta en la entrada del museo, en Puerto Madero.',
+      url: 'https://dicasargentina.com/buenos-aires/fortabat-art-collection-em-buenos-aires/',
+      note: 'Fuente no oficial: confirmalo con el museo antes de ir.',
+    },
+    {
+      cat: 'cultura', where: 'CABA', logo: 'buenosaires', org: 'Gobierno de la Ciudad',
+      title: 'Pase Cultural (si cursás el CBC)',
+      what: 'Crédito para cultura y 50% en cines como Cinemark Hoyts, Cinépolis y Atlas, y en varios teatros de la Ciudad.',
+      need: 'Ser estudiante del Ciclo Básico Común de la UBA (también alcanza a secundarios de escuelas públicas).',
+      how: 'Confirmá en el sitio de la Ciudad si sigue vigente y cómo se pide.',
+      url: 'https://www.iprofesional.com/actualidad/389631-pase-cultural-como-utilizarlo-comprar-entradas-y-pagar',
+      note: 'Fuente periodística: confirmalo en el sitio oficial.',
+    },
+    {
+      cat: 'programas', where: 'Online', logo: 'spotify', org: 'Spotify',
       title: 'Spotify Premium Estudiantes',
       what: 'Premium con descuento, y un mes gratis para empezar.',
       need: 'Estar inscripto en una institución de educación superior. Se vuelve a verificar cada 12 meses.',
@@ -37,7 +91,7 @@ window.CursadaBenefits = {
       url: 'https://support.spotify.com/ar/article/premium-student/',
     },
     {
-      cat: 'programas', where: 'Online',
+      cat: 'programas', where: 'Online', logo: 'microsoft', org: 'Microsoft',
       title: 'Microsoft 365 (Office) para educación',
       what: 'Word, Excel, PowerPoint, OneNote y Teams en la web, gratis.',
       need: 'Un mail de tu facultad que Microsoft reconozca.',
@@ -45,7 +99,7 @@ window.CursadaBenefits = {
       url: 'https://www.microsoft.com/es-ar/education/products/office',
     },
     {
-      cat: 'programas', where: 'Online',
+      cat: 'programas', where: 'Online', logo: 'notion', org: 'Notion',
       title: 'Notion Education Plus',
       what: 'El plan Plus de Notion gratis.',
       need: 'Entrar a Notion con el mail de tu facultad. No acepta Gmail ni otros comprobantes.',
@@ -53,7 +107,7 @@ window.CursadaBenefits = {
       url: 'https://www.notion.com/es/students',
     },
     {
-      cat: 'programas', where: 'Online',
+      cat: 'programas', where: 'Online', logo: 'github', org: 'GitHub',
       title: 'GitHub Student Developer Pack',
       what: 'GitHub Pro, Copilot y beneficios de varias herramientas para programar.',
       need: 'Ser estudiante de una institución que da título. Con mail de la facu es más rápido; si no, se puede probar con un comprobante de inscripción.',
@@ -61,7 +115,7 @@ window.CursadaBenefits = {
       url: 'https://education.github.com/pack',
     },
     {
-      cat: 'programas', where: 'Online',
+      cat: 'programas', where: 'Online', logo: 'figma', org: 'Figma',
       title: 'Figma para educación',
       what: 'El plan Professional de Figma gratis por un año, renovable mientras seas estudiante.',
       need: 'Mail de la facultad y verificación con SheerID.',
@@ -69,7 +123,7 @@ window.CursadaBenefits = {
       url: 'https://www.figma.com/education/',
     },
     {
-      cat: 'programas', where: 'Online',
+      cat: 'programas', where: 'Online', logo: 'autodesk', org: 'Autodesk',
       title: 'Autodesk para estudiantes',
       what: 'AutoCAD, Revit, Fusion y más, gratis por un año y renovable. Solo para estudiar, no para trabajos pagos.',
       need: 'Ser estudiante de nivel superior, mayor de 18, con mail de la facultad.',
@@ -77,21 +131,12 @@ window.CursadaBenefits = {
       url: 'https://www.autodesk.com/education/home',
     },
     {
-      cat: 'programas', where: 'Online',
+      cat: 'programas', where: 'Online', logo: 'jetbrains', org: 'JetBrains',
       title: 'JetBrains para estudiantes',
       what: 'IntelliJ IDEA, PyCharm y el resto de sus programas gratis por un año, renovable hasta que te recibas.',
       need: 'Mail de la universidad, credencial ISIC o el GitHub Student Developer Pack.',
       how: 'Se solicita en la página de licencias educativas de JetBrains.',
       url: 'https://www.jetbrains.com/student/',
-    },
-    {
-      cat: 'cultura', where: 'CABA',
-      title: 'Pase Cultural (si cursás el CBC)',
-      what: 'Crédito para cultura y 50% en cines como Cinemark Hoyts, Cinépolis y Atlas, según las notas publicadas.',
-      need: 'Ser estudiante del Ciclo Básico Común de la UBA (también alcanza a secundarios de escuelas públicas).',
-      how: 'Confirmá en el sitio de la Ciudad si sigue vigente y cómo se pide.',
-      url: 'https://www.iprofesional.com/actualidad/389631-pase-cultural-como-utilizarlo-comprar-entradas-y-pagar',
-      note: 'Fuente periodística: confirmalo en el sitio oficial.',
     },
   ],
 };

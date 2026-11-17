@@ -746,21 +746,21 @@
   // ---------- BENEFICIOS
   function viewBeneficios() {
     const B = window.CursadaBenefits || { items: [] };
-    const cats = [['', 'Todos'], ['transporte', 'Transporte'], ['programas', 'Programas y apps'], ['cultura', 'Cultura']];
+    const cats = [['', 'Todos'], ['transporte', 'Transporte'], ['cultura', 'Cultura'], ['programas', 'Programas y apps']];
     const f = ui.benefitFilter || '';
     const list = B.items.filter((b) => !f || b.cat === f);
     return `
     <header class="head"><div><h1>Beneficios</h1><p class="lead">Descuentos y cosas gratis por ser estudiante. La mayoría se piden con el certificado de alumno regular o con el mail de tu facu.</p></div></header>
     <div class="choice kind-chips" role="group" aria-label="Filtrar beneficios">${cats.map(([k, n]) => `<button data-act="benefit-filter" data-k="${k}" aria-pressed="${f === k}">${n}</button>`).join('')}</div>
     <div class="ben-grid mt">${list.map((b) => `<article class="card ben">
-      <div class="ben-top"><span class="pill">${h(b.where)}</span></div>
+      <div class="ben-top">${b.logo ? `<img class="ben-logo" src="icons/benefits/${h(b.logo)}.png" alt="" width="32" height="32" loading="lazy">` : ''}<span class="ben-org">${h(b.org || '')}</span><span class="pill">${h(b.where)}</span></div>
       <h2>${h(b.title)}</h2>
       <p class="ben-what">${h(b.what)}</p>
       <dl><dt>Qué necesitás</dt><dd>${h(b.need)}</dd><dt>Cómo se pide</dt><dd>${h(b.how)}</dd></dl>
       ${b.note ? `<p class="sub">${h(b.note)}</p>` : ''}
       <a class="linkish" href="${h(safeUrl(b.url))}" target="_blank" rel="noopener">Ver más</a>
     </article>`).join('')}</div>
-    <p class="sub mt">Revisados en ${h(B.checked)}. Los beneficios cambian seguido: confirmá en el link antes de usarlos.</p>`;
+    <p class="sub mt">Revisados en ${h(B.checked)}. Los beneficios cambian seguido: confirmá en el link antes de usarlos. Los logos son de sus dueños y están solo para que reconozcas cada lugar: ninguno auspicia ni está asociado a CursadOK.</p>`;
   }
 
   // ---------- Entrar

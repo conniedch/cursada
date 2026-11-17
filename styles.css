@@ -700,3 +700,7 @@ details.no-ai > summary { cursor: pointer; font-weight: 600; color: var(--ink-2)
   .ben-grid { grid-template-columns: minmax(0, 1fr); }
   .tabs a { font-size: 11px; padding: 11px 1px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+
+.ben-top { display: flex; align-items: center; gap: 10px; }
+.ben-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: contain; background: #fff; box-shadow: 0 0 0 1px var(--line); flex: none; }
+.ben-org { font-size: 13px; font-weight: 600; color: var(--ink-2); flex: 1; min-width: 0; }
