@@ -659,7 +659,7 @@ details.study[open] > summary .chev { transform: rotate(-135deg); margin-top: 4p
 .brand-logo { color: var(--accent); flex: none; }
 .brand > span { font-weight: 500; color: var(--ink-2); }
 .brand-ok { font-weight: 800; color: var(--accent); letter-spacing: -.01em; }
-.brand-logo { width: 30px; height: 22px; }
+.brand-logo { width: 24px; height: 24px; }
 
 /* ---- notas de clase como comentarios ---- */
 .note-chip { margin-left: 6px; border: 0; cursor: pointer; font: 600 11px var(--body); padding: 1px 7px 2px; border-radius: 9px 9px 9px 2px; background: var(--hi-strong); color: #121A2C; vertical-align: 2px; }
