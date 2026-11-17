@@ -660,3 +660,43 @@ details.study[open] > summary .chev { transform: rotate(-135deg); margin-top: 4p
 .brand > span { font-weight: 500; color: var(--ink-2); }
 .brand-ok { font-weight: 800; color: var(--accent); letter-spacing: -.01em; }
 .brand-logo { width: 30px; height: 22px; }
+
+/* ---- notas de clase como comentarios ---- */
+.note-chip { margin-left: 6px; border: 0; cursor: pointer; font: 600 11px var(--body); padding: 1px 7px 2px; border-radius: 9px 9px 9px 2px; background: var(--hi-strong); color: #121A2C; vertical-align: 2px; }
+.note-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-2); margin-right: 5px; vertical-align: 1px; }
+.comment { margin-top: 12px; padding: 10px 12px; border-left: 3px solid var(--hi-strong); background: var(--hi); color: var(--hi-ink); border-radius: 0 8px 8px 0; font-size: 14.5px; }
+.comment-tag { display: block; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; opacity: .8; }
+
+/* ---- encuesta: cargar la facu con IA ---- */
+.mini-h { font-size: 15px; font-weight: 700; margin: 16px 0 8px; }
+.mini-h:first-child { margin-top: 0; }
+.files3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.files3 div { background: var(--card-2); border-radius: 8px; padding: 11px 12px; }
+.files3 b { display: block; font-size: 14.5px; margin-bottom: 3px; }
+.files3 span { font-size: 13px; color: var(--ink-2); }
+.steps-ol { margin: 0 0 10px; padding-left: 20px; font-size: 14.5px; color: var(--ink-2); }
+.steps-ol li { margin-top: 3px; }
+.plan-ai { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.plan-ai details { flex-basis: 100%; }
+.ai-links { display: inline-flex; gap: 12px; font-size: 14px; }
+.ai-links a { color: var(--ink-2); }
+.all-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px 14px; margin-top: 4px; }
+.all-sum div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--line); padding: 4px 0; font-size: 13.5px; }
+.all-sum span { color: var(--muted); }
+details.no-ai { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+details.no-ai > summary { cursor: pointer; font-weight: 600; color: var(--ink-2); }
+.year-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+
+/* ---- beneficios ---- */
+.ben-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.ben h2 { font: 700 18px/1.25 var(--display); margin: 8px 0 4px; }
+.ben-what { font-size: 15px; }
+.ben dl { margin: 10px 0; font-size: 13.5px; }
+.ben dt { font-weight: 700; color: var(--ink-2); margin-top: 6px; }
+.ben dd { margin: 1px 0 0; color: var(--ink-2); }
+
+@media (max-width: 760px) {
+  .files3 { grid-template-columns: minmax(0, 1fr); }
+  .ben-grid { grid-template-columns: minmax(0, 1fr); }
+  .tabs a { font-size: 11px; padding: 11px 1px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}

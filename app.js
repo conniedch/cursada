@@ -9,7 +9,7 @@
   // ---------- Estado y guardado
   let S = null; let me = null; let rev = 0;
   let dirty = false; let inflight = false; let saveTimer = null; let deferring = false;
-  const ui = { kindFilter: null, openSubj: new Set(), authMode: 'login', authNotice: '', recovery: false, pracFilter: null, openPrac: new Set(), phoneWeek: null, msgI: Math.floor(Math.random() * 100), planDraft: '' };
+  const ui = { allDraft: '', benefitFilter: null, kindFilter: null, openSubj: new Set(), authMode: 'login', authNotice: '', recovery: false, pracFilter: null, openPrac: new Set(), phoneWeek: null, msgI: Math.floor(Math.random() * 100), planDraft: '' };
 
   const Backend = window.CursadaBackend;
   const api = (method, url, body) => Backend.request(method, url, body);
@@ -53,8 +53,8 @@
   function emptyState(user) {
     return {
       v: 2,
-      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', custom: { accent: '#674EA7', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Semestre', onboarded: false, wizStep: 0 },
-      classes: [], weeks: L.buildWeeks(16, [], []), att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', matColors: {}, history: [],
+      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', custom: { accent: '#674EA7', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
+      classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', matColors: {}, history: [],
     };
   }
   // Acepta datos viejos o importados y los deja en la forma actual.
@@ -310,11 +310,13 @@
     return `<div class="seg" role="group" aria-label="Estado de la clase">${['p', 'a', 'n'].map((s) => `<button data-act="mark" data-key="${key}" data-s="${s}" aria-pressed="${state === s}" aria-label="${STATE_WORD[s]}"><span class="g" aria-hidden="true">${STATE_GLYPH[s]}</span><span class="w">${STATE_WORD[s]}</span></button>`).join('')}</div>`;
   }
   function classRow(c, extra) {
-    return `<div class="class-row" style="--mc:${colorOf(c.cls.mat)}"><span class="dot"></span><div><b>${h(c.cls.name)}</b>${extra ? `<small>${h(extra)}</small>` : ''}</div>${segButtons(c.key, c.state)}</div>`;
+    const note = S.cellNotes[c.key];
+    const chip = note && note.t ? ` <button class="note-chip" data-act="cell" data-key="${c.key}" aria-label="Ver nota: ${h(note.t)}">nota</button>` : '';
+    return `<div class="class-row" style="--mc:${colorOf(c.cls.mat)}"><span class="dot"></span><div><b>${h(c.cls.name)}${chip}</b>${extra ? `<small>${h(extra)}</small>` : ''}</div>${segButtons(c.key, c.state)}</div>`;
   }
   function leftPill(m) {
-    if (m.left < 0) return `<span class="pill bad">! pasaste el límite por ${-m.left}</span>`;
-    if (m.left === 0) return '<span class="pill bad">! no te quedan faltas</span>';
+    if (m.left < 0) return `<span class="pill bad">Pasaste el límite por ${pl(-m.left, 'falta', 'faltas')}</span>`;
+    if (m.left === 0) return '<span class="pill bad">No te quedan faltas</span>';
     if (m.left === 1) return '<span class="pill hi">queda 1 falta</span>';
     return `<span class="pill ok">quedan ${m.left} faltas</span>`;
   }
@@ -445,7 +447,7 @@
       const n = L.daysBetween(t, L.parseDate(p.date));
       return `<li><span>${h(p.name)} <span class="pill">${h(kindOf(p).n)}</span><br><span class="sub">${h(matLabel(subjOfPractice(p)))} · ${cap(longDate(L.parseDate(p.date)))}</span></span><a class="days-to" href="#estudio">${n === 0 ? 'hoy' : n === 1 ? 'mañana' : `${n} días`}</a></li>`;
     }).join('');
-    const lateDue = pendingDated().filter((p) => L.daysBetween(t, L.parseDate(p.date)) < 0).map((p) => `<li><span>${h(p.name)} <span class="pill bad">! venció</span><br><span class="sub">${h(matLabel(subjOfPractice(p)))} · ${cap(longDate(L.parseDate(p.date)))}</span></span><a class="days-to" href="#estudio">ver</a></li>`).join('');
+    const lateDue = pendingDated().filter((p) => L.daysBetween(t, L.parseDate(p.date)) < 0).map((p) => `<li><span>${h(p.name)} <span class="pill bad">Venció</span><br><span class="sub">${h(matLabel(subjOfPractice(p)))} · ${cap(longDate(L.parseDate(p.date)))}</span></span><a class="days-to" href="#estudio">ver</a></li>`).join('');
     const finalsRow = finalsDate && L.daysBetween(t, finalsDate) >= 0 ? `<li><span>Semana de finales<br><span class="sub">Desde el ${longDate(finalsDate)}</span></span><span class="days-to">${L.daysBetween(t, finalsDate)} días</span></li>` : '';
 
     const prRows = pracSubjects().map((k) => {
@@ -504,7 +506,7 @@
       const note = S.cellNotes[c.key];
       const isToday = L.daysBetween(c.date, t) === 0;
       const word = c.state ? STATE_WORD[c.state] : 'sin cargar';
-      const tip = `${c.cls.name} · ${L.DIAS[c.cls.dow]} ${shortDate(c.date)} · ${word}${note ? ` · “${note.t}”` : ''}`;
+      const tip = `${c.cls.name} · ${L.DIAS[c.cls.dow]} ${shortDate(c.date)} · ${c.holiday && !S.att[c.key] ? 'feriado' : word}${note ? ` · “${note.t}”` : ''}`;
       return `<button class="cell ${mini ? 'mini ' : ''}${c.state || ''}${isToday ? ' today' : ''}${note ? ' noted' : ''}${note && note.check ? ' check' : ''}" data-act="cell" data-key="${c.key}" ${mini ? '' : `data-tip="${h(tip)}"`} aria-label="${h(tip)}">${STATE_GLYPH[c.state] || ''}</button>`;
     };
     const rows = S.weeks.map((w, idx) => {
@@ -546,14 +548,6 @@
       return `<div><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:5px;flex-wrap:wrap"><b style="display:inline-flex;align-items:center;gap:6px"><span class="dot" style="--mc:${colorOf(m)}"></span>${h(matLabel(m))}</b>${leftPill(s)}</div>${stitch(s.pct, { mark: S.settings.minAtt, warn: s.left < 0, n: 30 })}<p class="sub" style="margin-top:4px"><span class="num">${L.pct(s.pct)}</span> · faltaste ${s.a} de ${s.taken} · quedan ${pl(s.pending, 'clase', 'clases')}</p></div>`;
     }).join('');
 
-    const noteItems = Object.entries(S.cellNotes).map(([k, n]) => {
-      const c = cells.find((x) => x.key === k);
-      if (!c || !n.t) return null;
-      return { sort: c.week, html: `<li><span>${n.check ? '<span class="pill bad">! revisar</span> ' : ''}${h(n.t)}<br><span class="sub">Sem ${c.week} · ${h(c.cls.name)} · marcada ${c.state ? `“${STATE_WORD[c.state].toLowerCase()}”` : 'sin cargar'}</span></span><button class="btn ghost small" data-act="cell" data-key="${k}">Abrir</button></li>` };
-    }).filter(Boolean);
-    Object.entries(S.weekNotes || {}).forEach(([w, t2]) => noteItems.push({ sort: +w, html: `<li><span>${h(t2)}<br><span class="sub">Sem ${w}</span></span></li>` }));
-    noteItems.sort((a, b) => a.sort - b.sort);
-
     return `
     <header class="head"><div><h1>Asistencia</h1><p class="lead">Mínimo ${L.pct(S.settings.minAtt)} por materia. Las clases que todavía no pasaron no cuentan como falta.</p></div>
       <div class="figs"><div class="fig"><b>${L.pct(total.pct)}</b><span>${total.p} de ${total.taken} clases</span></div></div></header>
@@ -565,14 +559,13 @@
       <tbody>${rows}</tbody>
       <tfoot><tr><th class="sticky">Por clase</th>${foot}<td></td></tr></tfoot>
     </table></div>
-    <div class="key" style="margin-top:12px"><span>✓ fui</span><span>✕ falté</span><span>– no hubo clase</span><span>vacío: sin cargar</span><span>● tiene nota</span></div></section>
-    <div class="grid g-2 mt">
+    <div class="key" style="margin-top:12px"><span>✓ fui</span><span>✕ falté</span><span>– no hubo clase o feriado</span><span>vacío: sin cargar</span><span><span class="note-dot"></span>tiene nota: tocala para leerla</span></div></section>
+    <div class="mt">
       <section class="card"><div class="card-head"><h2>Tus números</h2></div><div class="mini-stats">
         <div><b>${st.current}</b><span>clases seguidas sin faltar</span></div>
         <div><b>${st.best}</b><span>tu mejor racha</span></div>
         <div><b>${worst && worst.a ? cap(L.DIAS[worst.dow]) : '–'}</b><span>${worst && worst.a ? `el día que más faltás: ${L.pct(worst.a / (worst.a + worst.p))} de las clases` : 'sin faltas todavía'}</span></div>
       </div></section>
-      <section class="card"><div class="card-head"><h2>Notas de las clases</h2><span class="sub">${pl(noteItems.length, 'nota', 'notas')}</span></div><ul class="list">${noteItems.map((n) => n.html).join('') || '<li class="sub">Tocá una clase para anotarle algo.</li>'}</ul></section>
     </div>
     <div class="actions att-phone" style="justify-content:flex-start"><button class="btn ghost" data-act="schedule">Editar horario</button></div>`;
   }
@@ -750,6 +743,26 @@
     <div class="actions" style="justify-content:flex-start"><button class="btn ghost" data-act="add-prac" data-course="">Agregar material de otra materia</button></div>`;
   }
 
+  // ---------- BENEFICIOS
+  function viewBeneficios() {
+    const B = window.CursadaBenefits || { items: [] };
+    const cats = [['', 'Todos'], ['transporte', 'Transporte'], ['programas', 'Programas y apps'], ['cultura', 'Cultura']];
+    const f = ui.benefitFilter || '';
+    const list = B.items.filter((b) => !f || b.cat === f);
+    return `
+    <header class="head"><div><h1>Beneficios</h1><p class="lead">Descuentos y cosas gratis por ser estudiante. La mayoría se piden con el certificado de alumno regular o con el mail de tu facu.</p></div></header>
+    <div class="choice kind-chips" role="group" aria-label="Filtrar beneficios">${cats.map(([k, n]) => `<button data-act="benefit-filter" data-k="${k}" aria-pressed="${f === k}">${n}</button>`).join('')}</div>
+    <div class="ben-grid mt">${list.map((b) => `<article class="card ben">
+      <div class="ben-top"><span class="pill">${h(b.where)}</span></div>
+      <h2>${h(b.title)}</h2>
+      <p class="ben-what">${h(b.what)}</p>
+      <dl><dt>Qué necesitás</dt><dd>${h(b.need)}</dd><dt>Cómo se pide</dt><dd>${h(b.how)}</dd></dl>
+      ${b.note ? `<p class="sub">${h(b.note)}</p>` : ''}
+      <a class="linkish" href="${h(safeUrl(b.url))}" target="_blank" rel="noopener">Ver más</a>
+    </article>`).join('')}</div>
+    <p class="sub mt">Revisados en ${h(B.checked)}. Los beneficios cambian seguido: confirmá en el link antes de usarlos.</p>`;
+  }
+
   // ---------- Entrar
   function viewAuth() {
     const mode = ui.authMode;
@@ -787,7 +800,7 @@
   }
 
   // ---------- Primeros pasos
-  const WIZ = ['Vos', 'Plan', 'Materias', 'Horario', 'Colores'];
+  const WIZ = ['Vos', 'Tu facu', 'Materias', 'Cuatrimestre', 'Colores'];
   function planPreviewHtml(text) {
     const p = L.parsePlan(text);
     if (!p.items.length) return text.trim() ? 'No encontré materias. Revisá que haya una por línea.' : 'Acá vas a ver las materias que detectemos.';
@@ -878,6 +891,127 @@ Reglas:
     return added;
   }
   const PLAN_HINT = '1er año\nSemestre A\nÁlgebra\nEconomía I\nSemestre B\nCálculo\n\n2do año\n...';
+  function allPrompt() {
+    const term = S.settings.termWord || 'Cuatrimestre';
+    const year = today().getFullYear();
+    return `Te voy a pasar hasta tres archivos de mi facultad: el plan de estudios de mi carrera, mi horario semanal y el calendario académico. Ordená todo con este formato exacto, en cuatro secciones:
+
+PLAN
+1er año
+${term} 1
+Nombre de la materia
+Nombre de la materia
+${term} 2
+Nombre de la materia
+2do año
+${term} 1
+Nombre de la materia
+
+HORARIO
+Lunes
+Teórica - Nombre de la materia
+Práctica - Nombre de la materia
+Jueves
+Tutorial - Nombre de la materia
+
+CALENDARIO
+Inicio de clases: AAAA-MM-DD
+Fin de clases: AAAA-MM-DD
+Parciales: AAAA-MM-DD a AAAA-MM-DD
+Finales: AAAA-MM-DD a AAAA-MM-DD
+Feriados:
+AAAA-MM-DD
+
+FECHAS
+AAAA-MM-DD - Parcial 1 - Nombre de la materia
+AAAA-MM-DD - Entrega TP 1 - Nombre de la materia
+
+Reglas:
+- PLAN: todas las materias de la carrera, una por línea, con el nombre tal cual figura. Sin códigos, horas ni correlativas. Las materias que duran todo el año van debajo de un título "Anual".
+- HORARIO: solo lo que curso este ${term.toLowerCase()}. Un renglón por clase: tipo, un guion y la materia con el mismo nombre que en el PLAN. Si una materia tiene dos bloques el mismo día, escribí el renglón dos veces. Sin horarios, aulas ni profesores.
+- CALENDARIO: las fechas del ${term.toLowerCase()} que estoy cursando ahora. Si no te paso el calendario académico, en Feriados poné los feriados nacionales de Argentina de ${year} que caen en esas fechas, y dejá vacíos Parciales y Finales.
+- FECHAS: parciales, recuperatorios, entregas y finales de cada materia que aparezcan en los archivos.
+- Si te falta un archivo, dejá su sección vacía. No inventes nada. Si una parte no se lee, avisame antes del bloque.
+- Respondé con todo dentro de un solo bloque de código, para copiarlo fácil.`;
+  }
+  function tempSubjects(planText) {
+    // Materias del plan pegado más las que ya están cargadas, para reconocer el horario antes de guardar.
+    const known = L.subjects(S);
+    const fresh = L.parsePlan(planText).items.filter((it) => !known.some((c) => c.subj === L.slug(it.name))).map((it) => ({ id: `nuevo:${L.slug(it.name)}`, subj: L.slug(it.name), name: it.name, short: '' }));
+    return [...known, ...fresh];
+  }
+  function allPreviewHtml(text) {
+    if (!text.trim()) return '';
+    const r = L.parseAll(text);
+    if (!r.found) return '<p class="auth-note">No encontré las secciones PLAN, HORARIO, CALENDARIO o FECHAS. Copiá la respuesta completa de la IA, con los títulos.</p>';
+    const plan = L.parsePlan(r.planText).items;
+    const sched = L.parseSchedule(r.schedText, tempSubjects(r.planText));
+    const c = r.calendar;
+    const d = (x) => (x ? shortDate(L.parseDate(x)) : '–');
+    const rows = [
+      ['Plan de estudios', plan.length ? pl(plan.length, 'materia', 'materias') : 'vacío'],
+      ['Horario', sched.items.length ? pl(sched.items.length, 'clase por semana', 'clases por semana') : 'vacío'],
+      ['Cuatrimestre', c.start ? `del ${d(c.start)} al ${d(c.end)}` : 'sin fechas'],
+      ['Parciales', c.parciales ? `del ${d(c.parciales[0])} al ${d(c.parciales[1])}` : '–'],
+      ['Finales', c.finales ? `del ${d(c.finales[0])} al ${d(c.finales[1])}` : '–'],
+      ['Feriados', c.holidays.length ? pl(c.holidays.length, 'día', 'días') : '–'],
+      ['Fechas de materias', r.fechas.length ? pl(r.fechas.length, 'fecha', 'fechas') : '–'],
+    ];
+    return `<div class="all-sum">${rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>${sched.unknown.length ? `<p class="auth-note">Del horario no reconocí: ${sched.unknown.map(h).join(', ')}. Fijate que esas materias estén en el plan.</p>` : ''}`;
+  }
+  function addScheduleItems(items) {
+    const groups = {};
+    items.forEach((it) => { const k = `${it.dow}|${it.courseId}|${it.tipo}`; groups[k] = (groups[k] || 0) + 1; });
+    const seen = {};
+    items.forEach((it) => {
+      const co = course(it.courseId);
+      if (!co) return;
+      if (!L.isCurrent(co)) co.status = 'cursando';
+      ensureColor(co.subj);
+      const k = `${it.dow}|${it.courseId}|${it.tipo}`;
+      seen[k] = (seen[k] || 0) + 1;
+      const base = `${it.tipo} ${label(co)}`;
+      S.classes.push({ id: uid('c'), name: groups[k] > 1 ? `${base} · bloque ${seen[k]}` : base, mat: co.subj, course: co.id, dow: it.dow });
+    });
+    S.classes.sort((a, b) => a.dow - b.dow);
+  }
+  function recomputeWeeks() {
+    const st = S.settings;
+    if (!st.semFirst) return;
+    const r = L.weeksFromDates(st.semFirst, st.semEnd || st.semFirst, st.parcFrom ? [st.parcFrom, st.parcTo || st.parcFrom] : null, st.finFrom ? [st.finFrom, st.finTo || st.finFrom] : null);
+    st.semStart = r.semStart; S.weeks = r.weeks;
+  }
+  function applyAll(text) {
+    const r = L.parseAll(text);
+    if (!r.found) return null;
+    const added = applyPlan(r.planText);
+    const sched = L.parseSchedule(r.schedText, L.subjects(S));
+    addScheduleItems(sched.items);
+    const c = r.calendar; const st = S.settings;
+    if (c.start) {
+      st.semFirst = c.start; st.semEnd = c.end || '';
+      [st.parcFrom, st.parcTo] = c.parciales || ['', ''];
+      [st.finFrom, st.finTo] = c.finales || ['', ''];
+      recomputeWeeks();
+    }
+    if (c.holidays.length) S.holidays = [...new Set([...(S.holidays || []), ...c.holidays])].sort();
+    r.fechas.forEach((f) => { if (!S.agenda.some((a) => a.date === f.date && a.title === f.title)) S.agenda.push({ id: uid('agenda'), title: f.title, date: f.date }); });
+    return { plan: added, classes: sched.items.length, dates: !!c.start, fechas: r.fechas.length };
+  }
+  // Fechas del cuatrimestre: las guardadas, o deducidas de las semanas si se cargó antes de este cambio.
+  function calValues() {
+    const st = S.settings;
+    const wk = (k) => S.weeks.filter((w) => w.kind === k).map((w) => w.n);
+    const mon = (n) => L.iso(L.weekStart(S, n));
+    const fri = (n) => L.iso(L.addDays(L.weekStart(S, n), 4));
+    const range = (k) => { const n = wk(k); return n.length ? [mon(n[0]), fri(n[n.length - 1])] : ['', '']; };
+    const lastClass = L.lastClassWeek(S);
+    const p = range('parciales'); const f = range('finales');
+    return {
+      semFirst: st.semFirst || st.semStart, semEnd: st.semEnd || (lastClass ? fri(lastClass) : ''),
+      parcFrom: st.parcFrom || p[0], parcTo: st.parcTo || p[1], finFrom: st.finFrom || f[0], finTo: st.finTo || f[1],
+    };
+  }
   function schedPrompt() {
     const names = S.courses.filter(L.isCurrent).map((c) => c.name);
     return `Te paso mi horario de cursada de este cuatrimestre. Armalo con este formato exacto:
@@ -902,24 +1036,29 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     const list = days.map((d) => `<li><b>${cap(L.DIAS[d])}</b>${r.items.filter((i) => i.dow === d).map((i) => `${h(i.tipo)} ${h(label(course(i.courseId)))}`).join(' · ')}</li>`).join('');
     return `${r.items.length ? `Encontré <b>${pl(r.items.length, 'clase', 'clases')}</b>.` : 'No encontré clases. Revisá que cada día esté como título.'}${r.unknown.length ? `<p class="auth-note">No reconocí estas materias: ${r.unknown.map(h).join(', ')}. Fijate que estén en tu plan, en Carrera.</p>` : ''}<ul class="plan-list">${list}</ul>${r.items.length ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><button type="button" class="btn" data-act="sched-apply">Agregar ${pl(r.items.length, 'clase', 'clases')}</button></div>` : ''}`;
   }
-  function scheduleHtml() {
+  function scheduleHtml(opts = {}) {
     const st = S.settings;
-    const nums = (k) => S.weeks.filter((w) => w.kind === k).map((w) => w.n).join(', ');
     const cur = S.courses.filter(L.isCurrent);
     const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const cv = calValues();
+    const hol = (S.holidays || []).map((x) => shortDate(L.parseDate(x)) + '/' + x.slice(0, 4)).join(', ');
     return `<div class="fields c2">
-      <label class="field">Primer lunes del cuatrimestre<input type="date" data-change="sem" data-f="semStart" value="${h(st.semStart)}"></label>
-      <label class="field">Semanas en total<input inputmode="numeric" data-change="sem" data-f="total" value="${S.weeks.length}"></label>
-      <label class="field">Semanas de parciales<input data-change="sem" data-f="parciales" value="${h(nums('parciales'))}" placeholder="9, 10"></label>
-      <label class="field">Semanas de finales<input data-change="sem" data-f="finales" value="${h(nums('finales'))}" placeholder="18, 19"></label>
-      <label class="field">Asistencia mínima (%)<input inputmode="numeric" data-change="sem" data-f="minAtt" value="${Math.round(st.minAtt * 100)}"></label>
-    </div><p class="err" id="sem-err" role="alert"></p>
-    <section class="plan-way sched-ai"><h3>Cargalo con tu IA <span class="pill ok">la más fácil</span></h3>
+      <label class="field">Empiezan las clases<input type="date" data-change="cal" data-f="semFirst" value="${h(cv.semFirst)}"></label>
+      <label class="field">Terminan las clases<input type="date" data-change="cal" data-f="semEnd" value="${h(cv.semEnd)}"></label>
+      <label class="field">Parciales desde<input type="date" data-change="cal" data-f="parcFrom" value="${h(cv.parcFrom)}"></label>
+      <label class="field">Parciales hasta<input type="date" data-change="cal" data-f="parcTo" value="${h(cv.parcTo)}"></label>
+      <label class="field">Finales desde<input type="date" data-change="cal" data-f="finFrom" value="${h(cv.finFrom)}"></label>
+      <label class="field">Finales hasta<input type="date" data-change="cal" data-f="finTo" value="${h(cv.finTo)}"></label>
+      <label class="field">Asistencia mínima (%)<input inputmode="numeric" data-change="cal" data-f="minAtt" value="${Math.round(st.minAtt * 100)}"></label>
+    </div>
+    <label class="field" style="margin-top:12px">Feriados y días sin clase<textarea rows="2" data-change="cal" data-f="holidays" placeholder="17/08/2026, 12/10/2026">${h(hol)}</textarea><span class="sub" style="font-weight:400">Esas clases quedan como "no hubo" solas. Separalos con coma.</span></label>
+    <p class="err" id="sem-err" role="alert"></p>
+    ${opts.ai === false ? '' : `<section class="plan-way sched-ai"><h3>Cargalo con tu IA <span class="pill ok">la más fácil</span></h3>
       <ol><li>Sacale una captura a tu horario del campus o del sistema de tu facu.</li><li>Copiá esta instrucción, pegala en ChatGPT, Claude o Gemini y adjuntá la captura.</li><li>Pegá la respuesta acá abajo y tocá <b>Agregar</b>.</li></ol>
       <div class="plan-ai"><button type="button" class="btn ghost" data-act="copy-prompt" data-prompt="sched">Copiar instrucción</button><details><summary>Ver la instrucción</summary><pre class="prompt-box" id="sched-prompt" tabindex="0">${h(schedPrompt())}</pre></details></div>
       <textarea class="plan-in sched-in" id="sched-text" aria-label="Horario pegado" placeholder="Lunes&#10;Teórica - Cálculo&#10;Tutorial - Cálculo&#10;Martes&#10;..."></textarea>
       <div class="ok-line" id="sched-preview" aria-live="polite"></div>
-    </section>
+    </section>`}
     <p class="section-label">Tus clases</p>
     <div>${S.classes.map((c) => `<div class="cls-row"><span style="display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="dot" style="--mc:${colorOf(c.mat)}"></span>${h(c.name)} <span class="sub">${L.DIAS[c.dow]}</span></span><button class="linkish" data-act="del-class" data-id="${h(c.id)}" aria-label="Borrar ${h(c.name)}">Borrar</button></div>`).join('') || '<p class="sub">Todavía no agregaste clases.</p>'}</div>
     ${cur.length ? `<form data-form="class"><div class="fields c2" style="margin-top:12px">
@@ -940,20 +1079,41 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <section class="card">
         <label class="field">Cómo te llamamos<input data-change="setting" data-f="name" value="${h(st.name)}" maxlength="40"></label>
         <p class="section-label">Cómo querés que te saludemos</p><div class="choice" style="margin-top:6px">${GREETS.map((g) => `<button data-act="greet" data-v="${g}" aria-pressed="${st.greet === g}">${g}</button>`).join('')}</div>
-        <div class="fields c2">${comboField('Universidad', 'university', 'universities', st.university)}${comboField('Carrera', 'career', 'careers', st.career)}${yearField(st.entryYear)}</div>
+        <div class="fields c2">${comboField('Universidad', 'university', 'universities', st.university)}${comboField('Carrera', 'career', 'careers', st.career)}${yearField(st.entryYear)}
+          <label class="field">Año que estás cursando<select data-change="setting" data-f="year"><option value="">Elegí</option>${['1', '2', '3', '4', '5', '6'].map((y) => `<option value="${y}"${String(st.year) === y ? ' selected' : ''}>${y}° año</option>`).join('')}</select></label></div>
+        <p class="section-label">¿Cómo se divide el año en tu carrera?</p><div class="choice" style="margin-top:6px">${[['Cuatrimestre', 'Cuatrimestres'], ['Semestre', 'Semestres'], ['Trimestre', 'Trimestres']].map(([v, n]) => `<button data-act="term-word" data-v="${v}" aria-pressed="${st.termWord === v}">${n}</button>`).join('')}</div>
+        <p class="sub" style="margin-top:6px">Si tenés materias anuales, igual elegí cómo se divide el resto: las anuales se marcan solas.</p>
         <hr class="divider"><p class="sub">Si ya tenés una copia de tus datos, importala y salteás todo esto.</p>
         <div class="actions" style="justify-content:flex-start;margin-top:8px"><label class="btn ghost plan-file">Importar copia<input class="vh" type="file" data-change="import" aria-label="Importar copia de tus datos"></label></div><p class="err" id="set-err" role="alert"></p>
       </section>${nav('Seguir')}`;
     } else if (step === 1) {
-      body = `<h1>Tu plan de estudios</h1><p class="lead">Cargá las materias de tu carrera una sola vez. Elegí la forma que te quede más cómoda.</p>
-      <section class="card">${planInputHtml(ui.planDraft, S.courses.length && !ui.planDraft ? `Ya tenés ${pl(S.courses.length, 'materia cargada', 'materias cargadas')}. Lo que agregues se suma.` : '')}</section>${nav('Seguir', 'Lo cargo después')}`;
+      body = `<h1>Cargá tu facu con IA</h1><p class="lead">Con tres archivos que ya tenés, una IA arma tu plan, tu horario y tu calendario. Te lleva unos minutos.</p>
+      <section class="card">
+        <h3 class="mini-h">1. Juntá estos archivos</h3>
+        <div class="files3">
+          <div><b>Plan de estudios</b><span>El de tu carrera. Está en la web de tu facu: PDF o captura.</span></div>
+          <div><b>Horario semanal</b><span>Captura de tu horario en el campus o en el sistema de inscripción.</span></div>
+          <div><b>Calendario académico</b><span>Si tu facu no publica uno, no pasa nada: la IA usa los feriados nacionales.</span></div>
+        </div>
+        <h3 class="mini-h">2. Pasáselos a tu IA</h3>
+        <ol class="steps-ol"><li>Tocá <b>Copiar instrucción</b>.</li><li>Abrí la IA que uses, pegá la instrucción y subí los archivos en el mismo mensaje.</li><li>Copiá el bloque que te responde.</li></ol>
+        <div class="plan-ai"><button type="button" class="btn" data-act="copy-prompt" data-prompt="all">Copiar instrucción</button>
+          <span class="ai-links"><a href="https://chatgpt.com/" target="_blank" rel="noopener">ChatGPT</a><a href="https://claude.ai/" target="_blank" rel="noopener">Claude</a><a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini</a></span>
+          <details><summary>Ver la instrucción</summary><pre class="prompt-box" id="all-prompt" tabindex="0">${h(allPrompt())}</pre></details></div>
+        <h3 class="mini-h">3. Pegá la respuesta acá</h3>
+        <textarea class="plan-in" id="all-text" aria-label="Respuesta de la IA" placeholder="PLAN&#10;1er año&#10;...&#10;&#10;HORARIO&#10;Lunes&#10;...">${h(ui.allDraft || '')}</textarea>
+        <div class="ok-line" id="all-preview" aria-live="polite">${allPreviewHtml(ui.allDraft || '')}</div>
+        <p class="sub" style="margin-top:10px">Antes de subirlos, fijate que los archivos no tengan datos personales que no quieras compartir.</p>
+        <details class="no-ai"><summary>¿Preferís no usar IA?</summary><p class="sub" style="margin:8px 0">Cargá solo el plan de estudios. El horario y las fechas los completás en el paso siguiente.</p>${planInputHtml(ui.planDraft, S.courses.length && !ui.planDraft ? `Ya tenés ${pl(S.courses.length, 'materia cargada', 'materias cargadas')}. Lo que agregues se suma.` : '')}</details>
+      </section>${nav('Seguir', 'Lo hago después')}`;
     } else if (step === 2) {
       const yrs = [...new Set(S.courses.map((c) => c.year))].sort((a, b) => a - b);
       const opts = [['proximamente', 'Falta'], ['cursando', 'Cursando'], ['aprobada 1ra instancia', 'Aprobada']];
-      const list = yrs.map((y) => `<h2 class="year-h" style="margin-top:12px">${y}° año</h2>${S.courses.filter((c) => c.year === y).map((c) => `<div class="subj-row"><span style="flex:1 1 180px">${h(c.name)}</span><span style="display:flex;gap:8px;align-items:center">${L.isApproved(c) ? `<input class="grade-in" inputmode="decimal" placeholder="Nota" aria-label="Nota final de ${h(c.name)}" data-change="grade" data-id="${h(c.id)}" data-f="final" value="${h(c.final == null ? '' : L.fmt(c.final))}">` : ''}<span class="seg" role="group" aria-label="Estado de ${h(c.name)}">${opts.map(([v, n]) => `<button data-act="wiz-status" data-id="${h(c.id)}" data-s="${v}" aria-pressed="${c.status === v}">${n}</button>`).join('')}</span></span></div>`).join('')}`).join('');
-      body = `<h1>¿En qué andás?</h1><p class="lead">Marcá lo que ya aprobaste y lo que estás cursando. La nota es opcional.</p><section class="card">${list || '<p class="sub">Sin plan cargado todavía: podés agregarlo después desde Carrera.</p>'}<p class="err" id="grade-err" role="alert"></p></section>${nav('Seguir', 'Lo hago después')}`;
+      const list = yrs.map((y) => `<div class="year-row"><h2 class="year-h" style="margin-top:12px">${y}° año</h2><button class="btn ghost small" data-act="year-approve" data-y="${y}">Marcar todo aprobado</button></div>${S.courses.filter((c) => c.year === y).map((c) => `<div class="subj-row"><span style="flex:1 1 180px">${h(c.name)}</span><span style="display:flex;gap:8px;align-items:center">${L.isApproved(c) ? `<input class="grade-in" inputmode="decimal" placeholder="Nota" aria-label="Nota final de ${h(c.name)}" data-change="grade" data-id="${h(c.id)}" data-f="final" value="${h(c.final == null ? '' : L.fmt(c.final))}">` : ''}<span class="seg" role="group" aria-label="Estado de ${h(c.name)}">${opts.map(([v, n]) => `<button data-act="wiz-status" data-id="${h(c.id)}" data-s="${v}" aria-pressed="${c.status === v}">${n}</button>`).join('')}</span></span></div>`).join('')}`).join('');
+      const hint = st.year && +st.year > 1 ? `<p class="auth-note">Estás en ${st.year}° año: marcá lo que ya aprobaste de los años anteriores.</p>` : '';
+      body = `<h1>¿Qué ya aprobaste?</h1><p class="lead">Marcá las materias que aprobaste y poné la nota final: con eso calculamos tu promedio. Lo que cursás ahora va como <b>Cursando</b>.</p>${hint}<section class="card">${list || '<p class="sub">Sin plan cargado todavía: podés agregarlo después desde Carrera.</p>'}<p class="err" id="grade-err" role="alert"></p></section>${nav('Seguir', 'Lo hago después')}`;
     } else if (step === 3) {
-      body = `<h1>Tu horario</h1><p class="lead">Agregá las clases de cada materia. Después solo marcás si fuiste.</p><section class="card">${scheduleHtml()}</section>${nav('Seguir', 'Lo armo después')}`;
+      body = `<h1>Tu ${h((st.termWord || 'cuatrimestre').toLowerCase())}</h1><p class="lead">Revisá las fechas y tus clases. Si cargaste con IA, ya está casi todo.</p><section class="card">${scheduleHtml({ ai: false })}</section>${nav('Seguir', 'Lo armo después')}`;
     } else {
       body = `<h1>Hacelo tuyo</h1><p class="lead">Elegí un tema o tu propio color. Se aplica al toque.</p><section class="card">${themePicker()}</section>${nav('Entrar a mi panel')}`;
     }
@@ -972,7 +1132,9 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     const d = L.cellDate(S, +w, c);
     const state = S.att[key] || null;
     const note = S.cellNotes[key];
-    openModal(`<h2 id="modal-title">${h(c.name)}</h2><p class="sub">Semana ${w} · ${longDate(d)}</p>
+    const holiday = (S.holidays || []).includes(L.iso(d));
+    openModal(`<h2 id="modal-title">${h(c.name)}</h2><p class="sub">Semana ${w} · ${longDate(d)}${holiday ? ' · feriado' : ''}</p>
+      ${note && note.t ? `<div class="comment"><span class="comment-tag">${note.check ? 'Para revisar' : 'Tu nota'}</span>${h(note.t)}</div>` : ''}
       <div style="margin-top:14px">${segButtons(key, state)} ${state ? `<button class="linkish" style="margin:8px 0 0 2px;display:inline-block" data-act="mark" data-key="${key}" data-s="">Dejar sin cargar</button>` : ''}</div>
       <label class="field" style="margin-top:14px">Nota<textarea rows="2" data-change="cell-note" data-key="${key}" placeholder="Cancelada, consultar, tema de la clase…">${h(note ? note.t : '')}</textarea></label>
       ${note && note.check ? `<div class="actions" style="justify-content:flex-start"><button class="btn ghost small" data-act="resolve" data-key="${key}">Ya lo revisé</button></div>` : ''}`);
@@ -1016,6 +1178,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         ${yearField(st.entryYear)}
       </div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Colores</p>${themePicker()}
+      <hr class="divider"><p class="section-label" style="margin-top:0">Tenela como app en el celular</p>${installHtml()}
       <hr class="divider"><p class="section-label" style="margin-top:0">Cuatrimestre</p><div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost" data-act="schedule">Editar horario</button></div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Tus datos</p>
       <div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost" data-act="export">Exportar copia</button><label class="btn ghost plan-file">Importar copia<input class="vh" type="file" data-change="import" aria-label="Importar copia de tus datos"></label></div>
@@ -1071,7 +1234,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   }
 
   // ---------- Render
-  const VIEWS = { hoy: ['Hoy', viewHoy], asistencia: ['Asistencia', viewAsistencia], notas: ['Notas', viewNotas], carrera: ['Carrera', viewCarrera], estudio: ['Estudio', viewMaterial] };
+  const VIEWS = { hoy: ['Hoy', viewHoy], asistencia: ['Asistencia', viewAsistencia], notas: ['Notas', viewNotas], carrera: ['Carrera', viewCarrera], estudio: ['Estudio', viewMaterial], beneficios: ['Beneficios', viewBeneficios] };
   const route = () => { const r = location.hash.slice(1); if (r === 'practicas' || r === 'material') return 'estudio'; return VIEWS[r] ? r : 'hoy'; };
   const inWizard = () => S && !S.settings.onboarded;
   function render() {
@@ -1148,6 +1311,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     'ex-add'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); const n = p.items.length + 1; mutate(() => { p.items.push(true); }, `${p.name}: ${kindOf(p).one} ${n} tildado`); },
     'prac-all'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); mutate(() => { p.items = p.items.map(() => true); }, `${p.name}: todo tildado`); },
     'del-prac'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); closeModal(); mutate(() => { S.practices = S.practices.filter((x) => x !== p); }, `${p.name}: borrado`); },
+    'benefit-filter'(el) { ui.benefitFilter = el.dataset.k || null; render(); },
     'kind-filter'(el) { ui.kindFilter = el.dataset.k || null; render(); },
     'edit-prac': (el) => pracDialog('', el.dataset.id),
     'pick-week'(el) { ui.phoneWeek = +el.dataset.w; render(); },
@@ -1158,7 +1322,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       mutate(() => {
         S.history = S.history || [];
         S.history.push({ label: `Hasta ${shortDate(today())}/${today().getFullYear()}`, pct: t.pct, classes: S.classes, weeks: S.weeks, att: S.att, cellNotes: S.cellNotes });
-        S.classes = []; S.att = {}; S.cellNotes = {}; S.weekNotes = {}; S.weeks = L.buildWeeks(16, [], []); S.settings.semStart = L.iso(mondayOf(today()));
+        S.classes = []; S.att = {}; S.cellNotes = {}; S.weekNotes = {}; S.weeks = L.buildWeeks(16, [], []); S.settings.semStart = L.iso(mondayOf(today())); Object.assign(S.settings, { semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '' }); S.holidays = [];
       }, 'Cuatrimestre archivado');
       scheduleDialog();
     },
@@ -1192,13 +1356,13 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     },
     async 'copy-prompt'(el) {
       try {
-        await navigator.clipboard.writeText(el.dataset.prompt === 'sched' ? schedPrompt() : AI_PROMPT);
+        await navigator.clipboard.writeText(el.dataset.prompt === 'sched' ? schedPrompt() : el.dataset.prompt === 'all' ? allPrompt() : AI_PROMPT);
         el.textContent = 'Copiada';
         setTimeout(() => { el.textContent = 'Copiar instrucción'; }, 2000);
       } catch (e) {
         const d = el.parentElement.querySelector('details'); d.open = true;
         const sel = getSelection(); const r = document.createRange();
-        r.selectNodeContents($(el.dataset.prompt === 'sched' ? '#sched-prompt' : '#ai-prompt')); sel.removeAllRanges(); sel.addRange(r);
+        r.selectNodeContents($(el.dataset.prompt === 'sched' ? '#sched-prompt' : el.dataset.prompt === 'all' ? '#all-prompt' : '#ai-prompt')); sel.removeAllRanges(); sel.addRange(r);
         el.textContent = 'Copiala con Cmd o Ctrl + C';
       }
     },
@@ -1207,29 +1371,26 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       const r = L.parseSchedule(t.value, L.subjects(S));
       if (!r.items.length) return;
       const n = r.items.length;
-      mutate(() => {
-        const groups = {};
-        r.items.forEach((it) => { const k = `${it.dow}|${it.courseId}|${it.tipo}`; groups[k] = (groups[k] || 0) + 1; });
-        const seen = {};
-        r.items.forEach((it) => {
-          const co = course(it.courseId);
-          if (!L.isCurrent(co)) co.status = 'cursando';
-          ensureColor(co.subj);
-          const k = `${it.dow}|${it.courseId}|${it.tipo}`;
-          seen[k] = (seen[k] || 0) + 1;
-          const base = `${it.tipo} ${label(co)}`;
-          S.classes.push({ id: uid('c'), name: groups[k] > 1 ? `${base} · bloque ${seen[k]}` : base, mat: co.subj, course: co.id, dow: it.dow });
-        });
-        S.classes.sort((a, b) => a.dow - b.dow);
-      }, inWizard() ? null : `${pl(n, 'clase agregada', 'clases agregadas')}`);
+      mutate(() => addScheduleItems(r.items), inWizard() ? null : `${pl(n, 'clase agregada', 'clases agregadas')}`);
       reopen(scheduleDialog);
     },
+    async install() { if (!installEvent) return; installEvent.prompt(); await installEvent.userChoice; installEvent = null; if (openDialogName() === 'Ajustes') settingsDialog(); },
     'change-password': passwordDialog,
     'change-email': emailDialog,
     greet(el) { S.settings.greet = el.dataset.v; save(); render(); },
     'wiz-status'(el) { const c = course(el.dataset.id); c.status = el.dataset.s; if (L.isCurrent(c)) ensureColor(c.subj); save(); render(); },
     'wiz-back'() { S.settings.wizStep--; save(); render(); scrollTo(0, 0); },
+    'term-word'(el) { S.settings.termWord = el.dataset.v; save(); render(); },
+    'year-approve'(el) {
+      S.courses.filter((c) => c.year === +el.dataset.y && !L.isCurrent(c)).forEach((c) => { c.status = 'aprobada 1ra instancia'; });
+      save(); render();
+    },
     'wiz-next'() {
+      if (S.settings.wizStep === 1 && (ui.allDraft || '').trim()) {
+        const r = applyAll(ui.allDraft);
+        if (!r) { const pv = $('#all-preview'); if (pv) pv.innerHTML = allPreviewHtml(ui.allDraft); return; }
+        ui.allDraft = '';
+      }
       if (S.settings.wizStep === 1 && ui.planDraft.trim()) { applyPlan(ui.planDraft); ui.planDraft = ''; }
       S.settings.wizStep++; save(); render(); scrollTo(0, 0);
     },
@@ -1263,28 +1424,33 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     const est = $('#est-val');
     if (est) est.textContent = L.fmt(L.estimate(c));
   }
-  function semChange(el) {
+  function calChange(el) {
     const f = el.dataset.f; const err = $('#sem-err');
     const fail = (m) => { if (err) err.textContent = m; };
     if (err) err.textContent = '';
-    const quiet = inWizard() ? null : 'Horario guardado';
+    const quiet = inWizard() ? null : 'Fechas guardadas';
+    const st = S.settings;
     if (f === 'minAtt') {
       const n = Number(el.value);
       if (!(n >= 0 && n <= 100)) return fail('La asistencia mínima va de 0 a 100.');
-      mutate(() => { S.settings.minAtt = n / 100; }, quiet);
-    } else if (f === 'semStart') {
-      if (!el.value || L.dow(L.parseDate(el.value)) !== 0) return fail('Elegí un día que sea lunes: la grilla arranca por ahí.');
-      mutate(() => { S.settings.semStart = el.value; }, quiet);
-    } else {
-      const form = el.closest('dialog, section');
-      const total = f === 'total' ? parseInt(el.value, 10) : S.weeks.length;
-      if (!(total >= 1 && total <= 40)) return fail('Poné una cantidad de semanas entre 1 y 40.');
-      const val = (k) => $(`[data-change="sem"][data-f="${k}"]`, form).value;
-      const par = L.parseWeekList(val('parciales'), total);
-      const fin = L.parseWeekList(val('finales'), total);
-      if (!par || !fin) return fail(`Las semanas de parciales y finales tienen que ser números del 1 al ${total}, separados por coma.`);
-      mutate(() => { S.weeks = L.buildWeeks(total, par, fin); }, quiet);
+      mutate(() => { st.minAtt = n / 100; }, quiet);
+      return undefined;
     }
+    if (f === 'holidays') {
+      const year = +(calValues().semFirst || L.iso(today())).slice(0, 4);
+      const list = el.value.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean);
+      const dates = list.map((x) => L.parseDateLoose(x, year));
+      if (dates.some((d) => !d)) return fail('Escribí los feriados como fechas: 17/08/2026, 12/10/2026.');
+      mutate(() => { S.holidays = [...new Set(dates)].sort(); }, quiet);
+      return undefined;
+    }
+    const cv = calValues();
+    const next = { ...cv, [f]: el.value };
+    if (!next.semFirst) return fail('Poné cuándo empiezan las clases.');
+    if (next.semEnd && next.semEnd < next.semFirst) return fail('El fin de clases tiene que ser después del inicio.');
+    if (next.parcFrom && next.parcTo && next.parcTo < next.parcFrom) return fail('Revisá las fechas de parciales: el "hasta" va después del "desde".');
+    if (next.finFrom && next.finTo && next.finTo < next.finFrom) return fail('Revisá las fechas de finales: el "hasta" va después del "desde".');
+    mutate(() => { Object.assign(st, next); recomputeWeeks(); }, quiet);
     return undefined;
   }
   document.addEventListener('change', (e) => {
@@ -1293,7 +1459,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     deferring = true;
     try {
       if (kind === 'grade') gradeChange(el);
-      if (kind === 'sem') semChange(el);
+      if (kind === 'cal') calChange(el);
       if (kind === 'course') {
         const c = course(el.dataset.id); const f = el.dataset.f;
         let v = el.value;
@@ -1353,6 +1519,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   document.addEventListener('input', (e) => {
     const t = e.target;
     if (t.dataset && t.dataset.change === 'scratch') { S.scratch = t.value; clearTimeout(scratchTimer); scratchTimer = setTimeout(save, 300); }
+    if (t.id === 'all-text') { ui.allDraft = t.value; const pv = $('#all-preview'); if (pv) pv.innerHTML = allPreviewHtml(t.value); }
     if (t.id === 'sched-text') { const pv = $('#sched-preview'); if (pv) pv.innerHTML = schedPreviewHtml(t.value); }
     if (t.id === 'plan-text') {
       if (inWizard()) ui.planDraft = t.value;
@@ -1502,6 +1669,19 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       if (r.status === 200 && r.data.rev !== rev && !dirty) { S = migrate(r.data.state); rev = r.data.rev; render(); }
     } catch (e) { /* sin conexión: seguimos con lo que hay */ }
   });
+
+  // Instalar como app: Android ofrece el botón; en iPhone se explica cómo hacerlo.
+  let installEvent = null;
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvent = e; });
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  function installHtml() {
+    if (isStandalone()) return '<p class="sub">Ya la estás usando como app.</p>';
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (installEvent) return '<div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn" data-act="install">Instalar CursadOK</button></div>';
+    if (ios) return '<p class="sub">En iPhone: abrí CursadOK en Safari, tocá <b>Compartir</b> y después <b>Agregar a inicio</b>.</p>';
+    return '<p class="sub">En Android: abrí CursadOK en Chrome, tocá el menú de los tres puntos y elegí <b>Instalar app</b> o <b>Agregar a la pantalla principal</b>.</p>';
+  }
 
   (async function boot() {
     render();

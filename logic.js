@@ -33,7 +33,11 @@
     const out = [];
     for (const w of classWeeks(s)) {
       for (const c of s.classes) {
-        out.push({ week: w.n, cls: c, key: `${w.n}:${c.id}`, state: s.att[`${w.n}:${c.id}`] || null, date: cellDate(s, w.n, c) });
+        const date = cellDate(s, w.n, c);
+        let state = s.att[`${w.n}:${c.id}`] || null;
+        const holiday = !!(s.holidays && s.holidays.includes(iso(date)));
+        if (!state && holiday) state = 'n'; // feriado: no hubo clase, sin que haya que marcarlo
+        out.push({ week: w.n, cls: c, key: `${w.n}:${c.id}`, state, date, holiday });
       }
     }
     return out;
@@ -267,6 +271,89 @@
     return { items, unknown };
   }
 
+  // ---------- Calendario por fechas (en vez de contar semanas)
+  function parseDateLoose(t, year) {
+    const x = String(t).trim();
+    let m = /(\d{4})-(\d{1,2})-(\d{1,2})/.exec(x);
+    if (m) return iso(new Date(+m[1], +m[2] - 1, +m[3]));
+    m = /(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2,4}))?/.exec(x);
+    if (m) {
+      let y = m[3] ? +m[3] : year;
+      if (!y) return null;
+      if (y < 100) y += 2000;
+      const d = new Date(y, +m[2] - 1, +m[1]);
+      return d.getMonth() === +m[2] - 1 ? iso(d) : null;
+    }
+    return null;
+  }
+  const DATE_ANY = /\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?/g;
+  function datesIn(line, year) { return (String(line).match(DATE_ANY) || []).map((d) => parseDateLoose(d, year)).filter(Boolean); }
+
+  function parseCalendar(text) {
+    const cal = { start: null, end: null, parciales: null, finales: null, holidays: [] };
+    const lines = String(text).split(/\r?\n/).map((l) => l.replace(/^\s*(?:[-*•·]|\d+[.)])\s+/, '').replace(/\*\*|__/g, '').trim()).filter(Boolean);
+    const firstYear = (() => { for (const l of lines) { const m = /(20\d{2})/.exec(l); if (m) return +m[1]; } return null; })();
+    let inHolidays = false;
+    for (const l of lines) {
+      const low = plain(l);
+      const ds = datesIn(l, firstYear);
+      if (/^feriado/.test(low)) { inHolidays = true; cal.holidays.push(...ds); continue; }
+      if (/^(inicio|comienzo|empiezan|arranca)/.test(low) && ds[0]) { cal.start = ds[0]; inHolidays = false; continue; }
+      if (/^(fin|final de clases|terminan|cierre)/.test(low) && !/^finales/.test(low) && ds[0]) { cal.end = ds[ds.length - 1]; inHolidays = false; continue; }
+      if (/^parcial/.test(low) && ds[0]) { cal.parciales = [ds[0], ds[ds.length - 1]]; inHolidays = false; continue; }
+      if (/^(finales|mesas|examenes finales)/.test(low) && ds[0]) { cal.finales = [ds[0], ds[ds.length - 1]]; inHolidays = false; continue; }
+      if (inHolidays && ds.length) cal.holidays.push(...ds);
+    }
+    cal.holidays = [...new Set(cal.holidays)].sort();
+    return cal;
+  }
+  // Fechas de cada materia: "2026-09-28 - Parcial 1 - Cálculo"
+  function parseFechas(text, year) {
+    const out = [];
+    for (const raw of String(text).split(/\r?\n/)) {
+      const l = raw.replace(/^\s*(?:[-*•·]|\d+[.)])\s+/, '').replace(/\*\*|__/g, '').trim();
+      const ds = datesIn(l, year);
+      if (!ds.length) continue;
+      const title = l.replace(DATE_ANY, ' ').replace(/^[\s:,–—-]+|[\s:,–—-]+$/g, '').replace(/\s+[-–—]\s+/g, ' · ').replace(/\s+/g, ' ').trim();
+      if (title) out.push({ date: ds[0], title });
+    }
+    return out;
+  }
+  // La respuesta completa de la IA: secciones PLAN, HORARIO, CALENDARIO y FECHAS.
+  function parseAll(text) {
+    const parts = { plan: [], horario: [], calendario: [], fechas: [] };
+    let cur = null;
+    for (const raw of String(text).split(/\r?\n/)) {
+      if (/^\s*(```|~~~)/.test(raw)) continue;
+      const head = plain(raw.replace(/^\s*#{1,6}\s*/, '').replace(/\*\*|__/g, '').replace(/:\s*$/, ''));
+      if (/^plan( de estudios?)?$/.test(head)) { cur = 'plan'; continue; }
+      if (/^horarios?( semanal(es)?)?$/.test(head)) { cur = 'horario'; continue; }
+      if (/^calendario( academico)?$/.test(head)) { cur = 'calendario'; continue; }
+      if (/^(fechas|examenes|fechas de examenes|fechas importantes)$/.test(head)) { cur = 'fechas'; continue; }
+      if (cur) parts[cur].push(raw);
+    }
+    const cal = parseCalendar(parts.calendario.join('\n'));
+    const year = cal.start ? +cal.start.slice(0, 4) : null;
+    return { planText: parts.plan.join('\n'), schedText: parts.horario.join('\n'), calendar: cal, fechas: parseFechas(parts.fechas.join('\n'), year), found: Object.values(parts).some((x) => x.length) };
+  }
+  // Semanas del cuatrimestre a partir de las fechas.
+  function weeksFromDates(start, end, parciales, finales) {
+    const first = parseDate(start);
+    const monday = addDays(first, -dow(first));
+    const last = [end, finales && finales[1], parciales && parciales[1]].filter(Boolean).map(parseDate).reduce((a, b) => (b > a ? b : a), first);
+    const total = Math.max(1, Math.min(40, Math.floor(daysBetween(monday, last) / 7) + 1));
+    const overlaps = (w, r) => {
+      if (!r) return false;
+      const a = addDays(monday, (w - 1) * 7); const b = addDays(a, 4);
+      return parseDate(r[0]) <= b && parseDate(r[1]) >= a;
+    };
+    const weeks = Array.from({ length: total }, (_, i) => {
+      const n = i + 1;
+      return { n, kind: overlaps(n, finales) ? 'finales' : overlaps(n, parciales) ? 'parciales' : 'clases' };
+    });
+    return { semStart: iso(monday), weeks };
+  }
+
   function parseGrade(raw) {
     const t = String(raw).trim().replace(',', '.');
     if (t === '') return { ok: true, value: null };
@@ -275,5 +362,5 @@
     return { ok: true, value: n };
   }
 
-  root.CursadaLogic = { DIAS, MESES, parseDate, iso, addDays, daysBetween, dow, avg, fmt, pct, weekNumber, weekStart, cellDate, classWeeks, lastClassWeek, firstWeekOf, allCells, tally, materiaStats, streaks, absencesByDay, pendingPast, isApproved, isCurrent, estimate, subjects, careerStats, semesterAverages, needed, parseGrade, parseSchedule, improvements, slug, parsePlan, parseWeekList, buildWeeks };
+  root.CursadaLogic = { DIAS, MESES, parseDate, iso, addDays, daysBetween, dow, avg, fmt, pct, weekNumber, weekStart, cellDate, classWeeks, lastClassWeek, firstWeekOf, allCells, tally, materiaStats, streaks, absencesByDay, pendingPast, isApproved, isCurrent, estimate, subjects, careerStats, semesterAverages, needed, parseGrade, parseSchedule, parseDateLoose, parseCalendar, parseFechas, parseAll, weeksFromDates, improvements, slug, parsePlan, parseWeekList, buildWeeks };
 })(typeof window !== 'undefined' ? window : globalThis);

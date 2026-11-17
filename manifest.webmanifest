@@ -1,0 +1,16 @@
+{
+  "name": "CursadOK",
+  "short_name": "CursadOK",
+  "description": "Tu carrera en una pestaña: asistencia, notas, estudio y plan de estudios.",
+  "lang": "es-AR",
+  "start_url": "./#hoy",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ECEEF2",
+  "theme_color": "#22305A",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
