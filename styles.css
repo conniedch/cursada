@@ -769,3 +769,60 @@ details.no-ai > summary { cursor: pointer; font-weight: 600; color: var(--ink-2)
   .wc-col span { font-size: 9.5px; }
   .yc-row { grid-template-columns: 52px minmax(0, 1fr) 48px; gap: 8px; }
 }
+
+/* ---- avisos arriba: festejos, alertas y tendencias ---- */
+.insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin: -4px 0 14px; }
+.ins { display: flex; gap: 12px; align-items: flex-start; padding: 13px 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
+.ins b { display: block; font-size: 15px; line-height: 1.25; }
+.ins span { display: block; font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.ins-ic { position: relative; flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; margin-top: 0; }
+.ins-ic .ico { width: 20px; height: 20px; }
+.ins.win { background: var(--ok); border-color: transparent; }
+.ins.win .ins-ic { background: var(--ok-ink); color: #fff; }
+.ins.win b, .ins.win span { color: var(--ok-ink); }
+.ins.warn { background: var(--bad); border-color: transparent; }
+.ins.warn .ins-ic { background: var(--bad-ink); color: #fff; }
+.ins.warn b, .ins.warn span { color: var(--bad-ink); }
+.ins.info .ins-ic { background: var(--card-2); color: var(--accent); }
+/* papelitos que saltan una vez cuando hay algo para festejar */
+.confetti { position: absolute; inset: 0; pointer-events: none; }
+.confetti b { position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; border-radius: 1px; background: var(--hi-strong); opacity: 0; }
+.confetti b:nth-child(2) { background: var(--accent); }
+.confetti b:nth-child(4) { background: #E85D75; }
+@media (prefers-reduced-motion: no-preference) {
+  .confetti b { animation: pop-out .9s ease-out .2s 2 both; }
+  .confetti b:nth-child(1) { --x: -20px; --y: -18px; }
+  .confetti b:nth-child(2) { --x: 18px; --y: -20px; animation-delay: .25s; }
+  .confetti b:nth-child(3) { --x: 22px; --y: 8px; animation-delay: .3s; }
+  .confetti b:nth-child(4) { --x: -22px; --y: 10px; animation-delay: .22s; }
+  .confetti b:nth-child(5) { --x: 2px; --y: -26px; animation-delay: .28s; }
+  @keyframes pop-out { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.6); } 100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(120deg) scale(1); } }
+}
+
+/* ---- Se viene: cuenta regresiva ---- */
+.list li.cd { justify-content: flex-start; gap: 12px; }
+.cd-n { flex: none; width: 52px; height: 52px; border-radius: 12px; background: var(--card-2); display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 4px solid var(--mc, var(--line)); }
+.cd-n b { font: 700 20px/1 var(--display); }
+.cd-n small { font-size: 11px; color: var(--muted); }
+.cd.soon .cd-n { background: var(--hi); }
+.cd-txt { flex: 1; min-width: 0; font-weight: 500; }
+.cd-txt .sub { display: block; font-weight: 400; font-size: 12.5px; }
+
+@media (max-width: 760px) {
+  /* Hoy en el celular: solo lo que se usa al toque */
+  .hide-on-phone { display: none !important; }
+  .mat .grades { display: none; }
+  .insights { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 8px; margin: 0 -16px 12px; padding: 0 16px 4px; }
+  .ins { flex: 0 0 82%; scroll-snap-align: start; }
+  .figs { display: none; }
+  /* Progreso en el celular: una barra simple, más fácil de leer en chico */
+  .stitch, [data-progress] .stitch { gap: 0 !important; height: 10px; align-items: center; }
+  .stitch i, [data-progress] .stitch i { margin-top: 0 !important; height: 10px !important; border-radius: 0 !important; flex: 1 !important; aspect-ratio: auto !important; }
+  .stitch i:first-child { border-radius: 5px 0 0 5px !important; }
+  .stitch i:last-child { border-radius: 0 5px 5px 0 !important; }
+  .stitch i.mark { outline: 0; box-shadow: inset -2px 0 0 var(--ink); }
+}
+@media (max-width: 760px) {
+  .weeks, [data-progress] .weeks { gap: 2px; height: 10px; }
+  .weeks i, [data-progress] .weeks i { margin-top: 0 !important; height: 10px; border-radius: 2px !important; }
+}

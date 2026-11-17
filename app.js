@@ -146,6 +146,10 @@
     guide: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01',
     settings: 'M4 7h10M18 7h2M4 17h2M10 17h10M16 4v6M8 14v6',
     check: 'M5 12l5 5 9-10',
+    spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8',
+    alert: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
+    bulb: 'M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z',
+    clock: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2',
   };
   const icon = (name) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON_PATHS[name]}"/></svg>`;
   // Les pone ícono a los botones que más se usan, sin tocar el texto.
@@ -398,7 +402,7 @@
     if (st.current >= 3) out.push(`Vas ${st.current} clases seguidas sin faltar.`);
     const fin = L.firstWeekOf(S, 'finales');
     if (fin) { const n = L.daysBetween(t, L.weekStart(S, fin)); if (n > 0) out.push(`Faltan ${pl(n, 'día', 'días')} para la semana de finales.`); }
-    const dated = [...S.agenda.map((a) => ({ title: a.title, date: a.date })), ...pendingDated().map((p) => ({ title: `${p.name} de ${matLabel(subjOfPractice(p))}`, date: p.date }))];
+    const dated = [...S.agenda.map((a) => ({ title: examPhrase(a), date: a.date })), ...pendingDated().map((p) => ({ title: `${p.name} de ${matLabel(subjOfPractice(p))}`, date: p.date }))];
     const next = dated.filter((a) => L.daysBetween(t, L.parseDate(a.date)) >= 0).sort((a, b) => a.date.localeCompare(b.date))[0];
     if (next) { const n = L.daysBetween(t, L.parseDate(next.date)); out.push(`${next.title}: ${n === 0 ? 'es hoy' : n === 1 ? 'es mañana' : `en ${n} días`}.`); }
     const cs = L.careerStats(S);
@@ -420,6 +424,34 @@
   }, 20000);
 
   // ---------- HOY
+  // Lo que la app nota de tus datos: festejos, alertas y tendencias. Los más importantes primero.
+  function insights() {
+    const t = today(); const out = [];
+    const st = L.streaks(S);
+    if (st.absent >= 2) out.push({ tone: 'warn', ic: 'alert', t: `Llevás ${st.absent} faltas seguidas`, d: `Fueron en ${st.absentIn.map(matLabel).join(', ')}. Mirá cuántas faltas te quedan en cada una.` });
+    const stats = mats().map((m) => ({ m, s: L.materiaStats(S, m) })).filter((x) => x.s.taken);
+    const tight = stats.filter((x) => x.s.left <= 1).sort((a, b) => a.s.left - b.s.left)[0];
+    if (tight) out.push({ tone: 'warn', ic: 'alert', t: tight.s.left < 0 ? `En ${matLabel(tight.m)} pasaste el límite de faltas` : tight.s.left === 0 ? `En ${matLabel(tight.m)} no te quedan faltas` : `En ${matLabel(tight.m)} te queda 1 falta`, d: `Llevás ${L.pct(tight.s.pct)} de asistencia, y el mínimo es ${L.pct(S.settings.minAtt)}.` });
+    if (st.current >= 3) out.push({ tone: 'win', ic: 'spark', t: `Vas ${st.current} clases seguidas sin faltar`, d: st.current >= st.best ? '¡Bien ahí! Es tu mejor racha.' : `¡Bien ahí! Tu récord es ${st.best}.` });
+    const next = [...S.agenda].filter((a) => { const n = L.daysBetween(t, L.parseDate(a.date)); return n >= 0 && n <= 14; }).sort((a, b) => a.date.localeCompare(b.date))[0];
+    if (next) { const n = L.daysBetween(t, L.parseDate(next.date)); out.push({ tone: 'info', ic: 'clock', t: countdownText(next, n), d: cap(longDate(L.parseDate(next.date))) }); }
+    const days = L.absencesByDay(S).filter((d) => d.a + d.p >= 4);
+    const totalA = days.reduce((a, d) => a + d.a, 0); const totalT = days.reduce((a, d) => a + d.a + d.p, 0);
+    const worst = days.sort((a, b) => b.a / (b.a + b.p) - a.a / (a.a + a.p))[0];
+    if (worst && totalA >= 3) {
+      const r = worst.a / (worst.a + worst.p); const rest = ratio(totalA - worst.a, totalT - worst.a - worst.p);
+      const day = L.DIAS[worst.dow]; const plural = day.endsWith('s') ? day : `${day}s`;
+      if (r >= 0.1 && r >= rest * 1.5) out.push({ tone: 'info', ic: 'bulb', t: `Tendés a faltar los ${plural}`, d: `Faltaste al ${L.pct(r)} de las clases de ese día. El resto de la semana, al ${L.pct(rest)}.` });
+    }
+    const imp = L.improvements(S);
+    if (imp.n >= 3 && imp.up !== imp.down) out.push({ tone: 'info', ic: 'notas', t: `Te suele ir mejor en los ${imp.up > imp.down ? 'segundos' : 'primeros'} parciales`, d: imp.up > imp.down ? `Subiste en ${imp.up} de ${imp.n} materias.` : `En ${imp.down} de ${imp.n} materias bajaste en el segundo.` });
+    return out.slice(0, 3);
+  }
+  function insightsHtml() {
+    const list = insights();
+    if (!list.length) return '';
+    return `<div class="insights">${list.map((x) => `<div class="ins ${x.tone}"><span class="ins-ic">${icon(x.ic)}${x.tone === 'win' ? '<i class="confetti" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b></i>' : ''}</span><div><b>${h(x.t)}</b><span>${h(x.d)}</span></div></div>`).join('')}</div>`;
+  }
   function viewHoy() {
     const t = today();
     const wk = L.weekNumber(S, t);
@@ -468,7 +500,8 @@
     const upcoming = [...S.agenda].filter((a) => L.daysBetween(t, L.parseDate(a.date)) >= 0).sort((a, b) => a.date.localeCompare(b.date));
     const agendaRows = upcoming.map((a) => {
       const n = L.daysBetween(t, L.parseDate(a.date));
-      return `<li><span>${h(a.title)}<br><span class="sub">${cap(longDate(L.parseDate(a.date)))}</span></span><span style="display:flex;align-items:center;gap:4px"><span class="days-to">${n === 0 ? 'hoy' : n === 1 ? 'mañana' : `${n} días`}</span><button class="x" data-act="del-agenda" data-id="${h(a.id)}" aria-label="Borrar ${h(a.title)}">×</button></span></li>`;
+      const co = a.course && course(a.course);
+      return `<li class="cd${n <= 3 ? ' soon' : ''}"${co ? ` style="--mc:${colorOf(co.subj)}"` : ''}><span class="cd-n"><b>${n === 0 ? 'Hoy' : n}</b>${n ? `<small>${n === 1 ? 'día' : 'días'}</small>` : ''}</span><span class="cd-txt">${h(countdownText(a, n))}<span class="sub">${cap(longDate(L.parseDate(a.date)))}</span></span><button class="x" data-act="del-agenda" data-id="${h(a.id)}" aria-label="Borrar ${h(examPhrase(a))}">×</button></li>`;
     }).join('');
     const pend = [
       ...pendingDated().filter((p) => L.daysBetween(t, L.parseDate(p.date)) >= 0).map((p) => ({ kind: 'mat', id: p.id, text: p.name, meta: `${kindOf(p).n} · ${matLabel(subjOfPractice(p))}`, date: p.date })),
@@ -496,11 +529,12 @@
 
     return `
     <header class="head">
-      <div><h1 class="hello">${h(st.greet)}, <em>${h(st.name)}</em></h1><p class="today-line">${h(line)}</p><p class="msg" id="msg">${h(currentMessage())}</p>${weeks}</div>
+      <div><h1 class="hello">${h(st.greet)}, <em>${h(st.name)}</em></h1><p class="today-line">${h(line)}</p>${weeks}</div>
       ${cs.total ? `<div class="figs"><div class="fig"><b>${L.fmt(cs.avgAll)}</b><span>promedio general</span></div><div class="fig"><b>${cs.approved}<small> de ${cs.total}</small></b><span>materias aprobadas</span></div></div>` : ''}
     </header>
+    ${insightsHtml()}
     <div class="hoy-flow">
-    <section class="card career hoy-career" aria-label="Tu carrera, una baldosa por materia">
+    <section class="card career hoy-career hide-on-phone" aria-label="Tu carrera, una baldosa por materia">
       <div class="card-head"><h2>${h(st.career || 'Tu carrera')}</h2>${cs.total ? `<span class="sub">${L.pct(ratio(cs.approved, cs.total))} aprobada · ${cs.current} en curso</span>` : ''}</div>
       ${cs.total ? `${careerStrip(!viewHoy.played)}<div class="zig-foot">${careerKey()}${milestoneChips()}</div>` : '<div class="empty"><b>Cargá tu plan de estudios.</b>Cada materia va a ser una baldosa que se llena a medida que aprobás.</div><div class="actions" style="justify-content:flex-start"><button class="btn" data-act="add-plan">Cargar plan de estudios</button></div>'}
     </section>
@@ -509,13 +543,12 @@
       ${matCards ? `<section class="card"><div class="card-head"><h2>Este cuatrimestre</h2><a class="linkish" href="#asistencia">Ver asistencia</a></div><div class="mat-grid">${matCards}</div></section>` : ''}
     </div>
     <div class="grid g-3 hoy-rest">
-      <section class="card"><div class="card-head"><h2>Se viene</h2><button class="btn ghost small" data-act="add-agenda">Agregar fecha</button></div>
+      <section class="card"><div class="card-head"><h2>Se viene</h2><button class="btn ghost small" data-act="add-agenda">Agregar examen</button></div>
         ${agendaRows || finalsRow ? `<ul class="list">${agendaRows}${finalsRow}</ul>` : ''}
-        ${!agendaRows ? '<p class="sub" style="margin-top:6px">Cargá parciales, inscripciones o fechas de examen y aparecen acá con la cuenta regresiva.</p>' : ''}
+        ${!agendaRows ? '<p class="sub" style="margin-top:6px">Agregá tus parciales, recuperatorios y finales: acá ves cuántos días faltan para cada uno.</p>' : ''}
       </section>
-      <section class="card"><div class="card-head"><h2>Nota rápida</h2><span class="sub">Se guarda sola</span></div><textarea class="scratch" data-change="scratch" aria-label="Nota rápida" placeholder="Lo que no te querés olvidar para la próxima clase">${h(S.scratch)}</textarea></section>
-      <section class="stack">
-        <div class="card"><div class="card-head"><h2>Estudio</h2><a class="linkish" href="#estudio">Abrir</a></div>${prRows || '<p class="sub">Sumá prácticas, lecturas, videos o TP de cada materia y seguí tu avance.</p>'}</div>
+      <section class="card hide-on-phone"><div class="card-head"><h2>Nota rápida</h2><span class="sub">Se guarda sola</span></div><textarea class="scratch" data-change="scratch" aria-label="Nota rápida" placeholder="Lo que no te querés olvidar para la próxima clase">${h(S.scratch)}</textarea></section>
+      <section class="stack hide-on-phone">
         <div class="card"><div class="card-head"><h2>Accesos</h2><button class="btn ghost small" data-act="add-link">Agregar</button></div>${links ? `<div class="links">${links}</div>` : '<p class="sub">El campus, el mail, el Drive: lo que abrís todos los días.</p>'}</div>
       </section>
     </div>
@@ -1274,7 +1307,29 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost" data-act="new-sem">Empezar cuatrimestre nuevo</button></div>
       ${hist ? `<p class="section-label">Cuatrimestres anteriores</p><ul class="list">${hist}</ul>` : ''}`);
   }
-  function agendaDialog() { openModal(`<h2 id="modal-title">Agregar fecha</h2><form data-form="agenda"><div class="fields"><label class="field">Qué es<input name="title" required maxlength="80" placeholder="2do parcial de Juegos"></label><label class="field">Cuándo<input name="date" type="date" required value="${L.iso(today())}"></label></div><div class="actions"><button class="btn" type="submit">Agregar fecha</button></div></form>`); }
+  const EXAM_KINDS = [['parcial1', 'Primer parcial', 'el primer parcial'], ['parcial2', 'Segundo parcial', 'el segundo parcial'], ['recu', 'Recuperatorio', 'el recuperatorio'], ['final', 'Final', 'el final'], ['coloquio', 'Coloquio', 'el coloquio'], ['entrega', 'Entrega', 'la entrega'], ['otro', 'Otro', '']];
+  function agendaDialog() {
+    const cur = S.courses.filter(L.isCurrent);
+    openModal(`<h2 id="modal-title">Agregar examen</h2><p class="sub">Aparece en Hoy con la cuenta regresiva.</p><form data-form="agenda"><div class="fields c2">
+      <label class="field">Materia<select name="course">${cur.map((c) => `<option value="${h(c.id)}">${h(label(c))}</option>`).join('')}<option value="">Otra o sin materia</option></select></label>
+      <label class="field">Qué es<select name="kind">${EXAM_KINDS.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></label>
+      <label class="field">Fecha<input name="date" type="date" required value="${L.iso(today())}"></label>
+      <label class="field">Detalle (opcional)<input name="title" maxlength="80" placeholder="Parcial integrador, aula 3"></label>
+    </div><div class="actions"><button class="btn" type="submit">Agregar examen</button></div></form>`);
+  }
+  // "el final de Cálculo", "la entrega de Juegos" o el texto que escribiste.
+  function examPhrase(a) {
+    const k = EXAM_KINDS.find((x) => x[0] === a.kind);
+    const co = a.course && course(a.course);
+    if (k && k[2]) return `${k[2]}${co ? ` de ${label(co)}` : ''}${a.title ? ` (${a.title})` : ''}`;
+    return a.title || (co ? label(co) : 'tu examen');
+  }
+  function countdownText(a, n) {
+    const what = examPhrase(a);
+    if (n === 0) return `Hoy es ${what}`;
+    if (n === 1) return `Mañana es ${what}`;
+    return `Faltan ${n} días para ${what}`;
+  }
   function linkDialog() { openModal('<h2 id="modal-title">Agregar acceso</h2><form data-form="link"><div class="fields"><label class="field">Nombre<input name="name" required maxlength="30" placeholder="Campus"></label><label class="field">Dirección<input name="url" type="url" required pattern="https?://.*" placeholder="https://"></label></div><div class="actions"><button class="btn" type="submit">Agregar acceso</button></div></form>'); }
   function pracDialog(courseId, editId) {
     const editing = editId ? S.practices.find((x) => x.id === editId) : null;
@@ -1699,7 +1754,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     if (kind !== 'prac' && kind !== 'todo') closeModal();
     const id = uid(kind);
     if (kind === 'todo') { mutate(() => { S.todos = S.todos || []; S.todos.push({ id, text: d.text.trim(), date: d.date || '' }); }, 'Pendiente agregado'); return; }
-    if (kind === 'agenda') mutate(() => { S.agenda.push({ id, title: d.title.trim(), date: d.date }); }, 'Fecha agregada');
+    if (kind === 'agenda') mutate(() => { S.agenda.push({ id, title: (d.title || '').trim(), date: d.date, course: d.course || '', kind: d.kind || 'otro' }); }, 'Examen agregado');
     if (kind === 'link') mutate(() => { S.links.push({ id, name: d.name.trim(), url: d.url.trim() }); }, 'Acceso agregado');
     if (kind === 'prac') {
       const co = course(d.course);

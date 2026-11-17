@@ -60,12 +60,13 @@
     return { ...t, allowed, left: allowed - t.a };
   }
 
+  // Rachas: clases seguidas yendo, y faltas seguidas (las últimas que cargaste).
   function streaks(s) {
-    let cur = 0; let best = 0;
+    let cur = 0; let best = 0; let absent = 0; let absentIn = [];
     for (const c of allCells(s)) {
-      if (c.state === 'p') { cur++; if (cur > best) best = cur; } else if (c.state === 'a') cur = 0;
+      if (c.state === 'p') { cur++; if (cur > best) best = cur; absent = 0; absentIn = []; } else if (c.state === 'a') { cur = 0; absent++; absentIn.push(c.cls.mat); }
     }
-    return { current: cur, best };
+    return { current: cur, best, absent, absentIn: [...new Set(absentIn)] };
   }
 
   function absencesByDay(s) {
