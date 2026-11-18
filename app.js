@@ -53,7 +53,7 @@
   function emptyState(user) {
     return {
       v: 2,
-      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', custom: { accent: '#674EA7', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
+      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
       classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], todos: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', matColors: {}, history: [],
     };
   }
@@ -65,6 +65,7 @@
     out.settings.custom = { ...base.settings.custom, ...(out.settings.custom || {}) };
     if (!GREETS.includes(out.settings.greet)) out.settings.greet = 'Hola';
     if (!isHex(out.settings.custom.accent)) out.settings.custom.accent = '#674EA7';
+    if (!isHex(out.settings.custom.second)) out.settings.custom.second = '';
     out.classes = (out.classes || []).map((c) => {
       const co = out.courses.find((x) => x.id === c.course);
       return { ...c, mat: co ? co.subj : c.mat };
@@ -112,8 +113,8 @@
   function ensureColor(subj) {
     if (!S.matColors[subj]) { const used = new Set(Object.values(S.matColors)); S.matColors[subj] = PALETTE.find((p) => !used.has(p)) || PALETTE[Object.keys(S.matColors).length % PALETTE.length]; }
   }
-  const STATE_WORD = { p: 'Fui', a: 'Falté', n: 'No hubo' };
-  const STATE_GLYPH = { p: '✓', a: '✕', n: '–' };
+  const STATE_WORD = { p: 'Fui', a: 'Falté', n: 'No hubo', f: 'No voy' };
+  const STATE_GLYPH = { p: '✓', a: '✕', n: '–', f: '⊘' };
   const STATUS = ['cursando', 'recursando', 'aprobada 1ra instancia', 'aprobada 2da instancia', 'desaprobada', 'proximamente'];
   const statusLabel = (s) => (s === 'proximamente' ? 'próximamente' : s);
   const pl = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -121,6 +122,44 @@
   const termShort = (y, sem) => `${y}° año${sem === 'Anual' ? ', anual' : `, ${(S.settings.termWord || 'Semestre').slice(0, 3).toLowerCase()}. ${sem}`}`;
   const signedPct = (x) => (x === null ? '' : `${x > 0 ? '+' : x < 0 ? '−' : ''}${Math.round(Math.abs(x) * 100)}%`);
   const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : '#');
+  // Íconos de los accesos: los servicios conocidos traen su dibujito guardado en icons/links/
+  // (no se le pide nada a nadie); el resto prueba el favicon del propio sitio y, si no hay, va la inicial.
+  const LINK_HOSTS = {
+    'calendar.google.com': 'calendar', 'drive.google.com': 'drive', 'mail.google.com': 'gmail', 'classroom.google.com': 'classroom',
+    'meet.google.com': 'meet', 'keep.google.com': 'keep', 'scholar.google.com': 'scholar', 'scholar.google.com.ar': 'scholar',
+    'translate.google.com': 'translate', 'translate.google.com.ar': 'translate', 'gemini.google.com': 'gemini',
+    'youtube.com': 'youtube', 'm.youtube.com': 'youtube', 'youtu.be': 'youtube', 'notion.so': 'notion', 'notion.com': 'notion',
+    'chatgpt.com': 'chatgpt', 'chat.openai.com': 'chatgpt', 'claude.ai': 'claude', 'outlook.office.com': 'outlook',
+    'outlook.live.com': 'outlook', 'outlook.office365.com': 'outlook', 'teams.microsoft.com': 'teams', 'teams.live.com': 'teams',
+    'zoom.us': 'zoom', 'canva.com': 'canva', 'github.com': 'github', 'web.whatsapp.com': 'whatsapp', 'trello.com': 'trello',
+    'quizlet.com': 'quizlet', 'linkedin.com': 'linkedin', 'open.spotify.com': 'spotify', 'figma.com': 'figma', 'padlet.com': 'padlet', 'miro.com': 'miro',
+  };
+  const QUICK_LINKS = [['Calendar', 'https://calendar.google.com/'], ['Drive', 'https://drive.google.com/'], ['Gmail', 'https://mail.google.com/'],
+    ['Classroom', 'https://classroom.google.com/'], ['Meet', 'https://meet.google.com/'], ['Docs', 'https://docs.google.com/document/'],
+    ['Sheets', 'https://docs.google.com/spreadsheets/'], ['Outlook', 'https://outlook.office.com/'], ['Teams', 'https://teams.microsoft.com/'],
+    ['Zoom', 'https://zoom.us/'], ['Notion', 'https://www.notion.so/'], ['YouTube', 'https://www.youtube.com/'], ['WhatsApp', 'https://web.whatsapp.com/']];
+  function linkIconName(url) {
+    let u; try { u = new URL(url); } catch { return ''; }
+    const host = u.hostname.toLowerCase().replace(/^www\./, ''), p = u.pathname;
+    if (host === 'docs.google.com') return p.startsWith('/spreadsheets') ? 'gsheets' : p.startsWith('/presentation') ? 'gslides' : p.startsWith('/forms') ? 'gforms' : 'gdocs';
+    if (host.endsWith('.zoom.us')) return 'zoom';
+    if (/moodle/.test(host + p)) return 'moodle';
+    return LINK_HOSTS[host] || '';
+  }
+  function linkIcon(l) {
+    const known = linkIconName(l.url);
+    if (known) return `<img class="fav" src="icons/links/${known}.png" alt="" width="16" height="16">`;
+    const letter = `<span class="fav fav-letter" aria-hidden="true">${h((l.name || '?').trim().charAt(0).toUpperCase())}</span>`;
+    let origin = ''; try { const u = new URL(l.url); if (u.protocol === 'https:') origin = u.origin; } catch { /* sin ícono */ }
+    return origin ? `<img class="fav fav-remote" src="${h(origin)}/favicon.ico" alt="" width="16" height="16" referrerpolicy="no-referrer">` : letter;
+  }
+  // Si el sitio no tiene favicon, se reemplaza por la inicial.
+  document.addEventListener('error', (e) => {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement) || !img.classList.contains('fav-remote')) return;
+    const name = (img.parentElement && img.parentElement.textContent) || '?';
+    img.outerHTML = `<span class="fav fav-letter" aria-hidden="true">${h(name.trim().charAt(0).toUpperCase())}</span>`;
+  }, true);
   const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   function newCourse(name, year, sem) {
     const subj = L.slug(name);
@@ -192,6 +231,17 @@
   const lum = (x) => { const [r, g, b] = rgb(x).map((v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
   const contrast = (a, b) => { const x = lum(a); const y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
   function fit(color, against, target, toward) { let c = color; for (let i = 0; i < 24 && contrast(c, against) < target; i++) c = mix(toward, c, 0.08); return c; }
+  // El color secundario pinta los resaltados: la semana actual, las notas, los avisos amarillos.
+  function secondVars(second, mode) {
+    if (!second) return {};
+    const strong = fit(second, '#121A2C', 6, '#FFFFFF');
+    if (mode === 'dark') {
+      const hi = mix(second, '#0B0916', 0.24);
+      return { '--hi': hi, '--hi-strong': strong, '--hi-ink': fit(mix(second, '#FFFFFF', 0.45), hi, 6, '#FFFFFF') };
+    }
+    const hi = fit(mix(second, '#FFFFFF', 0.3), '#121A2C', 9, '#FFFFFF');
+    return { '--hi': hi, '--hi-strong': strong, '--hi-ink': fit(mix(second, '#0E0A1E', 0.4), hi, 6.5, '#0E0A1E') };
+  }
   function deriveVars(accent, mode) {
     if (mode === 'dark') {
       const dark = '#0B0916';
@@ -222,13 +272,14 @@
     if (st.theme === 'custom') { accent = st.custom.accent; mode = st.custom.mode; } else if (preset && preset.accent) { accent = preset.accent; mode = preset.mode; }
     if (accent) {
       root.dataset.theme = mode === 'dark' ? 'noche' : 'lavanda';
-      Object.entries(deriveVars(accent, mode)).forEach(([k, v]) => root.style.setProperty(k, v));
+      const vars = { ...deriveVars(accent, mode), ...(st.theme === 'custom' ? secondVars(st.custom.second, mode) : {}) };
+      Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v));
     } else root.dataset.theme = preset ? preset.id : 'tinta';
   }
   function themePicker() {
     const st = S.settings;
     return `<div class="themes" style="margin-top:6px">${THEMES.map((t) => `<button type="button" data-act="theme" data-id="${t.id}" aria-pressed="${st.theme === t.id}"><i style="background:${t.c}"></i>${t.n}</button>`).join('')}<button type="button" data-act="theme" data-id="custom" aria-pressed="${st.theme === 'custom'}"><i style="background:${h(st.custom.accent)}"></i>Mi color</button></div>
-    ${st.theme === 'custom' ? `<div class="color-row"><label style="display:inline-flex;gap:8px;align-items:center">Tu color <input type="color" value="${h(st.custom.accent)}" data-change="custom-accent" aria-label="Elegí tu color"></label><div class="choice">${[['light', 'Claro'], ['dark', 'Oscuro']].map(([v, n]) => `<button type="button" data-act="custom-mode" data-v="${v}" aria-pressed="${st.custom.mode === v}">${n}</button>`).join('')}</div></div>` : ''}
+    ${st.theme === 'custom' ? `<div class="color-row"><label style="display:inline-flex;gap:8px;align-items:center">Principal <input type="color" value="${h(st.custom.accent)}" data-change="custom-accent" aria-label="Elegí tu color principal"></label><label style="display:inline-flex;gap:8px;align-items:center">Secundario <input type="color" value="${h(st.custom.second || getComputedStyle(document.documentElement).getPropertyValue('--hi-strong').trim() || '#FFE14D')}" data-change="custom-second" aria-label="Elegí tu color secundario, el de los resaltados"></label>${st.custom.second ? '<button type="button" class="linkish" data-act="custom-second-auto">Secundario automático</button>' : ''}<div class="choice">${[['light', 'Claro'], ['dark', 'Oscuro']].map(([v, n]) => `<button type="button" data-act="custom-mode" data-v="${v}" aria-pressed="${st.custom.mode === v}">${n}</button>`).join('')}</div></div>` : ''}
     <p class="section-label">Letra</p><div class="choice font-choice" style="margin-top:6px">${FONTS.map((f) => `<button type="button" data-act="font" data-v="${f.id}" data-font-sample="${f.id}" aria-pressed="${(st.font || 'moderna') === f.id}">${h(f.n)}</button>`).join('')}</div>
     <p class="section-label">Cómo se ve el progreso</p><div class="choice prog-choice" style="margin-top:6px">${PROGRESS.map(([v, n]) => `<button type="button" data-act="progress" data-v="${v}" aria-pressed="${(st.progress || 'zigzag') === v}">${progressSample(v)}<span>${n}</span></button>`).join('')}</div>`;
   }
@@ -338,7 +389,7 @@
   }
   const milestoneChips = () => (S.milestones || []).map((m) => `<span class="mile">${h(termShort(m.year, m.sem))}: ${h(m.text)}</span>`).join('');
   function segButtons(key, state) {
-    return `<div class="seg" role="group" aria-label="Estado de la clase">${['p', 'a', 'n'].map((s) => `<button data-act="mark" data-key="${key}" data-s="${s}" aria-pressed="${state === s}" aria-label="${STATE_WORD[s]}"><span class="g" aria-hidden="true">${STATE_GLYPH[s]}</span><span class="w">${STATE_WORD[s]}</span></button>`).join('')}</div>`;
+    return `<div class="seg" role="group" aria-label="Estado de la clase">${['p', 'a', 'n', 'f'].map((s) => `<button data-act="mark" data-key="${key}" data-s="${s}" aria-pressed="${state === s}" aria-label="${STATE_WORD[s]}"><span class="g" aria-hidden="true">${STATE_GLYPH[s]}</span><span class="w">${STATE_WORD[s]}</span></button>`).join('')}</div>`;
   }
   function classRow(c, extra) {
     const note = S.cellNotes[c.key];
@@ -346,6 +397,12 @@
     return `<div class="class-row" style="--mc:${colorOf(c.cls.mat)}"><span class="dot"></span><div><b>${h(c.cls.name)}${chip}</b>${extra ? `<small>${h(extra)}</small>` : ''}</div>${segButtons(c.key, c.state)}</div>`;
   }
   function leftPill(m) {
+    if (m.f) {
+      const plan = m.f === 1 ? 'contando la que anotaste' : `contando las ${m.f} que anotaste`;
+      if (m.left < 0) return `<span class="pill bad">Te pasarías por ${pl(-m.left, 'falta', 'faltas')}, ${plan}</span>`;
+      if (m.left === 0) return `<span class="pill bad">Justo en el límite, ${plan}</span>`;
+      return `<span class="pill ${m.left === 1 ? 'hi' : 'ok'}">${m.left === 1 ? 'queda 1 falta' : `quedan ${m.left} faltas`}, ${plan}</span>`;
+    }
     if (m.left < 0) return `<span class="pill bad">Pasaste el límite por ${pl(-m.left, 'falta', 'faltas')}</span>`;
     if (m.left === 0) return '<span class="pill bad">No te quedan faltas</span>';
     if (m.left === 1) return '<span class="pill hi">queda 1 falta</span>';
@@ -525,7 +582,7 @@
       const p = pracStats(list);
       return `<div style="margin-top:9px"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13.5px"><span>${h(matLabel(k))}</span><span class="pr-count">${p.pct !== null ? L.pct(p.pct) : `${p.done} hechos`}</span></div>${p.pct !== null ? stitch(p.pct, { n: 30 }) : ''}</div>`;
     }).join('');
-    const links = S.links.map((l) => `<a href="${h(safeUrl(l.url))}" target="_blank" rel="noopener">${h(l.name)}</a>`).join('');
+    const links = S.links.map((l) => `<a href="${h(safeUrl(l.url))}" target="_blank" rel="noopener">${linkIcon(l)}${h(l.name)}</a>`).join('');
 
     return `
     <header class="head">
@@ -549,7 +606,7 @@
       </section>
       <section class="card hide-on-phone"><div class="card-head"><h2>Nota rápida</h2><span class="sub">Se guarda sola</span></div><textarea class="scratch" data-change="scratch" aria-label="Nota rápida" placeholder="Lo que no te querés olvidar para la próxima clase">${h(S.scratch)}</textarea></section>
       <section class="stack hide-on-phone">
-        <div class="card"><div class="card-head"><h2>Accesos</h2><button class="btn ghost small" data-act="add-link">Agregar</button></div>${links ? `<div class="links">${links}</div>` : '<p class="sub">El campus, el mail, el Drive: lo que abrís todos los días.</p>'}</div>
+        <div class="card"><div class="card-head"><h2>Accesos</h2><button class="btn ghost small" data-act="add-link">${S.links.length ? 'Editar' : 'Agregar'}</button></div>${links ? `<div class="links">${links}</div>` : '<p class="sub">El campus, el mail, el Drive: lo que abrís todos los días.</p>'}</div>
       </section>
     </div>
     </div>`;
@@ -627,7 +684,7 @@
 
     const matCards = mats().map((m) => {
       const s = L.materiaStats(S, m);
-      return `<div><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:5px;flex-wrap:wrap"><b style="display:inline-flex;align-items:center;gap:6px"><span class="dot" style="--mc:${colorOf(m)}"></span>${h(matLabel(m))}</b>${leftPill(s)}</div>${stitch(s.pct, { mark: S.settings.minAtt, warn: s.left < 0, n: 30 })}<p class="sub" style="margin-top:4px"><span class="num">${L.pct(s.pct)}</span> · faltaste ${s.a} de ${s.taken} · quedan ${pl(s.pending, 'clase', 'clases')}</p></div>`;
+      return `<div><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:5px;flex-wrap:wrap"><b style="display:inline-flex;align-items:center;gap:6px"><span class="dot" style="--mc:${colorOf(m)}"></span>${h(matLabel(m))}</b>${leftPill(s)}</div>${stitch(s.pct, { mark: S.settings.minAtt, warn: s.left < 0, n: 30 })}<p class="sub" style="margin-top:4px"><span class="num">${L.pct(s.pct)}</span> · faltaste ${s.a} de ${s.taken}${s.f ? ` · no vas a ${pl(s.f, 'clase', 'clases')}` : ''} · quedan ${pl(s.pending + s.f, 'clase', 'clases')}</p></div>`;
     }).join('');
 
     return `
@@ -845,7 +902,7 @@
   // ---------- BENEFICIOS
   function viewBeneficios() {
     const B = window.CursadaBenefits || { items: [] };
-    const cats = [['', 'Todos'], ['transporte', 'Transporte'], ['cultura', 'Cultura'], ['programas', 'Programas y apps']];
+    const cats = [['', 'Todos'], ['transporte', 'Transporte'], ['cultura', 'Cultura'], ['comida', 'Comida y compras'], ['salud', 'Salud'], ['bancos', 'Bancos'], ['programas', 'Programas y apps']];
     const f = ui.benefitFilter || '';
     const list = B.items.filter((b) => !f || b.cat === f);
     return `
@@ -1267,7 +1324,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   }
   const TOUR = [
     { i: 'hoy', t: 'Hoy', d: 'Tu día de un vistazo: las clases de hoy para marcar si fuiste, tus pendientes y lo que se viene. Es la pestaña para dejar siempre abierta.' },
-    { i: 'asistencia', t: 'Asistencia', d: 'Marcá Fui, Falté o No hubo. Te avisa cuántas faltas te quedan en cada materia. Tocá una clase para dejarle una nota.' },
+    { i: 'asistencia', t: 'Asistencia', d: 'Marcá Fui, Falté o No hubo. Si ya sabés que vas a faltar (un viaje, un turno), marcá No voy de antemano y te descuenta esa falta. Tocá una clase para dejarle una nota.' },
     { i: 'notas', t: 'Notas', d: 'Cargá tus parciales y te dice cuánto necesitás en el segundo. Ves tu promedio y cómo te va de un parcial al otro.' },
     { i: 'carrera', t: 'Carrera', d: 'Tu plan de estudios entero: cada cuadradito es una materia. Tocala para cargar notas o cambiar si la aprobaste.' },
     { i: 'estudio', t: 'Estudio', d: 'Prácticas, lecturas, videos y TP de cada materia. Si les ponés fecha, aparecen en Hoy hasta que los termines o venza el plazo.' },
@@ -1308,15 +1365,44 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       ${hist ? `<p class="section-label">Cuatrimestres anteriores</p><ul class="list">${hist}</ul>` : ''}`);
   }
   const EXAM_KINDS = [['parcial1', 'Primer parcial', 'el primer parcial'], ['parcial2', 'Segundo parcial', 'el segundo parcial'], ['recu', 'Recuperatorio', 'el recuperatorio'], ['final', 'Final', 'el final'], ['coloquio', 'Coloquio', 'el coloquio'], ['entrega', 'Entrega', 'la entrega'], ['otro', 'Otro', '']];
+  // Agregar examen: materia y tipo como botones (sin nada elegido de entrada) y un calendario propio.
+  let agCal = null;
   function agendaDialog() {
     const cur = S.courses.filter(L.isCurrent);
-    openModal(`<h2 id="modal-title">Agregar examen</h2><p class="sub">Aparece en Hoy con la cuenta regresiva.</p><form data-form="agenda"><div class="fields c2">
-      <label class="field">Materia<select name="course">${cur.map((c) => `<option value="${h(c.id)}">${h(label(c))}</option>`).join('')}<option value="">Otra o sin materia</option></select></label>
-      <label class="field">Qué es<select name="kind">${EXAM_KINDS.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></label>
-      <label class="field">Fecha<input name="date" type="date" required value="${L.iso(today())}"></label>
+    const t = today();
+    agCal = { y: t.getFullYear(), m: t.getMonth(), sel: '' };
+    const subj = [...cur.map((c) => [c.id, label(c)]), ['__none', 'Otra o sin materia']]
+      .map(([v, n], i) => `<label class="pick"><input type="radio" name="course" value="${h(v)}"${i === 0 ? ' required' : ''}><span>${h(n)}</span></label>`).join('');
+    const kinds = EXAM_KINDS.map(([v, n], i) => `<label class="pick"><input type="radio" name="kind" value="${v}"${i === 0 ? ' required' : ''}><span>${n}</span></label>`).join('');
+    openModal(`<h2 id="modal-title">Agregar examen</h2><p class="sub">Aparece en Hoy con la cuenta regresiva.</p><form data-form="agenda" class="ag-form">
+      <fieldset class="picks"><legend>Materia</legend><div class="pick-row">${subj}</div></fieldset>
+      <fieldset class="picks"><legend>Qué es</legend><div class="pick-row">${kinds}</div></fieldset>
+      <fieldset class="picks"><legend>Fecha</legend><input type="hidden" name="date" value=""><div id="ag-cal" class="cal">${calHtml()}</div></fieldset>
       <label class="field">Detalle (opcional)<input name="title" maxlength="80" placeholder="Parcial integrador, aula 3"></label>
-    </div><div class="actions"><button class="btn" type="submit">Agregar examen</button></div></form>`);
+      <p class="err" id="ag-err" role="alert"></p>
+      <div class="actions"><button class="btn" type="submit">Agregar examen</button></div></form>`);
   }
+  function calHtml() {
+    const { y, m, sel } = agCal;
+    const t = today(), tIso = L.iso(t);
+    const first = new Date(y, m, 1);
+    const lead = (first.getDay() + 6) % 7;
+    const total = new Date(y, m + 1, 0).getDate();
+    const busy = new Set(S.agenda.map((a) => a.date));
+    const canBack = y > t.getFullYear() || (y === t.getFullYear() && m > t.getMonth());
+    let cells = '<span class="cal-blank"></span>'.repeat(lead);
+    for (let d = 1; d <= total; d++) {
+      const iso = L.iso(new Date(y, m, d));
+      const cls = ['cal-d', iso === tIso ? 'is-today' : '', iso === sel ? 'is-sel' : '', busy.has(iso) ? 'has-exam' : ''].filter(Boolean).join(' ');
+      cells += `<button type="button" class="${cls}" data-act="cal-pick" data-d="${iso}"${iso < tIso ? ' disabled' : ''} aria-pressed="${iso === sel}" aria-label="${h(longDate(new Date(y, m, d)))}${busy.has(iso) ? ', ya tenés un examen' : ''}">${d}</button>`;
+    }
+    const n = sel ? L.daysBetween(t, L.parseDate(sel)) : null;
+    const foot = sel ? `<b>${h(longDate(L.parseDate(sel)))}</b> · ${n === 0 ? 'es hoy' : n === 1 ? 'falta 1 día' : `faltan ${n} días`}` : 'Tocá un día';
+    return `<div class="cal-head"><button type="button" class="cal-nav" data-act="cal-nav" data-n="-1" aria-label="Mes anterior"${canBack ? '' : ' disabled'}>‹</button><b>${L.MESES[m]} ${y}</b><button type="button" class="cal-nav" data-act="cal-nav" data-n="1" aria-label="Mes siguiente">›</button></div>
+      <div class="cal-grid"><span class="cal-dow">L</span><span class="cal-dow">M</span><span class="cal-dow">M</span><span class="cal-dow">J</span><span class="cal-dow">V</span><span class="cal-dow">S</span><span class="cal-dow">D</span>${cells}</div>
+      <p class="cal-foot">${foot}</p>`;
+  }
+  function calRefresh() { const box = $('#ag-cal'); if (box) box.innerHTML = calHtml(); }
   // "el final de Cálculo", "la entrega de Juegos" o el texto que escribiste.
   function examPhrase(a) {
     const k = EXAM_KINDS.find((x) => x[0] === a.kind);
@@ -1330,7 +1416,17 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     if (n === 1) return `Mañana es ${what}`;
     return `Faltan ${n} días para ${what}`;
   }
-  function linkDialog() { openModal('<h2 id="modal-title">Agregar acceso</h2><form data-form="link"><div class="fields"><label class="field">Nombre<input name="name" required maxlength="30" placeholder="Campus"></label><label class="field">Dirección<input name="url" type="url" required pattern="https?://.*" placeholder="https://"></label></div><div class="actions"><button class="btn" type="submit">Agregar acceso</button></div></form>'); }
+  function linkDialog() {
+    const have = new Set(S.links.map((l) => linkIconName(l.url)));
+    const quick = QUICK_LINKS.filter(([, url]) => !have.has(linkIconName(url)))
+      .map(([name, url]) => `<button type="button" class="chip quick-link" data-act="quick-link" data-name="${h(name)}" data-url="${h(url)}">${linkIcon({ name, url })}${h(name)}</button>`).join('');
+    const mine = S.links.map((l) => `<li>${linkIcon(l)}<span class="ql-name">${h(l.name)}</span><button type="button" class="btn ghost small" data-act="del-link" data-id="${h(l.id)}" aria-label="Quitar ${h(l.name)}">Quitar</button></li>`).join('');
+    openModal(`<h2 id="modal-title">Accesos</h2>
+      ${mine ? `<ul class="list my-links">${mine}</ul>` : ''}
+      ${quick ? `<p class="sub" style="margin:12px 0 6px">Con un toque se agregan:</p><div class="quick-links">${quick}</div>` : ''}
+      <p class="sub" style="margin:14px 0 2px">O cualquier otro, como el campus de tu facu:</p>
+      <form data-form="link"><div class="fields c2"><label class="field">Nombre<input name="name" required maxlength="30" placeholder="Campus"></label><label class="field">Dirección<input name="url" type="url" required pattern="https?://.*" placeholder="https://"></label></div><div class="actions"><button class="btn" type="submit">Agregar acceso</button></div></form>`);
+  }
   function pracDialog(courseId, editId) {
     const editing = editId ? S.practices.find((x) => x.id === editId) : null;
     const opts = L.subjects(S).sort((a, b) => Number(L.isCurrent(b)) - Number(L.isCurrent(a)));
@@ -1435,10 +1531,15 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     theme(el) { S.settings.theme = el.dataset.id; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     font(el) { S.settings.font = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     progress(el) { S.settings.progress = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
+    'custom-second-auto'() { S.settings.custom.second = ''; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     'custom-mode'(el) { S.settings.custom.mode = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     resolve(el) { mutate(() => { delete S.cellNotes[el.dataset.key].check; }, 'Nota marcada como revisada'); closeModal(); },
     'add-agenda': agendaDialog,
+    'cal-nav'(el) { if (!agCal) return; const d = new Date(agCal.y, agCal.m + Number(el.dataset.n), 1); agCal.y = d.getFullYear(); agCal.m = d.getMonth(); calRefresh(); },
+    'cal-pick'(el) { if (!agCal) return; agCal.sel = el.dataset.d; const f = el.closest('form'); f.elements.date.value = agCal.sel; const err = $('#ag-err'); if (err) err.textContent = ''; calRefresh(); const again = $(`#ag-cal [data-d="${agCal.sel}"]`); if (again) again.focus(); },
     'add-link': linkDialog,
+    'quick-link'(el) { mutate(() => { S.links.push({ id: uid('link'), name: el.dataset.name, url: el.dataset.url }); }, `${el.dataset.name} agregado`); linkDialog(); },
+    'del-link'(el) { mutate(() => { S.links = S.links.filter((l) => l.id !== el.dataset.id); }, 'Acceso quitado'); linkDialog(); },
     'add-prac': (el) => pracDialog(el.dataset.course),
     'add-plan': planDialog,
     'add-mile': mileDialog,
@@ -1618,6 +1719,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       }
       if (kind === 'mat-color') { mutate(() => { S.matColors[el.dataset.subj] = el.value; }, 'Color guardado'); }
       if (kind === 'custom-accent') { S.settings.custom.accent = el.value; save(); render(); }
+      if (kind === 'custom-second') { S.settings.custom.second = el.value; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); }
       if (kind === 'cell-note') {
         const k = el.dataset.key; const v = el.value.trim();
         mutate(() => { if (v) S.cellNotes[k] = { ...(S.cellNotes[k] || {}), t: v }; else delete S.cellNotes[k]; }, 'Nota guardada');
@@ -1751,6 +1853,8 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       reopen(scheduleDialog);
       return;
     }
+    if (kind === 'agenda' && !d.date) { const err = $('#ag-err'); if (err) err.textContent = 'Elegí la fecha en el calendario.'; return; }
+    if (kind === 'agenda' && d.course === '__none') d.course = '';
     if (kind !== 'prac' && kind !== 'todo') closeModal();
     const id = uid(kind);
     if (kind === 'todo') { mutate(() => { S.todos = S.todos || []; S.todos.push({ id, text: d.text.trim(), date: d.date || '' }); }, 'Pendiente agregado'); return; }

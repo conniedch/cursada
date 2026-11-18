@@ -44,11 +44,12 @@
   }
 
   function tally(cells) {
-    const t = { p: 0, a: 0, n: 0, pending: 0 };
-    for (const c of cells) { if (c.state === 'p') t.p++; else if (c.state === 'a') t.a++; else if (c.state === 'n') t.n++; else t.pending++; }
+    // f = "no voy": una falta anotada de antemano (un viaje, un turno). Cuenta para las faltas que te quedan.
+    const t = { p: 0, a: 0, n: 0, f: 0, pending: 0 };
+    for (const c of cells) { if (c.state === 'p') t.p++; else if (c.state === 'a') t.a++; else if (c.state === 'n') t.n++; else if (c.state === 'f') t.f++; else t.pending++; }
     t.taken = t.p + t.a;
     t.pct = t.taken ? t.p / t.taken : null;
-    t.total = t.p + t.a + t.pending;
+    t.total = t.p + t.a + t.f + t.pending;
     return t;
   }
 
@@ -57,7 +58,7 @@
     const cells = allCells(s).filter((c) => c.cls.mat === mat);
     const t = tally(cells);
     const allowed = Math.floor(t.total * (1 - s.settings.minAtt) + 1e-9);
-    return { ...t, allowed, left: allowed - t.a };
+    return { ...t, allowed, left: allowed - t.a - t.f };
   }
 
   // Rachas: clases seguidas yendo, y faltas seguidas (las últimas que cargaste).
