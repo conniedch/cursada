@@ -418,6 +418,8 @@
     tp: { n: 'TP', many: 'TP', unit: 'partes', one: 'parte', parts: 'Partes del TP' },
     otro: { n: 'Otro', many: 'Otros', unit: 'partes', one: 'parte', parts: 'Partes' },
   };
+  const FEM_UNITS = ['partes', 'preguntas', 'clases'];
+  const partsQuestion = (k) => `¿${FEM_UNITS.includes(k.unit) ? 'Cuántas' : 'Cuántos'} ${k.unit} tiene?`;
   const kindOf = (p) => KINDS[p.kind] || KINDS.practica;
   const isComplete = (p) => p.known && p.items.length > 0 && p.items.every(Boolean);
   // Cada material pesa lo mismo: un TP no vale menos que una práctica de 30 ejercicios.
@@ -442,31 +444,57 @@
 
   // ---------- Frases motivadoras (solo si las activaste en Ajustes). Una por día, según lo que te pasa.
   const MOTTOS = {
-    examToday: ['Hoy es el día. Lo que estudiaste ya está adentro: andá tranqui.', 'Leé dos veces cada consigna antes de arrancar.', 'Respirá, empezá por la que mejor te sale y después volvé a las otras.'],
-    examSoon: ['Faltan pocos días para {exam}. Repasá lo que más entra, no todo.', 'Para {exam}: hacé un ejercicio de cada tema antes que diez del mismo.', 'Dormir bien antes de {exam} también es estudiar.'],
-    tight: ['En {mat} conviene no faltar más: cada clase cuenta.', 'Tenés las faltas justas en {mat}. Ir a la próxima ya es ganar.'],
-    streak: ['{n} clases seguidas. Que no se corte.', 'Llevás {n} clases sin faltar. Eso se nota en los parciales.'],
-    doubts: ['Tenés {d} anotadas. Llevalas a la próxima consulta y sacátelas de encima.', 'Con {d} para preguntar, la próxima clase te rinde el doble.'],
-    general: ['Un ejercicio más hoy es uno menos el día antes del parcial.', 'Hecho es mejor que perfecto.', 'Media hora todos los días le gana a una noche entera.', 'Si un tema no sale, anotá la duda y seguí con el próximo.', 'Mirá cuánto ya aprobaste: eso también lo hiciste vos.'],
+    examToday: ['Hoy es el día. Café, birome de repuesto y a romperla.', 'Lo que no estudiaste no lo vas a aprender en el colectivo. Confiá en lo que sabés.', 'Leé la consigna dos veces. La segunda siempre dice otra cosa.'],
+    examSoon: ['Faltan {n} para {exam}. Todavía da para hacerte el héroe, pero no tanto.', '{exam} en {n}: si no es ahora, es la noche anterior con mate y pánico.', 'Resumen hecho hoy es resumen que no hacés a las 3 de la mañana. {exam} en {n}.'],
+    beforeExam: ['Estás a {k} de tener {mat} al día para {short}. Se puede.', 'Con {k} más llegás con {mat} al día para {short}. Después, siesta merecida.'],
+    almostDone: ['{name} de {mat}: {left} y la cerrás.', 'Te {left} para terminar {name}. Ya casi, no aflojes ahora.'],
+    doubts: ['Anotaste {d} para consultar. Llevalas a clase, que el profe cobra igual.', '{d} para la próxima clase. Preguntar es gratis, recursar no.'],
+    streak: ['{n} clases seguidas. Ya te saludan los del buffet.', 'Racha de {n} clases: a esta altura el aula te cobra alquiler.'],
+    late: ['Pasada la medianoche el cerebro estudia en modo avión. Andá a dormir.', 'Dormir 7 horas también entra en el parcial, aunque no lo tomen.'],
+    weekend: ['Es finde. Una hora de estudio hoy y el lunes sos otra persona.', 'Finde: sacá una guía del medio y el resto del día es tuyo.'],
+    monday: ['Lunes. El café no se va a tomar solo.', 'Arranca la semana: lo que hagas hoy no lo tenés que hacer el jueves a la noche.'],
+    general: ['Hecho es mejor que perfecto. Perfecto es para la tesis.', 'Un ejercicio más hoy es uno menos la noche antes del parcial.', 'Media hora por día le gana a una noche entera de pánico.', 'Si un tema no sale, anotá la duda y seguí. El parcial no espera.', 'Mirá todo lo que ya aprobaste: eso también lo hiciste vos.', 'Silenciar el grupo de la facu cuenta como estudiar. Bueno, casi.', 'Tomá agua. El cerebro es 75% agua y 25% apuntes prestados.'],
   };
+  // Una frase por día (cambia también de noche). Junta las que aplican a tu situación y elige una.
   function motto() {
     if (!S.settings.motivation) return '';
-    const t = today(); const key = L.iso(t);
+    const t = today(); const now = new Date();
+    const late = now.getHours() >= 23 || now.getHours() < 5;
+    const key = `${L.iso(t)}${late ? 'n' : ''}`;
     const hash = [...key].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
-    const pick = (list) => list[hash % list.length];
     const own = String(S.settings.myPhrases || '').split('\n').map((x) => x.trim()).filter(Boolean);
+    const fill = (list, vars) => list.map((x) => Object.entries(vars).reduce((acc, [k, v]) => acc.split(`{${k}}`).join(v), x));
     const exams = S.agenda.map((a) => ({ a, n: L.daysBetween(t, L.parseDate(a.date)) })).filter((x) => x.n >= 0).sort((x, y) => x.n - y.n);
-    const st = L.streaks(S);
-    const tight = mats().map((m) => ({ m, s: L.materiaStats(S, m) })).filter((x) => x.s.taken && x.s.left <= 1 && x.s.pending).sort((a, b) => a.s.left - b.s.left)[0];
-    const doubts = S.practices.reduce((a, p) => a + (p.doubts || []).filter((i) => i < p.items.length).length, 0);
-    let text;
-    if (exams[0] && exams[0].n === 0) text = pick(MOTTOS.examToday);
-    else if (exams[0] && exams[0].n <= 4) text = pick(MOTTOS.examSoon).replace('{exam}', examPhrase(exams[0].a));
-    else if (own.length && hash % 2 === 0) text = own[hash % own.length];
-    else if (tight) text = pick(MOTTOS.tight).replace('{mat}', matLabel(tight.m));
-    else if (doubts) text = pick(MOTTOS.doubts).replace('{d}', pl(doubts, 'duda', 'dudas'));
-    else if (st.current >= 5) text = pick(MOTTOS.streak).replace('{n}', st.current);
-    else text = own.length ? own[hash % own.length] : pick(MOTTOS.general);
+    let pool = [];
+    if (exams[0] && exams[0].n === 0) pool = MOTTOS.examToday;
+    else {
+      if (late) pool.push(...MOTTOS.late);
+      const soon = exams[0] && exams[0].n <= 5 ? exams[0] : null;
+      if (soon) pool.push(...fill(MOTTOS.examSoon, { exam: examPhrase(soon.a), n: pl(soon.n, 'día', 'días') }));
+      // Cuánto material le falta a la materia del próximo examen (dentro de dos semanas).
+      const next = exams.find((x) => x.n <= 14 && x.a.course);
+      if (next) {
+        const co = course(next.a.course);
+        const left = co ? S.practices.filter((p) => subjOfPractice(p) === co.subj && !isComplete(p)).length : 0;
+        const kd = EXAM_KINDS.find((x) => x[0] === next.a.kind);
+        if (left) pool.push(...fill(MOTTOS.beforeExam, { k: pl(left, 'material', 'materiales'), mat: matLabel(co.subj), short: kd && kd[2] ? kd[2] : 'el examen' }));
+      }
+      const close = S.practices.filter((p) => p.known && !p.single && p.items.length).map((p) => ({ p, left: p.items.filter((v) => !v).length })).filter((x) => x.left >= 1 && x.left <= 3).sort((a, b) => a.left - b.left)[0];
+      if (close) {
+        const k = kindOf(close.p);
+        pool.push(...fill(MOTTOS.almostDone, { name: close.p.name, mat: matLabel(subjOfPractice(close.p)), left: close.left === 1 ? `falta 1 ${k.one}` : `faltan ${close.left} ${k.unit}` }));
+      }
+      const doubts = S.practices.reduce((a, p) => a + (p.doubts || []).filter((i) => i < p.items.length).length, 0);
+      if (doubts) pool.push(...fill(doubts === 1 ? MOTTOS.doubts.map((x) => x.replace('Llevalas', 'Llevala')) : MOTTOS.doubts, { d: pl(doubts, 'duda', 'dudas') }));
+      const st = L.streaks(S);
+      if (st.current >= 5) pool.push(...fill(MOTTOS.streak, { n: st.current }));
+      const dw = L.dow(t);
+      if (dw >= 5) pool.push(...MOTTOS.weekend);
+      if (dw === 0) pool.push(...MOTTOS.monday);
+      pool.push(...MOTTOS.general, ...own, ...own);
+    }
+    // Mayúscula al principio de cada oración ("el segundo parcial…" puede quedar arrancando una).
+    const text = pool[hash % pool.length].replace(/(^|[.!?]\s+)([a-záéíóúñ])/g, (m, a, b) => a + b.toUpperCase());
     return `<p class="motto">${h(text)}</p>`;
   }
 
@@ -790,6 +818,11 @@
     else inner = 'Cargá el parcial 1 para ver cuánto necesitás en el 2.';
     return `<tr class="need-row" data-tail-row><td colspan="4">${inner}</td></tr>`;
   }
+  // Campos de solo números: lo que no es dígito no entra.
+  document.addEventListener('input', (e) => {
+    const el = e.target;
+    if (el.dataset && 'digits' in el.dataset && /\D/.test(el.value)) el.value = el.value.replace(/\D/g, '');
+  }, true);
   // Las notas van con coma: si escribís un punto, se cambia solo.
   document.addEventListener('input', (e) => {
     const el = e.target;
@@ -882,7 +915,7 @@
     });
     const lead = cs.total ? `${pl(cs.total - cs.approved - cs.current, 'materia', 'materias')} por delante, ${cs.current} en curso, ${pl(cs.approved, 'aprobada', 'aprobadas')}${st.entryYear ? `. Empezaste en ${h(st.entryYear)}` : ''}${st.university ? ` · ${h(st.university)}` : ''}.` : 'Cargá tu plan y mirá cuánto te falta.';
     return `
-    <header class="head"><div><h1>${h(st.career || 'Tu carrera')}</h1><p class="lead">${lead}</p></div>
+    <header class="head"><div><h1>${h(st.career || 'Tu carrera')}</h1><p class="lead">${lead}</p>${wrappedTerms().length ? '<button class="btn ghost small wrapped-btn" data-act="wrapped">Tu resumen del cuatrimestre</button>' : ''}</div>
       ${cs.total ? `<div class="figs"><div class="fig"><b>${L.pct(ratio(cs.approved, cs.total))}</b><span>de la carrera</span></div></div>` : ''}</header>
     ${cs.total ? `<section class="card career">${careerStrip(false)}<div class="zig-foot">${careerKey()}</div></section>${yearChart()}` : ''}
     <section class="card mt"><div class="card-head"><h2>Plan de estudios</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost small" data-act="add-plan">Agregar materias</button>${cs.total ? '<button class="btn ghost small" data-act="add-mile">Agregar hito</button>' : ''}</span></div>${body || '<p class="sub">Todavía no hay materias. Pegá la lista de tu plan y se arma sola.</p>'}</section>`;
@@ -907,10 +940,10 @@
     const total = p.known ? p.items.length : null;
     return `<details class="pr" data-id="${h(p.id)}"${ui.openPrac.has(p.id) ? ' open' : ''}><summary><span class="pr-title"><b>${h(p.name)}</b><span class="pr-sub">${h(k.n)}${dz.length ? ` · <span class="doubt-txt">${pl(dz.length, 'duda', 'dudas')}</span>` : ''}</span></span>${total ? `<span class="pr-bar" style="--v:${ratio(d, total)}" aria-hidden="true"></span>` : ''}<span class="pr-count">${total ? `${d}/${total}` : `${d} ${d === 1 ? 'hecho' : 'hechos'}`}</span></summary>
     <div class="pr-body">${dateTxt ? `<div class="pr-meta">${dateTxt}</div>` : ''}
-      <div class="doubt-switch choice" role="group" aria-label="Qué marca un toque"><button data-act="doubt-mode" data-id="${h(p.id)}" data-v="" aria-pressed="${!mode}">✓ Hecho</button><button data-act="doubt-mode" data-id="${h(p.id)}" data-v="1" aria-pressed="${mode}">? Duda</button></div>
+      <div class="pr-actions"><div class="doubt-switch choice" role="group" aria-label="Qué marca un toque"><button data-act="doubt-mode" data-id="${h(p.id)}" data-v="" aria-pressed="${!mode}">✓ Hecho</button><button data-act="doubt-mode" data-id="${h(p.id)}" data-v="1" aria-pressed="${mode}">? Duda</button></div>${p.known && p.items.length ? `<button class="btn ghost small all-btn" data-act="prac-all" data-id="${h(p.id)}">${p.items.every(Boolean) ? 'Destildar todos' : `Tildar los ${p.items.length}`}</button>` : ''}</div>
       <div class="ex-grid${mode ? ' doubt-on' : ''}">${p.items.map((v, i) => `<button class="ex${dz.includes(i) ? ' has-doubt' : ''}" aria-pressed="${!!v}" data-act="ex" data-id="${h(p.id)}" data-i="${i}" aria-label="${h(k.one)} ${i + 1}, ${h(p.name)}${dz.includes(i) ? ', con duda' : ''}">${i + 1}</button>`).join('')}${p.known ? '' : `<button class="ex add" data-act="ex-add" data-id="${h(p.id)}" aria-label="Sumar ${h(k.one)} hecho en ${h(p.name)}">+</button>`}</div>
       ${note}
-      <div class="pr-tools"><label>Tiene <input class="grade-in" inputmode="numeric" data-change="prac-total" data-id="${h(p.id)}" value="${p.known ? p.items.length : ''}" placeholder="?" aria-label="Cantidad de ${h(k.unit)} de ${h(p.name)}"> ${h(k.unit)}</label><button class="linkish" data-act="prac-all" data-id="${h(p.id)}">Tildar todo</button>${linkTxt}${edit}<button class="linkish danger" data-act="del-prac" data-id="${h(p.id)}">Borrar</button></div></div></details>`;
+      <div class="pr-tools"><label>Tiene <input class="grade-in" inputmode="numeric" data-change="prac-total" data-id="${h(p.id)}" value="${p.known ? p.items.length : ''}" placeholder="?" aria-label="Cantidad de ${h(k.unit)} de ${h(p.name)}"> ${h(k.unit)}</label>${linkTxt}${edit}<button class="linkish danger" data-act="del-prac" data-id="${h(p.id)}">Borrar</button></div></div></details>`;
   }
   // Torta de avance de una materia. Sin material queda vacía (no es 0% ni 100%: no hay nada que medir).
   function donut(pct, color, empty, doneCount) {
@@ -936,18 +969,150 @@
       const doneAll = full.reduce((a, p) => a + p.items.filter(Boolean).length, 0);
       const line = !st.count ? 'Todavía sin material' : st.pct === null ? `${doneAll} ${doneAll === 1 ? 'hecho' : 'hechos'}. Poné cuántos tiene cada material para ver el porcentaje.` : `${st.complete} de ${st.count} ${st.count === 1 ? 'terminado' : 'terminados'}${st.unknown ? ` · ${st.unknown} sin total` : ''}`;
       const aria = !st.count ? 'sin material' : st.pct === null ? 'sin totales cargados' : `${L.pct(st.pct)} hecho`;
-      return `<section class="sbox" style="--mc:${colorOf(k)}" aria-label="${h(matLabel(k))}, ${aria}">
-        <header class="sbox-head">${donut(st.pct, colorOf(k), !st.count, doneAll)}<div><h2>${h(matLabel(k))}</h2><p class="sub">${line}</p>${dz ? `<span class="pill doubt">${pl(dz, 'duda', 'dudas')} para consultar</span>` : ''}</div></header>
-        <div class="sbox-body">${list.map(materialRow).join('') || '<p class="sub sbox-empty">Sumá lo primero: una práctica, una lectura, un video o un TP. Si tiene ejercicios, vas a poder tildarlos uno por uno.</p>'}</div>
-        <button class="btn ghost small sbox-add" data-act="add-prac" data-course="${h(co ? co.id : '')}">Agregar material</button>
-      </section>`;
+      const open = ui.openSubj.has(k) || !!kindF;
+      return `<details class="sbox" data-subj="${h(k)}" style="--mc:${colorOf(k)}"${open ? ' open' : ''}>
+        <summary class="sbox-head" aria-label="${h(matLabel(k))}, ${aria}">${donut(st.pct, colorOf(k), !st.count, doneAll)}<div class="sbox-info"><h2>${h(matLabel(k))}</h2><p class="sub">${line}</p>${dz ? `<span class="pill doubt">${pl(dz, 'duda', 'dudas')} para consultar</span>` : ''}</div><span class="chev" aria-hidden="true"></span></summary>
+        <div class="sbox-body">${list.map(materialRow).join('') || '<p class="sub sbox-empty">Sumá lo primero: una práctica, una lectura, un video o un TP. Si tiene ejercicios, vas a poder tildarlos uno por uno.</p>'}
+        <button class="btn ghost small sbox-add" data-act="add-prac" data-course="${h(co ? co.id : '')}">Agregar material</button></div>
+      </details>`;
     }).join('');
     return `
-    <header class="head"><div><h1>Estudio</h1><p class="lead">Prácticas, lecturas, videos y TP de cada materia. Tildá lo que vas haciendo y marcá con <b>?</b> lo que te quedó en duda.</p></div>
+    <header class="head"><div><h1>Estudio</h1><p class="lead">Tu avance en cada materia. Tocá una para ver sus prácticas, lecturas y TP, tildar lo que hiciste y marcar con <b>?</b> lo que te quedó en duda.</p></div>
       ${all.count ? `<div class="figs"><div class="fig"><b>${all.complete}<small> de ${all.count}</small></b><span>terminados</span></div>${totalDoubts ? `<div class="fig"><b>${totalDoubts}</b><span>${totalDoubts === 1 ? 'duda' : 'dudas'} para consultar</span></div>` : ''}</div>` : ''}</header>
     ${chips}
     ${subs.length ? `<div class="study-grid mt">${boxes}</div>` : '<section class="card"><div class="empty"><b>Todavía no hay materias en curso.</b>Marcá qué estás cursando en Carrera, o agregá material a cualquier materia.</div></section>'}
     <div class="actions" style="justify-content:flex-start"><button class="btn ghost" data-act="add-prac" data-course="">Agregar material de otra materia</button></div>`;
+  }
+
+  // ---------- WRAPPED: el resumen del cuatrimestre, como historias. Se abre solo cuando termina y desde Carrera.
+  const SEM_ORDER = { A: 0, B: 1, Anual: 2 };
+  const termKey = (t) => `${t.year}${t.sem}`;
+  function currentTerm() {
+    const cur = S.courses.filter(L.isCurrent);
+    if (!cur.length) return null;
+    const count = {};
+    cur.forEach((c) => { const k = termKey(c); count[k] = (count[k] || 0) + 1; });
+    const top = Object.keys(count).sort((a, b) => count[b] - count[a])[0];
+    const c = cur.find((x) => termKey(x) === top);
+    return { year: c.year, sem: c.sem };
+  }
+  // Cuatrimestres con algo para contar: notas cargadas, o el que estás cursando.
+  function wrappedTerms() {
+    const cur = currentTerm();
+    const map = new Map();
+    S.courses.forEach((c) => {
+      const has = c.p1 != null || c.p2 != null || c.final != null || (cur && termKey(c) === termKey(cur));
+      if (has && !map.has(termKey(c))) map.set(termKey(c), { year: c.year, sem: c.sem });
+    });
+    return [...map.values()].sort((a, b) => a.year - b.year || SEM_ORDER[a.sem] - SEM_ORDER[b.sem]);
+  }
+  function semesterEnded() {
+    if (!S.classes.length) return false;
+    const wk = L.weekNumber(S, today());
+    return wk >= 1 && !S.weeks.find((w) => w.n === wk);
+  }
+  function maybeAutoWrapped() {
+    const cur = currentTerm();
+    if (!cur || !semesterEnded() || S.settings.wrappedSeen === termKey(cur) || modal().open || $('#wrapped')) return;
+    S.settings.wrappedSeen = termKey(cur);
+    save();
+    setTimeout(() => openWrapped(termKey(cur)), 600);
+  }
+  function wrappedData(term) {
+    const k = termKey(term);
+    const cur = currentTerm();
+    const courses = S.courses.filter((c) => termKey(c) === k);
+    const ids = new Set(courses.map((c) => c.id));
+    // Asistencia: la del cuatrimestre actual, o la que quedó archivada al empezar uno nuevo.
+    let attState = null;
+    if (cur && termKey(cur) === k) attState = S;
+    else {
+      const old = (S.history || []).find((x) => x.term && termKey(x.term) === k);
+      if (old) attState = { ...S, classes: old.classes || [], weeks: old.weeks || [], att: old.att || {}, holidays: [] };
+    }
+    let att = null;
+    if (attState && attState.classes.length) {
+      const t = L.tally(L.allCells(attState));
+      if (t.taken) {
+        const st = L.streaks(attState);
+        const days = L.absencesByDay(attState).map((d) => ({ ...d, r: d.a + d.p ? d.a / (d.a + d.p) : 0 })).sort((a, b) => b.r - a.r);
+        att = { pct: t.pct, p: t.p, a: t.a, best: st.best, worst: days[0] && days[0].r >= 0.1 ? days[0] : null };
+      }
+    }
+    const finals = courses.filter((c) => c.final != null);
+    const best = [...finals].sort((a, b) => b.final - a.final)[0] || null;
+    const imp = L.improvements({ courses });
+    const prs = S.practices.filter((p) => ids.has(p.course));
+    const done = prs.reduce((a, p) => a + p.items.filter(Boolean).length, 0);
+    const exams = (S.agenda || []).filter((a) => ids.has(a.course)).length;
+    return { term, courses, att, finals, avg: L.avg(finals.map((c) => c.final)), approved: courses.filter(L.isApproved).length, best, imp, done, complete: prs.filter(isComplete).length, mats: prs.length, exams };
+  }
+  function wrappedSlides(d) {
+    const minAtt = S.settings.minAtt;
+    const termName = termShort(d.term.year, d.term.sem);
+    const out = [];
+    out.push({ cls: 'w-intro', html: `<p class="w-kicker">Tu resumen</p><h2 class="w-title">${h(termName)}</h2><p class="w-sub">${pl(d.courses.length, 'materia', 'materias')}${d.exams ? `, ${pl(d.exams, 'examen anotado', 'exámenes anotados')}` : ''}. Así te fue.</p><p class="w-hint">Tocá para seguir</p>` });
+    if (d.att) {
+      const joke = d.att.pct >= 0.95 ? 'Los del buffet ya te saludan por tu nombre.' : d.att.pct >= minAtt + 0.1 ? 'Presente casi siempre. Puntualidad, no te prometemos.' : d.att.pct >= minAtt ? 'Cumpliste. Con lo justo, pero cumpliste.' : 'El mínimo y vos: una relación complicada.';
+      out.push({ cls: 'w-att', html: `<p class="w-kicker">Asistencia</p><p class="w-big">${L.pct(d.att.pct)}</p><p class="w-sub">Fuiste a ${pl(d.att.p, 'clase', 'clases')}${d.att.best >= 3 ? ` y tu mejor racha fue de ${d.att.best} seguidas` : ''}.</p><p class="w-joke">${h(joke)}</p>` });
+      if (d.att.worst) {
+        const day = L.DIAS[d.att.worst.dow];
+        const plural = /s$/.test(day) ? day : `${day}s`;
+        out.push({ cls: 'w-day', html: `<p class="w-kicker">Tu día más difícil</p><p class="w-big w-word">Los ${h(plural)}</p><p class="w-sub">Faltaste al ${L.pct(d.att.worst.r)} de esas clases.</p><p class="w-joke">No es personal con los ${h(plural)}. O sí.</p>` });
+      }
+    }
+    if (d.finals.length) {
+      const joke = d.avg >= 8.5 ? 'Nivel cuadro de honor.' : d.avg >= 7 ? 'Sólido. Nadie te puede decir nada.' : d.avg >= 4 ? 'Aprobado es aprobado, y eso no lo discute nadie.' : 'Cuatrimestre difícil. El próximo arranca de cero.';
+      out.push({ cls: 'w-grades', html: `<p class="w-kicker">Notas</p><p class="w-big">${L.fmt(d.avg)}</p><p class="w-sub">de promedio. Aprobaste ${d.approved} de ${d.courses.length}.</p>${d.best ? `<p class="w-pill">Tu mejor nota: <b>${L.fmt(d.best.final)}</b> en ${h(label(d.best))}</p>` : ''}<p class="w-joke">${h(joke)}</p>` });
+    }
+    if (d.imp.n) {
+      const up = d.imp.delta > 0;
+      out.push({ cls: 'w-imp', html: `<p class="w-kicker">Del primer al segundo parcial</p><p class="w-big w-mid">${L.fmt(d.imp.avgP1)} → ${L.fmt(d.imp.avgP2)}</p><p class="w-sub">${up ? `Subiste en ${d.imp.up} de ${d.imp.n} materias.` : d.imp.delta < 0 ? `En ${d.imp.down} de ${d.imp.n} materias el segundo costó más.` : 'Pareja de punta a punta.'}</p>${d.imp.best ? `<p class="w-pill">La que más subió: <b>${h(label(d.imp.best.course))}</b>, +${L.fmt(d.imp.best.delta)}</p>` : ''}<p class="w-joke">${up ? 'Arrancar despacio y cerrar fuerte: un clásico.' : 'El segundo parcial siempre viene con más temas, no es tu culpa.'}</p>` });
+    }
+    if (d.done) {
+      out.push({ cls: 'w-study', html: `<p class="w-kicker">Estudio</p><p class="w-big">${d.done}</p><p class="w-sub">${d.done === 1 ? 'cosa tildada' : 'cosas tildadas'} en Estudio${d.complete ? `, y ${pl(d.complete, 'material terminado', 'materiales terminados')} de punta a punta` : ''}.</p><p class="w-joke">${d.done >= 100 ? 'Más de cien. Tu birome pide vacaciones.' : 'Cada tilde fue un ejercicio menos para la noche anterior.'}</p>` });
+    }
+    out.push({ cls: 'w-end', html: `<p class="w-kicker">${h(termName)}</p><h2 class="w-title">Cerrado.</h2><p class="w-sub">${d.approved ? `${pl(d.approved, 'materia', 'materias')} menos en el plan.` : 'Lo que viene, viene con todo esto aprendido.'}</p><p class="w-joke">Ahora sí: a dormir doce horas.</p>` });
+    return out;
+  }
+  let wrappedState = null;
+  function openWrapped(key) {
+    const terms = wrappedTerms();
+    if (!terms.length) return;
+    const cur = currentTerm();
+    const term = terms.find((t) => termKey(t) === key) || (cur && terms.find((t) => termKey(t) === termKey(cur))) || terms[terms.length - 1];
+    wrappedState = { term, i: 0, slides: wrappedSlides(wrappedData(term)), terms };
+    let dlg = $('#wrapped');
+    if (!dlg) {
+      dlg = document.createElement('dialog');
+      dlg.id = 'wrapped'; dlg.className = 'wrapped'; dlg.setAttribute('aria-label', 'Resumen del cuatrimestre');
+      document.body.append(dlg);
+      dlg.addEventListener('close', () => { dlg.remove(); wrappedState = null; });
+      dlg.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-w]');
+        if (b) { e.stopPropagation(); const w = b.dataset.w; if (w === 'close') dlg.close(); else if (w === 'term') openWrapped(b.dataset.term); return; }
+        if (e.target.closest('.w-stage')) { const r = dlg.querySelector('.w-stage').getBoundingClientRect(); wrappedGo(e.clientX < r.left + r.width / 3 ? -1 : 1); }
+      });
+      dlg.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); wrappedGo(1); } if (e.key === 'ArrowLeft') { e.preventDefault(); wrappedGo(-1); } });
+    }
+    drawWrapped();
+    if (!dlg.open) dlg.showModal();
+  }
+  function wrappedGo(n) {
+    if (!wrappedState) return;
+    const i = wrappedState.i + n;
+    if (i < 0) return;
+    if (i >= wrappedState.slides.length) { $('#wrapped').close(); return; }
+    wrappedState.i = i; drawWrapped();
+  }
+  function drawWrapped() {
+    const { slides, i, terms, term } = wrappedState;
+    const sl = slides[i];
+    $('#wrapped').innerHTML = `<div class="w-bars" aria-hidden="true">${slides.map((_, j) => `<i class="${j < i ? 'done' : j === i ? 'now' : ''}"></i>`).join('')}</div>
+      <button class="w-close" data-w="close" aria-label="Cerrar">×</button>
+      <div class="w-stage ${sl.cls}" role="group" aria-roledescription="historia" aria-label="${i + 1} de ${slides.length}"><div class="w-slide" aria-live="polite">${sl.html}</div></div>
+      ${terms.length > 1 ? `<div class="w-terms" role="group" aria-label="Otros cuatrimestres">${terms.map((t) => `<button data-w="term" data-term="${termKey(t)}" aria-pressed="${termKey(t) === termKey(term)}">${t.year}° ${t.sem === 'Anual' ? 'anual' : t.sem}</button>`).join('')}</div>` : ''}`;
+    const st = $('#wrapped .w-stage'); if (st) st.focus && st.setAttribute('tabindex', '-1');
   }
 
   // ---------- BENEFICIOS
@@ -1494,19 +1659,29 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     openModal(`<h2 id="modal-title">${editing ? 'Editar material' : 'Agregar material'}</h2><form data-form="prac" ${editing ? `data-id="${h(editing.id)}"` : ''}><div class="fields c2">
       <label class="field">Materia<select name="course">${opts.map((c) => `<option value="${h(c.id)}"${c.id === selected ? ' selected' : ''}>${h(label(c))}</option>`).join('')}</select></label>
       <label class="field">Tipo<select name="kind" data-change="mat-kind">${Object.entries(KINDS).map(([k, v]) => `<option value="${k}"${k === kind ? ' selected' : ''}>${h(v.n)}</option>`).join('')}</select></label>
-      </div><div class="fields c2"><label class="field">Nombre<input name="name" required maxlength="80" value="${h(name)}"></label>
-      <label class="field"><span id="parts-label">${h(KINDS[kind].parts)} (opcional)</span><input name="n" inputmode="numeric" pattern="[0-9]*" value="${parts}" placeholder="Sin dividir"></label></div>
+      </div><div class="fields"><label class="field">Nombre<input name="name" required maxlength="80" value="${h(name)}"></label></div>
+      <div class="field count-field"><span id="parts-label">${h(partsQuestion(KINDS[kind]))}</span>
+        <div class="stepper"><button type="button" class="step-btn" data-act="step" data-d="-1" aria-label="Uno menos">−</button><input name="n" data-digits inputmode="numeric" pattern="[0-9]*" maxlength="3" value="${parts}" placeholder="–" aria-labelledby="parts-label"><button type="button" class="step-btn" data-act="step" data-d="1" aria-label="Uno más">+</button></div>
+        <span class="sub" style="font-weight:400">Solo números. Dejalo vacío si es una sola cosa, como una lectura entera.</span></div>
+      ${editing ? '' : '<label class="check-line"><input type="checkbox" name="alldone" value="1"> Ya lo hice todo (se carga tildado)</label>'}
       <div class="fields c2"><label class="field">Link (opcional)<input name="link" type="url" pattern="https?://.*" value="${h(editing ? editing.link || '' : '')}" placeholder="https://"></label>
       <label class="field">Para cuándo (opcional)<input name="date" type="date" value="${h(editing ? editing.date || '' : '')}"></label></div>
-      <p class="sub" style="margin-top:8px">Si lo dividís, tildás cada parte y ves la barra. Si no, se marca como hecho de una.</p>
       <div class="actions">${editing ? `<button type="button" class="btn ghost danger" data-act="del-prac" data-id="${h(editing.id)}">Borrar</button>` : ''}<button class="btn" type="submit">${editing ? 'Guardar' : 'Agregar material'}</button></div></form>`);
   }
   function planDialog() {
     openModal(`<h2 id="modal-title">Agregar materias</h2><p class="sub" style="margin-bottom:12px">No se duplica lo que ya está.</p><form data-form="plan">${planInputHtml('')}<div class="actions"><button class="btn" type="submit">Agregar materias</button></div></form>`);
   }
+  const MILE_PRESETS = ['Me puedo postular al intercambio', 'Puedo empezar las pasantías', 'Título intermedio', 'Mitad de la carrera', 'Prácticas profesionales', 'Empiezo la tesis o el trabajo final', 'Termino de cursar'];
   function mileDialog() {
-    const yrs = [...new Set(S.courses.map((c) => c.year))];
-    openModal(`<h2 id="modal-title">Agregar hito</h2><p class="sub">Algo importante de tu carrera: intercambio, pasantías, título intermedio.</p><form data-form="mile"><div class="fields"><label class="field">Qué pasa<input name="text" required maxlength="70" placeholder="Me puedo postular al intercambio"></label></div><div class="fields c2"><label class="field">Año<select name="year">${yrs.map((y) => `<option>${y}</option>`).join('')}</select></label><label class="field">${h(S.settings.termWord)}<select name="sem"><option>A</option><option>B</option><option>Anual</option></select></label></div><div class="actions"><button class="btn" type="submit">Agregar hito</button></div></form>`);
+    const yrs = [...new Set(S.courses.map((c) => c.year))].sort((a, b) => a - b);
+    const pick = (name, v, n, req) => `<label class="pick"><input type="radio" name="${name}" value="${h(v)}"${req ? ' required' : ''}><span>${h(n)}</span></label>`;
+    openModal(`<h2 id="modal-title">Agregar hito</h2><p class="sub">Algo importante de tu carrera. Aparece en el plan de estudios, en el ${h(S.settings.termWord.toLowerCase())} que elijas.</p><form data-form="mile" class="ag-form mile-form">
+      <fieldset class="picks"><legend>Qué pasa</legend><div class="pick-row">${MILE_PRESETS.map((t, i) => pick('preset', t, t, i === 0)).join('')}${pick('preset', 'otro', 'Otro')}</div></fieldset>
+      <label class="field mile-other">Escribilo<input name="text" maxlength="70" placeholder="Ej.: me recibo de técnico"></label>
+      <fieldset class="picks"><legend>Año</legend><div class="pick-row">${(yrs.length ? yrs : [1, 2, 3, 4, 5]).map((y, i) => pick('year', y, `${y}° año`, i === 0)).join('')}</div></fieldset>
+      <fieldset class="picks"><legend>${h(S.settings.termWord)}</legend><div class="pick-row">${[['A', 'Primero'], ['B', 'Segundo'], ['Anual', 'Todo el año']].map(([v, n], i) => pick('sem', v, n, i === 0)).join('')}</div></fieldset>
+      <p class="err" id="mile-err" role="alert"></p>
+      <div class="actions"><button class="btn" type="submit">Agregar hito</button></div></form>`);
   }
   function deleteDialog() {
     const proof = me.hasPassword !== false
@@ -1529,6 +1704,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     if (deferring) { setTimeout(render); return; }
     applyTheme();
     document.title = APP_NAME;
+    document.body.classList.toggle('is-auth', !S || ui.recovery);
     const v = $('#view');
     if (ui.recovery) { document.body.classList.add('bare'); v.innerHTML = viewRecovery(); return; }
     if (!S) { document.body.classList.add('bare'); v.innerHTML = viewAuth(); return; }
@@ -1540,7 +1716,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     if (a && a.dataset && a.dataset.change === 'scratch') return;
     const wrap = $('.table-wrap'); const sx = wrap ? wrap.scrollLeft : 0;
     keepFocus(() => { v.innerHTML = VIEWS[r][1](); decorate(v); });
-    if (r === 'hoy') viewHoy.played = true;
+    if (r === 'hoy') { viewHoy.played = true; maybeAutoWrapped(); }
     const w2 = $('.table-wrap'); if (w2) w2.scrollLeft = sx;
   }
   // Al redibujar, el foco vuelve al mismo campo (Tab entre notas sigue andando).
@@ -1593,6 +1769,11 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     'add-agenda': agendaDialog,
     'cal-nav'(el) { if (!agCal) return; const d = new Date(agCal.y, agCal.m + Number(el.dataset.n), 1); agCal.y = d.getFullYear(); agCal.m = d.getMonth(); calRefresh(); },
     'cal-pick'(el) { if (!agCal) return; agCal.sel = el.dataset.d; const f = el.closest('form'); f.elements.date.value = agCal.sel; const err = $('#ag-err'); if (err) err.textContent = ''; calRefresh(); const again = $(`#ag-cal [data-d="${agCal.sel}"]`); if (again) again.focus(); },
+    step(el) {
+      const inp = el.parentElement.querySelector('input');
+      const n = Math.max(0, Math.min(300, (parseInt(inp.value, 10) || 0) + Number(el.dataset.d)));
+      inp.value = n ? String(n) : '';
+    },
     'add-link': linkDialog,
     'quick-link'(el) { mutate(() => { S.links.push({ id: uid('link'), name: el.dataset.name, url: el.dataset.url }); }, `${el.dataset.name} agregado`); linkDialog(); },
     'del-link'(el) { mutate(() => { S.links = S.links.filter((l) => l.id !== el.dataset.id); }, 'Acceso quitado'); linkDialog(); },
@@ -1612,19 +1793,20 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     'doubt-mode'(el) { const id = el.dataset.id; if (el.dataset.v) ui.doubtMode.add(id); else ui.doubtMode.delete(id); ui.openPrac.add(id); render(); },
     'doubt-single'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); const has = doubtsOf(p).length > 0; ui.openPrac.add(p.id); mutate(() => { p.doubts = has ? [] : [0]; }, `${p.name}: ${has ? 'sin dudas' : 'con dudas'}`); },
     'ex-add'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); const n = p.items.length + 1; mutate(() => { p.items.push(true); }, `${p.name}: ${kindOf(p).one} ${n} tildado`); },
-    'prac-all'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); mutate(() => { p.items = p.items.map(() => true); }, `${p.name}: todo tildado`); },
+    'prac-all'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); const all = p.items.every(Boolean); ui.openPrac.add(p.id); mutate(() => { p.items = p.items.map(() => !all); }, `${p.name}: ${all ? 'todo destildado' : 'todo tildado'}`); },
     'del-prac'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); closeModal(); mutate(() => { S.practices = S.practices.filter((x) => x !== p); }, `${p.name}: borrado`); },
     'benefit-filter'(el) { ui.benefitFilter = el.dataset.k || null; render(); },
     'kind-filter'(el) { ui.kindFilter = el.dataset.k || null; render(); },
     'edit-prac': (el) => pracDialog('', el.dataset.id),
     'pick-week'(el) { ui.phoneWeek = +el.dataset.w; render(); },
     'del-class'(el) { mutate(() => { S.classes = S.classes.filter((c) => c.id !== el.dataset.id); }, 'Clase borrada'); reopen(scheduleDialog); },
+    wrapped(el) { openWrapped(el.dataset.term || null); },
     'new-sem'() {
       const t = L.tally(L.allCells(S));
       closeModal();
       mutate(() => {
         S.history = S.history || [];
-        S.history.push({ label: `Hasta ${shortDate(today())}/${today().getFullYear()}`, pct: t.pct, classes: S.classes, weeks: S.weeks, att: S.att, cellNotes: S.cellNotes });
+        S.history.push({ label: `Hasta ${shortDate(today())}/${today().getFullYear()}`, term: currentTerm(), pct: t.pct, classes: S.classes, weeks: S.weeks, att: S.att, cellNotes: S.cellNotes });
         S.classes = []; S.att = {}; S.cellNotes = {}; S.weekNotes = {}; S.weeks = L.buildWeeks(16, [], []); S.settings.semStart = L.iso(mondayOf(today())); Object.assign(S.settings, { semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '' }); S.holidays = [];
       }, 'Cuatrimestre archivado');
       scheduleDialog();
@@ -1726,7 +1908,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   document.addEventListener('toggle', (e) => {
     const d = e.target;
     if (d.matches && d.matches('details.pr')) { if (d.open) ui.openPrac.add(d.dataset.id); else ui.openPrac.delete(d.dataset.id); }
-    if (d.matches && d.matches('details.study') && !ui.kindFilter) { if (d.open) ui.openSubj.add(d.dataset.subj); else ui.openSubj.delete(d.dataset.subj); }
+    if (d.matches && d.matches('details.study, details.sbox') && !ui.kindFilter) { if (d.open) ui.openSubj.add(d.dataset.subj); else ui.openSubj.delete(d.dataset.subj); }
   }, true);
 
   function gradeChange(el) {
@@ -1808,7 +1990,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       }
       if (kind === 'mat-kind') {
         const f = el.form; const k = KINDS[el.value]; const nameIn = f.elements.name;
-        $('#parts-label').textContent = `${k.parts} (opcional)`;
+        $('#parts-label').textContent = partsQuestion(k);
         if (Object.values(KINDS).some((v) => new RegExp(`^${v.n} \\d+$`).test(nameIn.value))) {
           const c = S.practices.filter((p) => p.course === f.elements.course.value && (p.kind || 'practica') === el.value).length;
           nameIn.value = `${k.n} ${c + 1}`;
@@ -1921,6 +2103,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       reopen(scheduleDialog);
       return;
     }
+    if (kind === 'mile' && d.preset === 'otro' && !(d.text || '').trim()) { const err = $('#mile-err'); if (err) err.textContent = 'Escribí cuál es el hito.'; const t = f.elements.text; if (t) t.focus(); return; }
     if (kind === 'agenda' && !d.date) { const err = $('#ag-err'); if (err) err.textContent = 'Elegí la fecha en el calendario.'; return; }
     if (kind === 'agenda' && d.course === '__none') d.course = '';
     if (kind !== 'prac' && kind !== 'todo') closeModal();
@@ -1949,17 +2132,18 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         mutate(() => {
           ensureColor(co.subj);
           const single = n <= 1 && d.kind !== 'practica' || n === 1;
-          S.practices.push({ id, ...fields, single, items: single ? [false] : Array(n).fill(false), known: single || n > 0 });
+          const all = d.alldone === '1';
+          S.practices.push({ id, ...fields, single, items: single ? [all] : Array(n).fill(all), known: single || n > 0 });
         }, 'Material agregado');
       }
     }
-    if (kind === 'mile') mutate(() => { S.milestones.push({ year: +d.year, sem: d.sem, text: d.text.trim() }); }, 'Hito agregado');
+    if (kind === 'mile') mutate(() => { S.milestones.push({ year: +d.year, sem: d.sem, text: d.preset === 'otro' ? d.text.trim() : d.preset }); }, 'Hito agregado');
     if (kind === 'plan') { if (!d.plan.trim()) { toast('Subí un archivo o pegá la lista primero.'); return; } let added = 0; mutate(() => { added = applyPlan(d.plan); }, null); toast(added ? `${pl(added, 'materia agregada', 'materias agregadas')}.` : 'No había materias nuevas en la lista.', !!added); }
   });
 
   // Teclas 1 a 5 para saltar de sección.
   document.addEventListener('keydown', (e) => {
-    if (!S || inWizard() || e.metaKey || e.ctrlKey || e.altKey || modal().open) return;
+    if (!S || inWizard() || e.metaKey || e.ctrlKey || e.altKey || modal().open || $('#wrapped')) return;
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
     const k = Object.keys(VIEWS)[+e.key - 1];
     if (k) location.hash = k;
