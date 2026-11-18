@@ -9,7 +9,7 @@
   // ---------- Estado y guardado
   let S = null; let me = null; let rev = 0;
   let dirty = false; let inflight = false; let saveTimer = null; let deferring = false;
-  const ui = { allDraft: '', benefitFilter: null, kindFilter: null, openSubj: new Set(), authMode: 'login', authNotice: '', recovery: false, pracFilter: null, openPrac: new Set(), phoneWeek: null, msgI: Math.floor(Math.random() * 100), planDraft: '' };
+  const ui = { allDraft: '', benefitFilter: null, kindFilter: null, openSubj: new Set(), authMode: 'login', authNotice: '', recovery: false, pracFilter: null, openPrac: new Set(), doubtMode: new Set(), phoneWeek: null, msgI: Math.floor(Math.random() * 100), planDraft: '' };
 
   const Backend = window.CursadaBackend;
   const api = (method, url, body) => Backend.request(method, url, body);
@@ -53,7 +53,7 @@
   function emptyState(user) {
     return {
       v: 2,
-      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
+      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', motivation: false, myPhrases: '', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
       classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], todos: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', matColors: {}, history: [],
     };
   }
@@ -79,7 +79,7 @@
       if (isHex(given)) colors[c.subj] = given; else if (active) colors[c.subj] = PALETTE[i++ % PALETTE.length];
     }
     out.matColors = colors;
-    out.practices = out.practices.map((p) => ({ kind: 'practica', ...p }));
+    out.practices = out.practices.map((p) => ({ kind: 'practica', ...p, doubts: Array.isArray(p.doubts) ? p.doubts.filter((i) => Number.isInteger(i) && i >= 0) : [], doubtNote: typeof p.doubtNote === 'string' ? p.doubtNote : '' }));
     // Una clase "x2" son dos bloques: cada uno con su casilla. Lo ya cargado se copia a los dos.
     if (out.classes.some((c) => c.x2)) {
       const att = { ...out.att };
@@ -188,6 +188,7 @@
     spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8',
     alert: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
     bulb: 'M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z',
+    smile: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM8 14.5s1.5 2.5 4 2.5 4-2.5 4-2.5M9 9.5h.01M15 9.5h.01',
     clock: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2',
   };
   const icon = (name) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON_PATHS[name]}"/></svg>`;
@@ -439,6 +440,36 @@
     return out;
   }
 
+  // ---------- Frases motivadoras (solo si las activaste en Ajustes). Una por día, según lo que te pasa.
+  const MOTTOS = {
+    examToday: ['Hoy es el día. Lo que estudiaste ya está adentro: andá tranqui.', 'Leé dos veces cada consigna antes de arrancar.', 'Respirá, empezá por la que mejor te sale y después volvé a las otras.'],
+    examSoon: ['Faltan pocos días para {exam}. Repasá lo que más entra, no todo.', 'Para {exam}: hacé un ejercicio de cada tema antes que diez del mismo.', 'Dormir bien antes de {exam} también es estudiar.'],
+    tight: ['En {mat} conviene no faltar más: cada clase cuenta.', 'Tenés las faltas justas en {mat}. Ir a la próxima ya es ganar.'],
+    streak: ['{n} clases seguidas. Que no se corte.', 'Llevás {n} clases sin faltar. Eso se nota en los parciales.'],
+    doubts: ['Tenés {d} anotadas. Llevalas a la próxima consulta y sacátelas de encima.', 'Con {d} para preguntar, la próxima clase te rinde el doble.'],
+    general: ['Un ejercicio más hoy es uno menos el día antes del parcial.', 'Hecho es mejor que perfecto.', 'Media hora todos los días le gana a una noche entera.', 'Si un tema no sale, anotá la duda y seguí con el próximo.', 'Mirá cuánto ya aprobaste: eso también lo hiciste vos.'],
+  };
+  function motto() {
+    if (!S.settings.motivation) return '';
+    const t = today(); const key = L.iso(t);
+    const hash = [...key].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+    const pick = (list) => list[hash % list.length];
+    const own = String(S.settings.myPhrases || '').split('\n').map((x) => x.trim()).filter(Boolean);
+    const exams = S.agenda.map((a) => ({ a, n: L.daysBetween(t, L.parseDate(a.date)) })).filter((x) => x.n >= 0).sort((x, y) => x.n - y.n);
+    const st = L.streaks(S);
+    const tight = mats().map((m) => ({ m, s: L.materiaStats(S, m) })).filter((x) => x.s.taken && x.s.left <= 1 && x.s.pending).sort((a, b) => a.s.left - b.s.left)[0];
+    const doubts = S.practices.reduce((a, p) => a + (p.doubts || []).filter((i) => i < p.items.length).length, 0);
+    let text;
+    if (exams[0] && exams[0].n === 0) text = pick(MOTTOS.examToday);
+    else if (exams[0] && exams[0].n <= 4) text = pick(MOTTOS.examSoon).replace('{exam}', examPhrase(exams[0].a));
+    else if (own.length && hash % 2 === 0) text = own[hash % own.length];
+    else if (tight) text = pick(MOTTOS.tight).replace('{mat}', matLabel(tight.m));
+    else if (doubts) text = pick(MOTTOS.doubts).replace('{d}', pl(doubts, 'duda', 'dudas'));
+    else if (st.current >= 5) text = pick(MOTTOS.streak).replace('{n}', st.current);
+    else text = own.length ? own[hash % own.length] : pick(MOTTOS.general);
+    return `<p class="motto">${h(text)}</p>`;
+  }
+
   // ---------- Mensajes que cambian: siempre salen de tus datos.
   function messages() {
     const t = today(); const out = [];
@@ -489,7 +520,7 @@
     const stats = mats().map((m) => ({ m, s: L.materiaStats(S, m) })).filter((x) => x.s.taken);
     const tight = stats.filter((x) => x.s.left <= 1).sort((a, b) => a.s.left - b.s.left)[0];
     if (tight) out.push({ tone: 'warn', ic: 'alert', t: tight.s.left < 0 ? `En ${matLabel(tight.m)} pasaste el límite de faltas` : tight.s.left === 0 ? `En ${matLabel(tight.m)} no te quedan faltas` : `En ${matLabel(tight.m)} te queda 1 falta`, d: `Llevás ${L.pct(tight.s.pct)} de asistencia, y el mínimo es ${L.pct(S.settings.minAtt)}.` });
-    if (st.current >= 3) out.push({ tone: 'win', ic: 'spark', t: `Vas ${st.current} clases seguidas sin faltar`, d: st.current >= st.best ? '¡Bien ahí! Es tu mejor racha.' : `¡Bien ahí! Tu récord es ${st.best}.` });
+    if (st.current >= 3) out.push({ tone: 'win', ic: 'smile', t: `Vas ${st.current} clases seguidas sin faltar`, d: st.current >= st.best ? '¡Bien ahí! Es tu mejor racha.' : `¡Bien ahí! Tu récord es ${st.best}.` });
     const next = [...S.agenda].filter((a) => { const n = L.daysBetween(t, L.parseDate(a.date)); return n >= 0 && n <= 14; }).sort((a, b) => a.date.localeCompare(b.date))[0];
     if (next) { const n = L.daysBetween(t, L.parseDate(next.date)); out.push({ tone: 'info', ic: 'clock', t: countdownText(next, n), d: cap(longDate(L.parseDate(next.date))) }); }
     const days = L.absencesByDay(S).filter((d) => d.a + d.p >= 4);
@@ -589,25 +620,25 @@
       <div><h1 class="hello">${h(st.greet)}, <em>${h(st.name)}</em></h1><p class="today-line">${h(line)}</p>${weeks}</div>
       ${cs.total ? `<div class="figs"><div class="fig"><b>${L.fmt(cs.avgAll)}</b><span>promedio general</span></div><div class="fig"><b>${cs.approved}<small> de ${cs.total}</small></b><span>materias aprobadas</span></div></div>` : ''}
     </header>
-    ${insightsHtml()}
+    ${motto()}${insightsHtml()}
     <div class="hoy-flow">
     <section class="card career hoy-career hide-on-phone" aria-label="Tu carrera, una baldosa por materia">
       <div class="card-head"><h2>${h(st.career || 'Tu carrera')}</h2>${cs.total ? `<span class="sub">${L.pct(ratio(cs.approved, cs.total))} aprobada · ${cs.current} en curso</span>` : ''}</div>
       ${cs.total ? `${careerStrip(!viewHoy.played)}<div class="zig-foot">${careerKey()}${milestoneChips()}</div>` : '<div class="empty"><b>Cargá tu plan de estudios.</b>Cada materia va a ser una baldosa que se llena a medida que aprobás.</div><div class="actions" style="justify-content:flex-start"><button class="btn" data-act="add-plan">Cargar plan de estudios</button></div>'}
     </section>
     <div class="grid g-hoy hoy-main">
-      <div class="stack"><section class="card">${todayHtml}</section>${lateHtml}${pendHtml}</div>
-      ${matCards ? `<section class="card"><div class="card-head"><h2>Este cuatrimestre</h2><a class="linkish" href="#asistencia">Ver asistencia</a></div><div class="mat-grid">${matCards}</div></section>` : ''}
-    </div>
-    <div class="grid g-3 hoy-rest">
-      <section class="card"><div class="card-head"><h2>Se viene</h2><button class="btn ghost small" data-act="add-agenda">Agregar examen</button></div>
-        ${agendaRows || finalsRow ? `<ul class="list">${agendaRows}${finalsRow}</ul>` : ''}
-        ${!agendaRows ? '<p class="sub" style="margin-top:6px">Agregá tus parciales, recuperatorios y finales: acá ves cuántos días faltan para cada uno.</p>' : ''}
-      </section>
-      <section class="card hide-on-phone"><div class="card-head"><h2>Nota rápida</h2><span class="sub">Se guarda sola</span></div><textarea class="scratch" data-change="scratch" aria-label="Nota rápida" placeholder="Lo que no te querés olvidar para la próxima clase">${h(S.scratch)}</textarea></section>
-      <section class="stack hide-on-phone">
-        <div class="card"><div class="card-head"><h2>Accesos</h2><button class="btn ghost small" data-act="add-link">${S.links.length ? 'Editar' : 'Agregar'}</button></div>${links ? `<div class="links">${links}</div>` : '<p class="sub">El campus, el mail, el Drive: lo que abrís todos los días.</p>'}</div>
-      </section>
+      <div class="stack">
+        <section class="card">${todayHtml}</section>${lateHtml}${pendHtml}
+        <section class="card hide-on-phone"><div class="card-head"><h2>Nota rápida</h2><span class="sub">Se guarda sola</span></div><textarea class="scratch" data-change="scratch" aria-label="Nota rápida" placeholder="Lo que no te querés olvidar para la próxima clase">${h(S.scratch)}</textarea></section>
+      </div>
+      <div class="stack">
+        ${matCards ? `<section class="card"><div class="card-head"><h2>Este cuatrimestre</h2><a class="linkish" href="#asistencia">Ver asistencia</a></div><div class="mat-grid">${matCards}</div></section>` : ''}
+        <section class="card"><div class="card-head"><h2>Se viene</h2><button class="btn ghost small" data-act="add-agenda">Agregar examen</button></div>
+          ${agendaRows || finalsRow ? `<ul class="list">${agendaRows}${finalsRow}</ul>` : ''}
+          ${!agendaRows ? '<p class="sub" style="margin-top:6px">Agregá tus parciales, recuperatorios y finales: acá ves cuántos días faltan para cada uno.</p>' : ''}
+        </section>
+        <section class="card hide-on-phone"><div class="card-head"><h2>Accesos</h2><button class="btn ghost small" data-act="add-link">${S.links.length ? 'Editar' : 'Agregar'}</button></div>${links ? `<div class="links">${links}</div>` : '<p class="sub">El campus, el mail, el Drive: lo que abrís todos los días.</p>'}</section>
+      </div>
     </div>
     </div>`;
   }
@@ -759,6 +790,14 @@
     else inner = 'Cargá el parcial 1 para ver cuánto necesitás en el 2.';
     return `<tr class="need-row" data-tail-row><td colspan="4">${inner}</td></tr>`;
   }
+  // Las notas van con coma: si escribís un punto, se cambia solo.
+  document.addEventListener('input', (e) => {
+    const el = e.target;
+    if (!el.dataset || el.dataset.change !== 'grade' || !el.value.includes('.')) return;
+    const pos = el.selectionStart;
+    el.value = el.value.replace(/\./g, ',');
+    try { el.setSelectionRange(pos, pos); } catch { /* algunos campos no lo permiten */ }
+  }, true);
   // Recalcula mientras escribís, sin esperar a salir del casillero.
   document.addEventListener('input', (e) => {
     const row = e.target.closest && e.target.closest('tr[data-row]');
@@ -850,26 +889,35 @@
   }
 
   // ---------- MATERIAL
+  const doubtsOf = (p) => (p.doubts || []).filter((i) => i < p.items.length);
   function materialRow(p) {
     const k = kindOf(p);
     const d = p.items.filter(Boolean).length;
+    const dz = doubtsOf(p);
     const dateTxt = p.date ? `<span class="sub mat-date${!isComplete(p) && L.daysBetween(today(), L.parseDate(p.date)) < 0 ? ' late' : ''}">${shortDate(L.parseDate(p.date))}</span>` : '';
     const linkTxt = p.link ? `<a class="linkish" href="${h(safeUrl(p.link))}" target="_blank" rel="noopener">Abrir</a>` : '';
     const edit = `<button class="linkish" data-act="edit-prac" data-id="${h(p.id)}" aria-label="Editar ${h(p.name)}">Editar</button>`;
+    const note = `<label class="doubt-note${p.doubtNote || dz.length ? '' : ' is-empty'}"><span>Dudas para consultar</span><textarea rows="2" data-change="prac-doubt-note" data-id="${h(p.id)}" placeholder="Ej.: en el 4 no entiendo de dónde sale el 2">${h(p.doubtNote || '')}</textarea></label>`;
     if (p.single) {
-      return `<div class="mat-row"><button class="mat-check" aria-pressed="${!!p.items[0]}" data-act="ex" data-id="${h(p.id)}" data-i="0" aria-label="${p.items[0] ? 'Marcar sin hacer' : 'Marcar como hecho'}: ${h(p.name)}">${p.items[0] ? '✓' : ''}</button><span class="mat-name${p.items[0] ? ' done' : ''}">${h(p.name)}</span><span class="pill">${h(k.n)}</span>${dateTxt}<span class="mat-tools">${linkTxt}${edit}</span></div>`;
+      const has = dz.length > 0;
+      return `<details class="pr single" data-id="${h(p.id)}"${ui.openPrac.has(p.id) ? ' open' : ''}><summary><button class="mat-check" aria-pressed="${!!p.items[0]}" data-act="ex" data-id="${h(p.id)}" data-i="0" aria-label="${p.items[0] ? 'Marcar sin hacer' : 'Marcar como hecho'}: ${h(p.name)}">${p.items[0] ? '✓' : ''}</button><span class="mat-name${p.items[0] ? ' done' : ''}">${h(p.name)}</span><span class="pill">${h(k.n)}</span>${has ? '<span class="pill doubt">Con dudas</span>' : ''}${dateTxt}</summary>
+      <div class="pr-body">${note}<div class="pr-tools"><button class="linkish" data-act="doubt-single" data-id="${h(p.id)}">${has ? 'Ya no tengo dudas' : 'Me quedaron dudas'}</button>${linkTxt}${edit}<button class="linkish danger" data-act="del-prac" data-id="${h(p.id)}">Borrar</button></div></div></details>`;
     }
-    return `<details class="pr" data-id="${h(p.id)}"${ui.openPrac.has(p.id) ? ' open' : ''}><summary><b>${h(p.name)}</b>${p.known ? stitch(ratio(d, p.items.length), { n: 40, label: `${d} de ${p.items.length}` }) : '<span class="sub">Falta el total</span>'}<span class="pr-count">${p.known ? `${d} de ${p.items.length}` : `${d} ${d === 1 ? 'hecho' : 'hechos'}`}</span></summary>
-    <div class="pr-body"><div class="pr-meta"><span class="pill">${h(k.n)}</span>${dateTxt}</div><div class="ex-grid">${p.items.map((v, i) => `<button class="ex" aria-pressed="${!!v}" data-act="ex" data-id="${h(p.id)}" data-i="${i}" aria-label="${h(k.one)} ${i + 1}, ${h(p.name)}">${i + 1}</button>`).join('')}${p.known ? '' : `<button class="ex add" data-act="ex-add" data-id="${h(p.id)}" aria-label="Sumar ${h(k.one)} hecho en ${h(p.name)}">+</button>`}</div>
-    <div class="pr-tools"><label>Tiene <input class="grade-in" inputmode="numeric" data-change="prac-total" data-id="${h(p.id)}" value="${p.known ? p.items.length : ''}" placeholder="?" aria-label="Cantidad de ${h(k.unit)} de ${h(p.name)}"> ${h(k.unit)}</label><button class="linkish" data-act="prac-all" data-id="${h(p.id)}">Tildar todo</button>${linkTxt}${edit}<button class="linkish danger" data-act="del-prac" data-id="${h(p.id)}">Borrar</button></div></div></details>`;
+    const mode = ui.doubtMode.has(p.id);
+    const total = p.known ? p.items.length : null;
+    return `<details class="pr" data-id="${h(p.id)}"${ui.openPrac.has(p.id) ? ' open' : ''}><summary><span class="pr-title"><b>${h(p.name)}</b><span class="pr-sub">${h(k.n)}${dz.length ? ` · <span class="doubt-txt">${pl(dz.length, 'duda', 'dudas')}</span>` : ''}</span></span>${total ? `<span class="pr-bar" style="--v:${ratio(d, total)}" aria-hidden="true"></span>` : ''}<span class="pr-count">${total ? `${d}/${total}` : `${d} ${d === 1 ? 'hecho' : 'hechos'}`}</span></summary>
+    <div class="pr-body">${dateTxt ? `<div class="pr-meta">${dateTxt}</div>` : ''}
+      <div class="doubt-switch choice" role="group" aria-label="Qué marca un toque"><button data-act="doubt-mode" data-id="${h(p.id)}" data-v="" aria-pressed="${!mode}">✓ Hecho</button><button data-act="doubt-mode" data-id="${h(p.id)}" data-v="1" aria-pressed="${mode}">? Duda</button></div>
+      <div class="ex-grid${mode ? ' doubt-on' : ''}">${p.items.map((v, i) => `<button class="ex${dz.includes(i) ? ' has-doubt' : ''}" aria-pressed="${!!v}" data-act="ex" data-id="${h(p.id)}" data-i="${i}" aria-label="${h(k.one)} ${i + 1}, ${h(p.name)}${dz.includes(i) ? ', con duda' : ''}">${i + 1}</button>`).join('')}${p.known ? '' : `<button class="ex add" data-act="ex-add" data-id="${h(p.id)}" aria-label="Sumar ${h(k.one)} hecho en ${h(p.name)}">+</button>`}</div>
+      ${note}
+      <div class="pr-tools"><label>Tiene <input class="grade-in" inputmode="numeric" data-change="prac-total" data-id="${h(p.id)}" value="${p.known ? p.items.length : ''}" placeholder="?" aria-label="Cantidad de ${h(k.unit)} de ${h(p.name)}"> ${h(k.unit)}</label><button class="linkish" data-act="prac-all" data-id="${h(p.id)}">Tildar todo</button>${linkTxt}${edit}<button class="linkish danger" data-act="del-prac" data-id="${h(p.id)}">Borrar</button></div></div></details>`;
   }
-  // Una columna por material: la altura es cuánto hiciste. Se distingue de las barras de Hoy.
-  function studyColumns(list) {
-    if (!list.length) return '<span class="cols-empty">Sin material todavía</span>';
-    return `<span class="study-cols" role="img" aria-label="${h(list.map((p) => `${p.name}: ${p.known && p.items.length ? L.pct(p.items.filter(Boolean).length / p.items.length) : 'sin total'}`).join(', '))}">${list.map((p) => {
-      const v = p.known && p.items.length ? p.items.filter(Boolean).length / p.items.length : null;
-      return `<i class="${v === null ? 'unknown' : v === 1 ? 'full' : ''}" style="--v:${v === null ? 0 : v}"></i>`;
-    }).join('')}</span>`;
+  // Torta de avance de una materia. Sin material queda vacía (no es 0% ni 100%: no hay nada que medir).
+  function donut(pct, color, empty, doneCount) {
+    const r = 26; const c = 2 * Math.PI * r;
+    const v = empty || pct === null ? 0 : Math.max(0, Math.min(1, pct));
+    const label = empty ? '' : pct === null ? String(doneCount || 0) : `${Math.round(v * 100)}<small>%</small>`;
+    return `<span class="donut${empty ? ' is-empty' : ''}" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="donut-bg" cx="32" cy="32" r="${r}"/>${v > 0 ? `<circle class="donut-fg" cx="32" cy="32" r="${r}" style="stroke:${color}" stroke-dasharray="${(v * c).toFixed(2)} ${c.toFixed(2)}"/>` : ''}</svg><b>${label}</b></span>`;
   }
   function viewMaterial() {
     const subs = pracSubjects();
@@ -877,25 +925,28 @@
     const present = Object.keys(KINDS).filter((k) => S.practices.some((p) => (p.kind || 'practica') === k));
     const kindF = present.includes(ui.kindFilter) ? ui.kindFilter : null;
     const chips = present.length > 1 ? `<div class="choice kind-chips" role="group" aria-label="Filtrar por tipo"><button data-act="kind-filter" data-k="" aria-pressed="${!kindF}">Todo</button>${present.map((k) => `<button data-act="kind-filter" data-k="${k}" aria-pressed="${kindF === k}">${h(KINDS[k].many)}</button>`).join('')}</div>` : '';
-    const sections = subs.map((k) => {
+    const totalDoubts = S.practices.reduce((a, p) => a + doubtsOf(p).length, 0);
+    const boxes = subs.map((k) => {
       const full = S.practices.filter((p) => subjOfPractice(p) === k);
       const list = full.filter((p) => !kindF || (p.kind || 'practica') === kindF);
       if (kindF && !list.length) return '';
       const st = pracStats(full);
       const co = latestOf(k);
-      const line = !st.count ? '' : `${st.complete} de ${st.count} ${st.count === 1 ? 'terminado' : 'terminados'}${st.unknown ? ` · ${st.unknown} sin total` : ''}`;
-      const open = ui.openSubj.has(k) || !!kindF;
-      return `<details class="study" data-subj="${h(k)}"${open ? ' open' : ''}>
-        <summary><span class="study-name"><span class="dot" style="--mc:${colorOf(k)}"></span>${h(matLabel(k))}</span>${studyColumns(full)}<span class="study-count">${line}</span><span class="chev" aria-hidden="true"></span></summary>
-        <div class="study-body">${list.map(materialRow).join('') || '<p class="sub">Sumá lo primero de esta materia: una práctica, una lectura, un video o un TP.</p>'}
-          <div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost small" data-act="add-prac" data-course="${h(co ? co.id : '')}">Agregar material</button></div></div>
-      </details>`;
+      const dz = full.reduce((a, p) => a + doubtsOf(p).length, 0);
+      const doneAll = full.reduce((a, p) => a + p.items.filter(Boolean).length, 0);
+      const line = !st.count ? 'Todavía sin material' : st.pct === null ? `${doneAll} ${doneAll === 1 ? 'hecho' : 'hechos'}. Poné cuántos tiene cada material para ver el porcentaje.` : `${st.complete} de ${st.count} ${st.count === 1 ? 'terminado' : 'terminados'}${st.unknown ? ` · ${st.unknown} sin total` : ''}`;
+      const aria = !st.count ? 'sin material' : st.pct === null ? 'sin totales cargados' : `${L.pct(st.pct)} hecho`;
+      return `<section class="sbox" style="--mc:${colorOf(k)}" aria-label="${h(matLabel(k))}, ${aria}">
+        <header class="sbox-head">${donut(st.pct, colorOf(k), !st.count, doneAll)}<div><h2>${h(matLabel(k))}</h2><p class="sub">${line}</p>${dz ? `<span class="pill doubt">${pl(dz, 'duda', 'dudas')} para consultar</span>` : ''}</div></header>
+        <div class="sbox-body">${list.map(materialRow).join('') || '<p class="sub sbox-empty">Sumá lo primero: una práctica, una lectura, un video o un TP. Si tiene ejercicios, vas a poder tildarlos uno por uno.</p>'}</div>
+        <button class="btn ghost small sbox-add" data-act="add-prac" data-course="${h(co ? co.id : '')}">Agregar material</button>
+      </section>`;
     }).join('');
     return `
-    <header class="head"><div><h1>Estudio</h1><p class="lead">Prácticas, lecturas, videos y TP de cada materia. Abrí una para ver lo que tenés que hacer.</p></div>
-      ${all.count ? `<div class="figs"><div class="fig"><b>${all.complete}<small> de ${all.count}</small></b><span>terminados</span></div></div>` : ''}</header>
+    <header class="head"><div><h1>Estudio</h1><p class="lead">Prácticas, lecturas, videos y TP de cada materia. Tildá lo que vas haciendo y marcá con <b>?</b> lo que te quedó en duda.</p></div>
+      ${all.count ? `<div class="figs"><div class="fig"><b>${all.complete}<small> de ${all.count}</small></b><span>terminados</span></div>${totalDoubts ? `<div class="fig"><b>${totalDoubts}</b><span>${totalDoubts === 1 ? 'duda' : 'dudas'} para consultar</span></div>` : ''}</div>` : ''}</header>
     ${chips}
-    ${subs.length ? `<section class="card study-list mt">${sections}</section>` : '<section class="card"><div class="empty"><b>Todavía no hay materias en curso.</b>Marcá qué estás cursando en Carrera, o agregá material a cualquier materia.</div></section>'}
+    ${subs.length ? `<div class="study-grid mt">${boxes}</div>` : '<section class="card"><div class="empty"><b>Todavía no hay materias en curso.</b>Marcá qué estás cursando en Carrera, o agregá material a cualquier materia.</div></section>'}
     <div class="actions" style="justify-content:flex-start"><button class="btn ghost" data-act="add-prac" data-course="">Agregar material de otra materia</button></div>`;
   }
 
@@ -1349,6 +1400,10 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         ${yearField(st.entryYear)}
       </div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Colores</p>${themePicker()}
+      <hr class="divider"><p class="section-label" style="margin-top:0">Frases motivadoras</p>
+      <p class="sub" style="margin:2px 0 8px">Una frase por día en Hoy, según lo que te pase: un examen cerca, una racha, faltas justas o dudas anotadas.</p>
+      <div class="choice" role="group" aria-label="Frases motivadoras"><button type="button" data-act="motivation" data-v="1" aria-pressed="${!!st.motivation}">Activadas</button><button type="button" data-act="motivation" data-v="" aria-pressed="${!st.motivation}">Desactivadas</button></div>
+      ${st.motivation ? `<label class="field" style="margin-top:10px">Tus propias frases (opcional, una por línea)<textarea rows="3" data-change="my-phrases" maxlength="2000" placeholder="Paso a paso se llega\nEl lunes arranco con Cálculo">${h(st.myPhrases || '')}</textarea><span class="sub" style="font-weight:400">Se mezclan con las de la app.</span></label>` : ''}
       <hr class="divider"><p class="section-label" style="margin-top:0">¿Cómo se usa?</p><div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost" data-act="tour">Ver guía de uso</button></div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Tenela como app en el celular</p>${installHtml()}
       <hr class="divider"><p class="section-label" style="margin-top:0">Cuatrimestre</p><div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost" data-act="schedule">Editar horario</button></div>
@@ -1531,6 +1586,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     theme(el) { S.settings.theme = el.dataset.id; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     font(el) { S.settings.font = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     progress(el) { S.settings.progress = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
+    motivation(el) { S.settings.motivation = !!el.dataset.v; save(); render(); settingsDialog(); },
     'custom-second-auto'() { S.settings.custom.second = ''; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     'custom-mode'(el) { S.settings.custom.mode = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     resolve(el) { mutate(() => { delete S.cellNotes[el.dataset.key].check; }, 'Nota marcada como revisada'); closeModal(); },
@@ -1545,7 +1601,16 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     'add-mile': mileDialog,
     'del-mile': (el) => mutate(() => { S.milestones = S.milestones.filter((m) => m.text !== el.dataset.id); }, 'Hito borrado'),
     'del-agenda': (el) => mutate(() => { S.agenda = S.agenda.filter((a) => a.id !== el.dataset.id); }, 'Fecha borrada'),
-    ex(el) { const p = S.practices.find((x) => x.id === el.dataset.id); const i = +el.dataset.i; const next = !p.items[i]; mutate(() => { p.items[i] = next; }, p.single ? `${p.name}: ${next ? 'hecho' : 'sin hacer'}` : `${p.name}, ${kindOf(p).one} ${i + 1}: ${next ? 'tildado' : 'destildado'}`); },
+    ex(el) {
+      const p = S.practices.find((x) => x.id === el.dataset.id); const i = +el.dataset.i;
+      if (!p.single && ui.doubtMode.has(p.id)) {
+        const has = (p.doubts || []).includes(i);
+        mutate(() => { p.doubts = has ? p.doubts.filter((x) => x !== i) : [...(p.doubts || []), i].sort((a, b) => a - b); }, `${p.name}, ${kindOf(p).one} ${i + 1}: ${has ? 'sin duda' : 'con duda'}`);
+        return;
+      }
+      const next = !p.items[i]; mutate(() => { p.items[i] = next; }, p.single ? `${p.name}: ${next ? 'hecho' : 'sin hacer'}` : `${p.name}, ${kindOf(p).one} ${i + 1}: ${next ? 'tildado' : 'destildado'}`); },
+    'doubt-mode'(el) { const id = el.dataset.id; if (el.dataset.v) ui.doubtMode.add(id); else ui.doubtMode.delete(id); ui.openPrac.add(id); render(); },
+    'doubt-single'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); const has = doubtsOf(p).length > 0; ui.openPrac.add(p.id); mutate(() => { p.doubts = has ? [] : [0]; }, `${p.name}: ${has ? 'sin dudas' : 'con dudas'}`); },
     'ex-add'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); const n = p.items.length + 1; mutate(() => { p.items.push(true); }, `${p.name}: ${kindOf(p).one} ${n} tildado`); },
     'prac-all'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); mutate(() => { p.items = p.items.map(() => true); }, `${p.name}: todo tildado`); },
     'del-prac'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); closeModal(); mutate(() => { S.practices = S.practices.filter((x) => x !== p); }, `${p.name}: borrado`); },
@@ -1667,11 +1732,12 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   function gradeChange(el) {
     const parsed = L.parseGrade(el.value);
     const err = $('#grade-err');
-    if (!parsed.ok) { el.setAttribute('aria-invalid', 'true'); if (err) err.textContent = 'La nota tiene que ser un número de 0 a 10.'; return; }
+    if (!parsed.ok) { el.setAttribute('aria-invalid', 'true'); if (err) err.textContent = 'La nota va de 0 a 10 (o de 0 a 100, y la paso a 10).'; return; }
+    el.value = parsed.value === null ? '' : L.fmt(parsed.value);
     el.removeAttribute('aria-invalid');
     if (err) err.textContent = '';
     const c = course(el.dataset.id);
-    mutate(() => { c[el.dataset.f] = parsed.value; }, inWizard() ? null : `${label(c)}: nota guardada`);
+    mutate(() => { c[el.dataset.f] = parsed.value; }, inWizard() ? null : parsed.scaled ? `${label(c)}: ${parsed.raw} sobre 100 quedó en ${L.fmt(parsed.value)}` : `${label(c)}: nota guardada`);
     const est = $('#est-val');
     if (est) est.textContent = L.fmt(L.estimate(c));
   }
@@ -1724,6 +1790,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         const k = el.dataset.key; const v = el.value.trim();
         mutate(() => { if (v) S.cellNotes[k] = { ...(S.cellNotes[k] || {}), t: v }; else delete S.cellNotes[k]; }, 'Nota guardada');
       }
+      if (kind === 'prac-doubt-note') { const p = S.practices.find((x) => x.id === el.dataset.id); mutate(() => { p.doubtNote = el.value.slice(0, 1000); }, null); return; }
       if (kind === 'prac-total') {
         const p = S.practices.find((x) => x.id === el.dataset.id);
         const n = parseInt(el.value, 10);
@@ -1733,6 +1800,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         if (n < lastDone) { toast(`${p.name} tiene tildados hasta el ${lastDone}. Destildalos primero o poné un total mayor.`); el.value = p.known ? p.items.length : ''; return; }
         mutate(() => { p.known = true; p.items = Array.from({ length: n }, (_, i) => !!p.items[i]); }, `${p.name}: ${p.items.filter(Boolean).length} de ${n}`);
       }
+      if (kind === 'my-phrases') { S.settings.myPhrases = el.value.slice(0, 2000); save(); render(); return; }
       if (kind === 'setting') {
         S.settings[el.dataset.f] = el.value.trim();
         save();

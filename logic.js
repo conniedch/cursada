@@ -36,7 +36,7 @@
         const date = cellDate(s, w.n, c);
         let state = s.att[`${w.n}:${c.id}`] || null;
         const holiday = !!(s.holidays && s.holidays.includes(iso(date)));
-        if (!state && holiday) state = 'n'; // feriado: no hubo clase, sin que haya que marcarlo
+        if ((!state || state === 'f') && holiday) state = 'n'; // feriado: no hubo clase, sin que haya que marcarlo
         out.push({ week: w.n, cls: c, key: `${w.n}:${c.id}`, state, date, holiday });
       }
     }
@@ -359,8 +359,11 @@
   function parseGrade(raw) {
     const t = String(raw).trim().replace(',', '.');
     if (t === '') return { ok: true, value: null };
+    if (!/^\d+(\.\d+)?$/.test(t)) return { ok: false };
     const n = Number(t);
-    if (Number.isNaN(n) || n < 0 || n > 10) return { ok: false };
+    // Más de 10 (hasta 100) se entiende como nota sobre 100: 85 queda en 8,5.
+    if (n > 10 && n <= 100) return { ok: true, value: n / 10, scaled: true, raw: t.replace('.', ',') };
+    if (n < 0 || n > 10) return { ok: false };
     return { ok: true, value: n };
   }
 
