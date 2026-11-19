@@ -1329,3 +1329,24 @@ body.is-auth .auth .card { box-shadow: 0 1px 0 var(--line), 0 18px 50px -18px co
 @media (prefers-reduced-motion: reduce) { .pet-art .pet-img { animation: none; } }
 .pet-btn { width: 132px; height: 142px; }
 @media (max-width: 760px) { .pet-btn { width: 88px; height: 96px; } }
+
+/* Movimiento suave para que las mascotas se sientan vivas (sin exagerar):
+   los mamíferos respiran y se balancean, las aves cabecean, los que nadan flotan. */
+.pet-art .pet-img { animation: pet-live 5.2s ease-in-out infinite; }
+@keyframes pet-live { 0%, 100% { transform: translateY(0) rotate(0) scale(1, 1); } 25% { transform: translateY(-1px) rotate(-.8deg) scale(1.01, 1.018); } 50% { transform: translateY(0) rotate(0) scale(1, 1); } 75% { transform: translateY(-1px) rotate(.8deg) scale(1.01, 1.018); } }
+.pet-pinguino .pet-img, .pet-pato .pet-img, .pet-buho .pet-img, .pet-condor .pet-img { animation: pet-bird 4.4s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes pet-bird { 0%, 100% { transform: rotate(0); } 10% { transform: rotate(-2.2deg); } 18% { transform: rotate(0); } 55% { transform: rotate(0) translateY(0); } 62% { transform: rotate(1.6deg) translateY(-1.5px); } 70% { transform: rotate(0) translateY(0); } }
+.pet-pez .pet-img, .pet-tortuga .pet-img { animation: pet-swim2 4.6s ease-in-out infinite; transform-origin: 50% 50%; }
+@keyframes pet-swim2 { 0%, 100% { transform: translate(0, 0) rotate(0); } 25% { transform: translate(-2px, -3px) rotate(-1.6deg); } 50% { transform: translate(0, -1px) rotate(0); } 75% { transform: translate(2px, -3px) rotate(1.6deg); } }
+.pet-gatito .pet-img, .pet-yaguarete .pet-img { animation-duration: 6s; }
+.pet-btn.jump .pet-img { animation: pet-hop2 .6s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes pet-hop2 { 0% { transform: translateY(0) scale(1, 1); } 25% { transform: translateY(0) scale(1.04, .96); } 55% { transform: translateY(-7px) scale(.98, 1.02); } 100% { transform: translateY(0) scale(1, 1); } }
+.pet-picker .pet-art .pet-img { animation: none; }
+@media (prefers-reduced-motion: reduce) { .pet-art .pet-img { animation: none !important; } }
+/* Post-its en tonos nude */
+.c-crema { --pc: #F1E4CC; --pi: #4A3A24; }
+.c-arena { --pc: #DCC6A8; --pi: #3E2E1C; }
+.c-rosaviejo { --pc: #DDB2A6; --pi: #4A2620; }
+.c-terracota { --pc: #CF9677; --pi: #3E1C0E; }
+.c-salvia { --pc: #BFC8AE; --pi: #2C3820; }
+.sticky-colors { flex-wrap: wrap; }

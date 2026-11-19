@@ -500,6 +500,15 @@
 
   // ---------- MASCOTA (opcional, se activa en Ajustes): pingüino, gatito, pez o búho. Cambia de cara según lo que te pasa.
   const PETS = { oso: 'Oso', pinguino: 'Pingüino', gatito: 'Gato', yaguarete: 'Yaguareté', carpincho: 'Carpincho', condor: 'Cóndor', pato: 'Pato', buho: 'Búho', pez: 'Pez', tortuga: 'Tortuga' };
+  // Por qué la mascota está desanimada (lo dice el globito, sin dibujos raros).
+  function petSadWhy() {
+    const ct = currentTerm();
+    const over = mats().map((m) => ({ m, st: L.materiaStats(S, m) })).find((x) => x.st.taken && x.st.left < 0);
+    if (over) return `En ${matLabel(over.m)} te pasaste del límite de faltas${over.st.f ? ', contando las que marcaste como "No voy"' : ''}. Revisalo en Asistencia.`;
+    const failed = ct && S.courses.find((c) => c.status === 'desaprobada' && c.year === ct.year && c.sem === ct.sem);
+    if (failed) return `${label(failed)} figura como desaprobada este cuatrimestre. La próxima sale.`;
+    return 'Ánimo. La próxima sale mejor.';
+  }
   function petMood() {
     const t = today(); const hr = new Date().getHours();
     if (hr >= 23 || hr < 5) return 'sleepy';
@@ -537,7 +546,7 @@
     const lines = {
       sleepy: ['Zzz… vos también deberías dormir.', 'Ya es tarde. Mañana seguimos.'],
       study: ex ? [`${cap(examPhrase(ex.a))} ${ex.n === 0 ? 'es hoy' : ex.n === 1 ? 'es mañana' : `es en ${ex.n} días`}. ¿Repasamos?`, 'Traje los anteojos. A estudiar.'] : ['A estudiar.'],
-      sad: ['Ánimo. La próxima sale mejor.', 'Un mal momento no es toda la carrera.'],
+      sad: [petSadWhy(), petSadWhy().includes('faltas') ? 'En Asistencia ves cuántas te quedan en cada materia.' : 'Si ya lo recuperaste, cambiale el estado en Carrera.'],
       happy: [`¡${L.streaks(S).current} clases seguidas! Qué racha.`, '¡Así da gusto!'],
       idle: coffeeTime() && S.settings.pet !== 'pez' ? ['Una hora ya. Café y seguimos.', 'Pausa de café. Estirá un poco y volvemos.'] : ['Acá estoy. Tocame y te cuento un chiste.', 'Un pendiente a la vez.', '¿Qué toca hoy?'],
     }[mood];
@@ -567,7 +576,6 @@
     let g = '';
     if (mood === 'study') g += `<g transform="translate(6 104)"><path d="M0 4l12 3 12-3v14l-12 3-12-3z" fill="#8C6E4E" stroke="${INK}" stroke-width=".9" stroke-linejoin="round"/><path d="M1.6 4.8l10.4 2.6v12.2L1.6 17zM22.4 4.8L12 7.4v12.2l10.4-2.6z" fill="#F4ECDD" stroke="${INK}" stroke-width=".6"/><path d="M4 9l6 1.5M4 12l6 1.5M20 9l-6 1.5M20 12l-6 1.5" stroke="#B8A890" stroke-width=".6"/></g>`;
     if (mood === 'sleepy') g += `<g fill="#8A7F76" font-family="Georgia, serif" font-style="italic" class="pet-z"><text x="98" y="22" font-size="12">z</text><text x="106" y="13" font-size="9">z</text></g>`;
-    if (mood === 'sad') g += `<g transform="translate(8 14)" class="pet-cloud"><path d="M2 10a5 5 0 0 1 4-6 6 6 0 0 1 11-1 4.5 4.5 0 0 1 4 7z" fill="#C9CFD6" stroke="#8C949E" stroke-width=".8"/><path d="M7 13l-1 3M12 13l-1 3M17 13l-1 3" stroke="#8DB3CF" stroke-width="1.2" stroke-linecap="round"/></g>`;
     if (mood === 'happy') g += `<g transform="translate(100 18)" fill="none" stroke="#C9A24A" stroke-width="1.3" stroke-linecap="round"><path d="M0-6v4M0 2v4M-6 0h4M2 0h4"/></g>`;
     if (coffee && kind !== 'pez') g += PET_MUG;
     if (season) {
@@ -608,7 +616,7 @@
 
   // ---------- POST-ITS: la nota rápida se pega arriba de Hoy como un papelito. Tocándolo se edita o se despega.
   // Colores de papel bien distintos del fondo de la app (que es lila, celeste, menta… según el tema).
-  const STICKY_COLORS = { amarillo: 'Amarillo', rosa: 'Rosa', naranja: 'Naranja', celeste: 'Celeste', verde: 'Verde' };
+  const STICKY_COLORS = { amarillo: 'Amarillo', rosa: 'Rosa', naranja: 'Naranja', celeste: 'Celeste', verde: 'Verde', crema: 'Crema', arena: 'Arena', rosaviejo: 'Rosa viejo', terracota: 'Terracota', salvia: 'Salvia' };
   function boardHtml() {
     const list = S.stickies || [];
     if (!list.length) return '';
