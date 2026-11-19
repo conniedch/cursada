@@ -9,6 +9,9 @@
   // ---------- Estado y guardado
   let S = null; let me = null; let rev = 0;
   let dirty = false; let inflight = false; let saveTimer = null; let deferring = false;
+  // Lo último que sabemos que está guardado en el servidor: sirve para juntar cambios de dos dispositivos.
+  let base = null;
+  const snap = (x) => JSON.parse(JSON.stringify(x));
   const ui = { allDraft: '', benefitFilter: null, kindFilter: null, openSubj: new Set(), authMode: 'login', authNotice: '', recovery: false, pracFilter: null, openPrac: new Set(), doubtMode: new Set(), phoneWeek: null, msgI: Math.floor(Math.random() * 100), planDraft: '' };
 
   const Backend = window.CursadaBackend;
@@ -23,9 +26,18 @@
     inflight = true; dirty = false;
     let retry = 350;
     try {
-      const r = await api('PUT', '/api/state', { state: S, rev });
-      if (r.status === 200) rev = r.data.rev;
-      else if (r.status === 409) { S = migrate(r.data.state); rev = r.data.rev; dirty = false; render(); toast('Se actualizó con lo último que guardaste en otra pestaña o dispositivo.'); }
+      const sent = snap(S);
+      const r = await api('PUT', '/api/state', { state: sent, rev });
+      if (r.status === 200) { rev = r.data.rev; base = sent; }
+      else if (r.status === 409) {
+        // Otro dispositivo guardó antes. En vez de tirar lo tuyo, se juntan: lo que cambiaste acá gana,
+        // y lo que cambiaste allá (y acá no tocaste) se mantiene.
+        const server = migrate(r.data.state);
+        const merged = mergeStates(base, S, server);
+        S = merged; rev = r.data.rev; base = snap(server);
+        dirty = true;
+        if (!modal().open) render();
+      }
       else if (r.status === 401) { location.reload(); return; }
       else throw new Error('save');
     } catch (e) {
@@ -34,6 +46,18 @@
     }
     inflight = false;
     if (dirty) { clearTimeout(saveTimer); saveTimer = setTimeout(flush, retry); }
+  }
+  function mergeStates(b, mine, theirs) {
+    if (!b) return mine;
+    const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+    const out = { ...theirs };
+    Object.keys(mine).forEach((k) => {
+      if (k === 'settings') {
+        out.settings = { ...theirs.settings };
+        Object.keys(mine.settings || {}).forEach((sk) => { if (!same(mine.settings[sk], (b.settings || {})[sk])) out.settings[sk] = mine.settings[sk]; });
+      } else if (!same(mine[k], b[k])) out[k] = mine[k];
+    });
+    return out;
   }
   window.addEventListener('pagehide', () => {
     if (dirty && S) { dirty = false; Backend.beacon(S, rev); }
@@ -54,7 +78,7 @@
     return {
       v: 2,
       settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', pet: '', classLen: 120, motivation: false, myPhrases: '', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
-      classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], todos: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', matColors: {}, history: [],
+      classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], todos: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', stickies: [], studyArchive: {}, matColors: {}, history: [],
     };
   }
   // Acepta datos viejos o importados y los deja en la forma actual.
@@ -190,6 +214,15 @@
     spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8',
     alert: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
     bulb: 'M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z',
+    bus: 'M5 17V6a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v11M5 17h14M5 11h14M8 17v3M16 17v3M8.5 14h.01M15.5 14h.01',
+    ticket: 'M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 0 0-4V4H3zM14 4v16',
+    cup: 'M4 8h13v5a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6zM17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 2v3M12 2v3',
+    heart: 'M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1L12 21.5l8.8-8.8a5 5 0 0 0 0-7.1zM7 12h3l1.5-2.5L13 14l1.5-2H17',
+    bank: 'M3 10h18L12 4zM5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18',
+    laptop: 'M4 5h16v11H4zM2 19h20',
+    grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+    globe: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20',
+    pin: 'M12 22s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
     smile: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM8 14.5s1.5 2.5 4 2.5 4-2.5 4-2.5M9 9.5h.01M15 9.5h.01',
     clock: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2',
   };
@@ -465,8 +498,8 @@
     return out;
   }
 
-  // ---------- MASCOTA (opcional, se activa en Ajustes). Por ahora: pingüino. Cambia de cara según lo que te pasa.
-  const PETS = { pinguino: 'Pingüino' };
+  // ---------- MASCOTA (opcional, se activa en Ajustes): pingüino, gatito, pez o búho. Cambia de cara según lo que te pasa.
+  const PETS = { pinguino: 'Pingüino', gatito: 'Gatito', pez: 'Pez', buho: 'Búho' };
   function petMood() {
     const t = today(); const hr = new Date().getHours();
     if (hr >= 23 || hr < 5) return 'sleepy';
@@ -479,6 +512,25 @@
     if (L.streaks(S).current >= 5) return 'happy';
     return 'idle';
   }
+  // Al tocarla, la mascota tira chistes de estudiante (y alguno geek).
+  const PET_JOKES = [
+    '¿Por qué el libro de matemática estaba triste? Tenía demasiados problemas.',
+    'Hay 10 tipos de personas: las que entienden binario y las que no.',
+    'Un átomo le dice a otro: "Perdí un electrón". "¿Seguro?" "Sí, estoy positivo".',
+    '¿Qué le dijo el 0 al 8? Lindo cinturón.',
+    'El profe dijo "esto no entra". Spoiler: entró.',
+    'Mi método de estudio: abro el apunte, miro el celu, repito.',
+    'Ctrl+Z no funciona en los parciales. Lo probé.',
+    'El grupo de la materia: 200 mensajes y ninguno responde cuándo es el parcial.',
+    'Mi resumen tiene más resaltador que texto. Arte contemporáneo.',
+    'El café no es una bebida, es una dependencia funcional.',
+    'Dormir 8 horas antes del parcial: leyenda urbana universitaria.',
+    'Si la vida te da limones, pedí la fórmula del volumen.',
+    'Copiar es fácil. Entender lo que copiaste ya es nivel final.',
+    'Fui a la biblioteca a estudiar. Volví con tres fotocopias y un amigo nuevo.',
+    '¿Por qué el programador no estudió? Tenía un bug en la motivación.',
+    'La entropía del universo aumenta. La de mi escritorio, también.',
+  ];
   function petLine(mood) {
     const t = today();
     const ex = S.agenda.map((a) => ({ a, n: L.daysBetween(t, L.parseDate(a.date)) })).filter((x) => x.n >= 0).sort((x, y) => x.n - y.n)[0];
@@ -487,48 +539,118 @@
       study: ex ? [`${cap(examPhrase(ex.a))} ${ex.n === 0 ? 'es hoy' : ex.n === 1 ? 'es mañana' : `es en ${ex.n} días`}. ¿Repasamos?`, 'Traje los anteojos. A estudiar.'] : ['A estudiar.'],
       sad: ['Ánimo. La próxima sale mejor.', 'Un mal momento no es toda la carrera.'],
       happy: [`¡${L.streaks(S).current} clases seguidas! Qué racha.`, '¡Así da gusto!'],
-      idle: ['Acá estoy. ¿Qué toca hoy?', 'Tocame si te aburrís.', 'Un pendiente a la vez.'],
+      idle: ['Acá estoy. Tocame y te cuento un chiste.', 'Un pendiente a la vez.', '¿Qué toca hoy?'],
     }[mood];
     return lines[(ui.petTap || 0) % lines.length];
   }
-  // Dibujado a mano. Todo vive en un viewBox de 120×130; cada expresión cambia ojos, aletas y accesorios.
-  function penguinSvg(mood) {
+  // Dibujados a mano. Todos viven en un viewBox de 120×130 con los ojos en (50,52) y (70,52):
+  // así las 5 caras (ojos, lágrima, anteojos, libro, zetas, brillitos) sirven para cualquier mascota.
+  function petFace(mood) {
     const ink = '#121A2C';
-    const eyes = {
+    return {
       idle: `<g class="pet-eyes"><ellipse cx="50" cy="52" rx="4.6" ry="5.6" fill="${ink}"/><ellipse cx="70" cy="52" rx="4.6" ry="5.6" fill="${ink}"/><circle cx="51.6" cy="50" r="1.5" fill="#fff"/><circle cx="71.6" cy="50" r="1.5" fill="#fff"/></g>`,
       happy: `<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><path d="M45 54q5-7 10 0"/><path d="M65 54q5-7 10 0"/></g>`,
       sad: `<g><path d="M43.5 46.5l10-3.5M76.5 46.5l-10-3.5" stroke="${ink}" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="50" cy="54" rx="4" ry="4.6" fill="${ink}"/><ellipse cx="70" cy="54" rx="4" ry="4.6" fill="${ink}"/><path class="pet-tear" d="M45.5 59q-3.4 5 0 7.2q3.4-2.2 0-7.2z" fill="#6EC1FF"/></g>`,
       sleepy: `<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><path d="M45 54q5 4 10 0"/><path d="M65 54q5 4 10 0"/></g>`,
       study: `<g class="pet-eyes"><ellipse cx="50" cy="52" rx="4" ry="4.8" fill="${ink}"/><ellipse cx="70" cy="52" rx="4" ry="4.8" fill="${ink}"/></g><g fill="none" stroke="${ink}" stroke-width="2.2"><circle cx="50" cy="52" r="8.5"/><circle cx="70" cy="52" r="8.5"/><path d="M58.5 52h3"/></g>`,
     }[mood];
-    const wave = mood === 'happy' ? ' pet-wave' : '';
-    const flipL = mood === 'sad' ? 'M27 74q-8 20 4 34q4-14 2-34z' : 'M26 70q-12 18 2 34q6-14 4-34z';
-    const flipR = mood === 'sad' ? 'M93 74q8 20-4 34q-4-14-2-34z' : 'M94 70q12 18-2 34q-6-14-4-34z';
-    const extra = {
+  }
+  function petExtra(mood) {
+    return {
       sleepy: '<g class="pet-z" fill="var(--accent)" font-family="var(--display)" font-weight="800"><text x="88" y="30" font-size="14">z</text><text x="98" y="18" font-size="10">z</text></g>',
       study: '<g><rect x="38" y="88" width="44" height="26" rx="3" fill="var(--accent)"/><rect x="41" y="91" width="17.5" height="20" rx="1.5" fill="#fff"/><rect x="61.5" y="91" width="17.5" height="20" rx="1.5" fill="#fff"/><path d="M44 96h11M44 100h11M44 104h8M64 96h11M64 100h11M64 104h8" stroke="#C9C3DD" stroke-width="1.4"/></g>',
       happy: '<g class="pet-spark" fill="var(--hi-strong)"><path d="M14 30l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><path d="M104 46l1.4 3.4 3.4 1.4-3.4 1.4-1.4 3.4-1.4-3.4-3.4-1.4 3.4-1.4z"/></g>',
     }[mood] || '';
-    return `<svg class="pet-svg mood-${mood}" viewBox="0 0 120 130" aria-hidden="true">
-      <ellipse class="pet-shadow" cx="60" cy="124" rx="30" ry="4" fill="rgba(20,12,50,.16)"/>
-      <g class="pet-body">
-        <path class="pet-flip-l" d="${flipL}" fill="#2B3556"/>
-        <path class="pet-flip-r${wave}" d="${flipR}" fill="#2B3556"/>
+  }
+  const PET_DRAW = {
+    pinguino(mood) {
+      const sad = mood === 'sad';
+      return `<path class="pet-flip-l" d="${sad ? 'M27 74q-8 20 4 34q4-14 2-34z' : 'M26 70q-12 18 2 34q6-14 4-34z'}" fill="#2B3556"/>
+        <path class="pet-flip-r${mood === 'happy' ? ' pet-wave' : ''}" d="${sad ? 'M93 74q8 20-4 34q-4-14-2-34z' : 'M94 70q12 18-2 34q-6-14-4-34z'}" fill="#2B3556"/>
         <ellipse cx="60" cy="72" rx="37" ry="46" fill="#2B3556"/>
         <ellipse cx="60" cy="84" rx="25" ry="32" fill="#FAF8FF"/>
         <circle cx="49" cy="53" r="13.5" fill="#FAF8FF"/><circle cx="71" cy="53" r="13.5" fill="#FAF8FF"/>
         <circle cx="41" cy="63" r="4.5" fill="#FF8FA3" opacity=".55"/><circle cx="79" cy="63" r="4.5" fill="#FF8FA3" opacity=".55"/>
-        ${eyes}
+        ${petFace(mood)}
         <path d="M54.5 61.5h11l-5.5 7z" fill="#FFA62B" stroke="#FFA62B" stroke-width="2" stroke-linejoin="round"/>
-        ${extra}
-        <ellipse cx="48" cy="118" rx="9.5" ry="4.6" fill="#FFA62B"/><ellipse cx="72" cy="118" rx="9.5" ry="4.6" fill="#FFA62B"/>
-      </g>
+        ${petExtra(mood)}
+        <ellipse cx="48" cy="118" rx="9.5" ry="4.6" fill="#FFA62B"/><ellipse cx="72" cy="118" rx="9.5" ry="4.6" fill="#FFA62B"/>`;
+    },
+    gatito(mood) {
+      const fur = '#A9AEC2'; const dark = '#7F849B'; const cream = '#F6F1EA';
+      const tail = mood === 'sad' ? 'M84 108q20 6 26 18' : 'M84 106q26-2 22-30q-2-10-11-8';
+      return `<path class="pet-tail${mood === 'happy' ? ' pet-wave-tail' : ''}" d="${tail}" fill="none" stroke="${fur}" stroke-width="9" stroke-linecap="round"/>
+        <ellipse cx="60" cy="102" rx="28" ry="21" fill="${fur}"/>
+        <ellipse cx="60" cy="106" rx="16" ry="13" fill="${cream}"/>
+        <path d="M29 42L33 13l20 17z" fill="${fur}"/><path d="M91 42L87 13 67 30z" fill="${fur}"/>
+        <path d="M34 34l2-13 10 9z" fill="#FFB3C4"/><path d="M86 34l-2-13-10 9z" fill="#FFB3C4"/>
+        <ellipse cx="60" cy="56" rx="35" ry="30" fill="${fur}"/>
+        <path d="M55 29v8M60 27v9M65 29v8" stroke="${dark}" stroke-width="2.6" stroke-linecap="round"/>
+        <ellipse cx="60" cy="67" rx="13" ry="8.5" fill="${cream}"/>
+        <circle cx="39" cy="63" r="4.5" fill="#FF8FA3" opacity=".5"/><circle cx="81" cy="63" r="4.5" fill="#FF8FA3" opacity=".5"/>
+        ${petFace(mood)}
+        <path d="M57 62.5h6l-3 3.6z" fill="#FF8FA3"/>
+        <path d="M60 66q-2.5 4-6 1.5M60 66q2.5 4 6 1.5" fill="none" stroke="#121A2C" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M45 66l-15-3M45 70l-15 2M75 66l15-3M75 70l15 2" stroke="${dark}" stroke-width="1.3" stroke-linecap="round"/>
+        ${petExtra(mood)}
+        <ellipse cx="49" cy="120" rx="8.5" ry="5" fill="${cream}"/><ellipse cx="71" cy="120" rx="8.5" ry="5" fill="${cream}"/>`;
+    },
+    pez(mood) {
+      const body = '#FF8A65'; const deep = '#F06A44';
+      return `<g class="pet-bubbles" fill="none" stroke="#9FD3FF" stroke-width="1.6"><circle cx="22" cy="40" r="4"/><circle cx="16" cy="24" r="2.6"/><circle cx="26" cy="12" r="1.8"/></g>
+        <path class="pet-fin" d="M90 72L114 50l-5 22 5 22z" fill="${deep}"/>
+        <path d="M42 46q16-22 34-2z" fill="${deep}"/>
+        <ellipse cx="60" cy="70" rx="36" ry="30" fill="${body}"/>
+        <ellipse cx="58" cy="82" rx="25" ry="14" fill="#FFD3BE"/>
+        <path d="M70 62q4 4 0 8M78 60q4 5 0 10M78 74q4 5 0 10" fill="none" stroke="${deep}" stroke-width="2" stroke-linecap="round"/>
+        <path class="pet-side-fin" d="M60 76q16-6 22 6q-14 5-22-6z" fill="${deep}"/>
+        <g transform="translate(-8 8)">${petFace(mood)}</g>
+        <circle cx="34" cy="64" r="3.4" fill="#FF8FA3" opacity=".6"/>
+        <ellipse cx="26" cy="72" rx="3.6" ry="3" fill="#8A2E14"/>
+        ${petExtra(mood)}`;
+    },
+    buho(mood) {
+      const feather = '#8C6B52'; const light = '#EBDCC7';
+      return `<path class="pet-flip-l" d="${mood === 'sad' ? 'M27 74q-8 22 6 34q2-16 0-34z' : 'M26 66q-14 20 4 40q6-18 2-40z'}" fill="#6F533F"/>
+        <path class="pet-flip-r${mood === 'happy' ? ' pet-wave' : ''}" d="${mood === 'sad' ? 'M93 74q8 22-6 34q-2-16 0-34z' : 'M94 66q14 20-4 40q-6-18-2-40z'}" fill="#6F533F"/>
+        <path d="M30 40l3-24 17 16z" fill="${feather}"/><path d="M90 40l-3-24-17 16z" fill="${feather}"/>
+        <ellipse cx="60" cy="72" rx="36" ry="45" fill="${feather}"/>
+        <ellipse cx="60" cy="88" rx="22" ry="27" fill="${light}"/>
+        <path d="M52 80l4 4 4-4 4 4 4-4M50 92l4 4 4-4 4 4 4-4 4 4M54 104l4 4 4-4 4 4" fill="none" stroke="#C4AC8E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="50" cy="52" r="14" fill="#F7EEE2"/><circle cx="70" cy="52" r="14" fill="#F7EEE2"/>
+        ${petFace(mood)}
+        <path d="M56.5 60h7l-3.5 7.5z" fill="#F2A33A"/>
+        ${petExtra(mood)}
+        <path d="M45 117l3 5 3-5 3 5 3-5M63 117l3 5 3-5 3 5 3-5" fill="none" stroke="#F2A33A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+    },
+  };
+  function petSvg(kind, mood) {
+    const draw = PET_DRAW[kind] || PET_DRAW.pinguino;
+    return `<svg class="pet-svg mood-${mood} pet-${kind}" viewBox="0 0 120 130" aria-hidden="true">
+      <ellipse class="pet-shadow" cx="60" cy="124" rx="30" ry="4" fill="rgba(20,12,50,.16)"/>
+      <g class="pet-body">${draw(mood)}</g>
     </svg>`;
   }
   function petHtml() {
     if (!S.settings.pet) return '';
     const mood = petMood();
-    return `<div class="pet" data-mood="${mood}"><p class="pet-bubble" aria-live="polite">${h(petLine(mood))}</p><button class="pet-btn" data-act="pet-tap" aria-label="Tu mascota, ${h(PETS[S.settings.pet] || '')}. Tocala">${penguinSvg(mood)}</button></div>`;
+    return `<div class="pet" data-mood="${mood}"><p class="pet-bubble" aria-live="polite">${h(petLine(mood))}</p><button class="pet-btn" data-act="pet-tap" aria-label="Tu mascota, ${h(PETS[S.settings.pet] || '')}. Tocala">${petSvg(S.settings.pet, mood)}</button></div>`;
+  }
+
+  // ---------- POST-ITS: la nota rápida se pega arriba de Hoy como un papelito. Tocándolo se edita o se despega.
+  const STICKY_COLORS = { amarillo: 'Amarillo', rosa: 'Rosa', celeste: 'Celeste', verde: 'Verde', lila: 'Lila' };
+  function boardHtml() {
+    const list = S.stickies || [];
+    if (!list.length) return '';
+    return `<section class="board" aria-label="Tus post-its">${list.map((n, i) => `<button class="postit c-${h(n.color || 'amarillo')}" style="--r:${n.rot ?? ((i % 2 ? 1 : -1) * (1 + (i % 3)))}deg" data-act="sticky" data-id="${h(n.id)}" aria-label="Post-it: ${h(n.text)}. Tocalo para editarlo o despegarlo"><span class="postit-tape" aria-hidden="true"></span><span class="postit-txt">${h(n.text)}</span></button>`).join('')}</section>`;
+  }
+  function stickyDialog(id) {
+    const n = (S.stickies || []).find((x) => x.id === id);
+    if (!n) return;
+    openModal(`<h2 id="modal-title">Post-it</h2>
+      <div class="postit-edit c-${h(n.color || 'amarillo')}"><textarea data-change="sticky-text" data-id="${h(n.id)}" rows="5" maxlength="400" aria-label="Texto del post-it">${h(n.text)}</textarea></div>
+      <div class="choice sticky-colors" role="group" aria-label="Color">${Object.entries(STICKY_COLORS).map(([k, v]) => `<button type="button" class="sw c-${k}" data-act="sticky-color" data-id="${h(n.id)}" data-v="${k}" aria-pressed="${(n.color || 'amarillo') === k}" aria-label="${v}"></button>`).join('')}</div>
+      <div class="actions" style="justify-content:space-between"><button type="button" class="btn ghost danger" data-act="unstick" data-id="${h(n.id)}">Despegar</button><button type="button" class="btn" data-act="close">Listo</button></div>`);
   }
 
   // ---------- Frases motivadoras (solo si las activaste en Ajustes). Una por día, según lo que te pasa.
@@ -742,7 +864,7 @@
       ${petHtml()}
       ${cs.total ? `<div class="figs"><div class="fig"><b>${L.fmt(cs.avgAll)}</b><span>promedio general</span></div><div class="fig"><b>${cs.approved}<small> de ${cs.total}</small></b><span>materias aprobadas</span></div></div>` : ''}
     </header>
-    ${motto()}${insightsHtml()}
+    ${motto()}${insightsHtml()}${boardHtml()}
     <div class="hoy-flow">
     <section class="card career hoy-career hide-on-phone" aria-label="Tu carrera, una baldosa por materia">
       <div class="card-head"><h2>${h(st.career || 'Tu carrera')}</h2>${cs.total ? `<span class="sub">${L.pct(ratio(cs.approved, cs.total))} aprobada · ${cs.current} en curso</span>` : ''}</div>
@@ -751,7 +873,7 @@
     <div class="grid g-hoy hoy-main">
       <div class="stack">
         <section class="card">${todayHtml}</section>${lateHtml}${pendHtml}
-        <section class="card hide-on-phone"><div class="card-head"><h2>Nota rápida</h2><span class="sub">Se guarda sola</span></div><textarea class="scratch" data-change="scratch" aria-label="Nota rápida" placeholder="Lo que no te querés olvidar para la próxima clase">${h(S.scratch)}</textarea></section>
+        <section class="card"><div class="card-head"><h2>Nota rápida</h2><span class="sub">Se guarda sola</span></div><textarea class="scratch" data-change="scratch" aria-label="Nota rápida" placeholder="Lo que no te querés olvidar para la próxima clase">${h(S.scratch)}</textarea><div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost small" data-act="stick">Pegar como post-it</button></div></section>
       </div>
       <div class="stack">
         ${matCards ? `<section class="card"><div class="card-head"><h2>Este cuatrimestre</h2><a class="linkish" href="#asistencia">Ver asistencia</a></div><div class="mat-grid">${matCards}</div></section>` : ''}
@@ -779,9 +901,27 @@
       <div class="week-chart" role="img" aria-label="${h(data.map((d) => `Semana ${d.week}: ${L.pct(d.pct)}`).join(', '))}"><div class="wc-min" style="bottom:${min * 100}%"><span>mínimo ${L.pct(min)}</span></div>${bars}</div>
       <div class="key" style="margin-top:8px"><span><i style="background:var(--accent)"></i>llegaste al mínimo</span><span><i style="background:var(--bad-ink)"></i>por debajo</span></div></section>`;
   }
+  // Cuatrimestres archivados: horario y asistencia de antes, para consultar (no se editan).
+  function oldAttendanceHtml() {
+    const hist = (S.history || []).filter((x) => x.classes && x.classes.length);
+    const archive = `<p class="sub" style="margin-top:10px">¿Terminó el cuatrimestre? En <button class="linkish" data-act="schedule">Editar horario</button> → "Empezar cuatrimestre nuevo" se guarda todo esto acá y arrancás con la grilla vacía.</p>`;
+    if (!hist.length) return `<section class="card mt"><div class="card-head"><h2>Cuatrimestres anteriores</h2></div><p class="sub">Todavía no archivaste ninguno.</p>${archive}</section>`;
+    const items = [...hist].reverse().map((x) => {
+      const st = { ...S, classes: x.classes, weeks: x.weeks || [], att: x.att || {}, holidays: [] };
+      const ms = [...new Set(x.classes.map((c) => c.mat))];
+      const tot = L.tally(L.allCells(st));
+      const title = x.term ? termShort(x.term.year, x.term.sem) : x.label;
+      const rows = ms.map((m) => { const t = L.materiaStats(st, m); const nm = (x.classes.find((c) => c.mat === m) || {}).name || m; return `<li><span><span class="dot" style="--mc:${colorOf(m)}"></span> ${h(matLabel(m) || nm)}</span><span class="num">${t.taken ? `${L.pct(t.pct)} · ${pl(t.a, 'falta', 'faltas')}` : '–'}</span></li>`; }).join('');
+      const sched = [...new Set(x.classes.map((c) => c.dow))].sort().map((d) => `<li><b>${cap(L.DIAS[d])}</b>${x.classes.filter((c) => c.dow === d).map((c) => `${h(c.name)}${c.from ? ` <span class="num sub">${c.from}–${c.to}</span>` : ''}`).join(' · ')}</li>`).join('');
+      return `<details class="old-sem"><summary><span>${h(title)}</span><span class="sub">${tot.taken ? `${L.pct(tot.pct)} de asistencia` : 'sin asistencia cargada'}</span></summary>
+        <p class="section-label">Asistencia por materia</p><ul class="list">${rows}</ul>
+        <p class="section-label">Horario</p><ul class="plan-list">${sched}</ul></details>`;
+    }).join('');
+    return `<section class="card mt"><div class="card-head"><h2>Cuatrimestres anteriores</h2><span class="sub">${pl(hist.length, 'archivado', 'archivados')}</span></div>${items}${archive}</section>`;
+  }
   function viewAsistencia() {
     if (!S.classes.length) {
-      return '<header class="head"><div><h1>Asistencia</h1><p class="lead">Armá tu horario una vez y después solo marcás si fuiste.</p></div></header><section class="card"><div class="empty"><b>Todavía no hay clases cargadas.</b>Agregá las clases de cada materia con su día.</div><div class="actions" style="justify-content:flex-start"><button class="btn" data-act="schedule">Armar horario</button></div></section>';
+      return '<header class="head"><div><h1>Asistencia</h1><p class="lead">Armá tu horario una vez y después solo marcás si fuiste.</p></div></header><section class="card"><div class="empty"><b>Todavía no hay clases cargadas.</b>Agregá las clases de cada materia con su día.</div><div class="actions" style="justify-content:flex-start"><button class="btn" data-act="schedule">Armar horario</button></div></section>' + oldAttendanceHtml();
     }
     const t = today();
     const wk = L.weekNumber(S, t);
@@ -810,7 +950,10 @@
       }
       const cs = cells.filter((c) => c.week === w.n);
       const tl = L.tally(cs);
-      return `<tr class="${w.n === wk ? 'cur' : ''}"><th class="sticky wk" scope="row">Sem ${w.n}<small>${shortDate(L.weekStart(S, w.n))}</small></th>${cs.map((c) => `<td>${cellBtn(c)}</td>`).join('')}<td class="wbar"><div><span class="bar"><i style="width:${(tl.pct || 0) * 100}%"></i></span><span>${tl.taken ? L.pct(tl.pct) : ''}</span></div></td></tr>`;
+      // Lo que cursás hoy va en un solo bloque con fondo, así ubicás el día de un vistazo.
+      const ti = cs.map((c, i) => (L.daysBetween(c.date, t) === 0 ? i : -1)).filter((i) => i >= 0);
+      const tdCls = (i) => (ti.includes(i) ? ` class="is-today${i === ti[0] ? ' t-first' : ''}${i === ti[ti.length - 1] ? ' t-last' : ''}"` : '');
+      return `<tr class="${w.n === wk ? 'cur' : ''}"><th class="sticky wk" scope="row">Sem ${w.n}<small>${shortDate(L.weekStart(S, w.n))}</small></th>${cs.map((c, i) => `<td${tdCls(i)}>${cellBtn(c)}</td>`).join('')}<td class="wbar"><div><span class="bar"><i style="width:${(tl.pct || 0) * 100}%"></i></span><span>${tl.taken ? L.pct(tl.pct) : ''}</span></div></td></tr>`;
     }).join('');
     const foot = S.classes.map((c) => `<td>${L.pct(L.tally(cells.filter((x) => x.cls.id === c.id)).pct)}</td>`).join('');
 
@@ -829,7 +972,14 @@
     const map = cw.map((w) => `<div class="map-row${w.n === pw ? ' sel' : ''}"><button class="map-wk" data-act="pick-week" data-w="${w.n}" aria-label="Ver semana ${w.n}">${w.n}</button>${cells.filter((c) => c.week === w.n).map((c) => cellBtn(c, true)).join('')}</div>`).join('');
     const phone = `<section class="card att-phone mt">
       <div class="week-pager"><button class="icon-btn" data-act="pick-week" data-w="${prevW ? prevW.n : pw}" ${prevW ? '' : 'disabled'} aria-label="Semana anterior">‹</button><div><b>Semana ${pw}${pw === wk ? ' · esta' : ''}</b><span class="sub">Desde el ${shortDate(L.weekStart(S, pw))}${pwT.taken ? ` · ${L.pct(pwT.pct)}` : ''}</span></div><button class="icon-btn" data-act="pick-week" data-w="${nextW ? nextW.n : pw}" ${nextW ? '' : 'disabled'} aria-label="Semana siguiente">›</button></div>
-      ${pwCells.map((c) => classRow(c, cap(L.DIAS[c.cls.dow]))).join('')}
+      ${(() => {
+        const isT = (c) => L.daysBetween(c.date, t) === 0;
+        const before = pwCells.filter((c) => !isT(c) && c.cls.dow < L.dow(t));
+        const tod = pwCells.filter(isT);
+        const after = pwCells.filter((c) => !isT(c) && !before.includes(c));
+        const row = (c) => classRow(c, cap(L.DIAS[c.cls.dow]));
+        return `${before.map(row).join('')}${tod.length ? `<div class="today-block"><span class="today-tag">Hoy</span>${tod.map((c) => classRow(c, c.cls.from ? `${c.cls.from} a ${c.cls.to}` : 'Hoy')).join('')}</div>` : ''}${after.map(row).join('')}`;
+      })()}
       <p class="section-label">Todo el cuatrimestre</p><p class="sub">Tocá un número para ir a esa semana.</p>
       <div class="att-map" style="--cols:${S.classes.length}"><div class="map-row map-head"><span></span>${S.classes.map((c) => `<span style="background:${colorOf(c.mat)}" title="${h(c.name)}"></span>`).join('')}</div>${map}</div>
       <div class="key" style="margin-top:10px">${mats().map((m) => `<span><i style="background:${colorOf(m)}"></i>${h(matLabel(m))}</span>`).join('')}</div>
@@ -847,12 +997,13 @@
     ${weekChart()}
     ${phone}
     <section class="card mt att-desk"><div class="card-head"><h2>Grilla</h2><button class="btn ghost small" data-act="schedule">Editar horario</button></div><div class="table-wrap"><table class="att">
-      <thead><tr class="day"><th class="sticky"></th>${groups.map((g) => `<th colspan="${g.n}" scope="colgroup">${L.DIAS[g.dow]}</th>`).join('')}<th></th></tr>
+      <thead><tr class="day"><th class="sticky"></th>${groups.map((g) => `<th colspan="${g.n}" scope="colgroup"${g.dow === L.dow(t) && S.weeks.some((w) => w.n === wk && w.kind === 'clases') ? ' class="is-today"' : ''}>${L.DIAS[g.dow]}${g.dow === L.dow(t) && S.weeks.some((w) => w.n === wk && w.kind === 'clases') ? ' · hoy' : ''}</th>`).join('')}<th></th></tr>
       <tr class="cl"><th class="sticky"></th>${S.classes.map((c) => `<th scope="col" style="--mc:${colorOf(c.mat)}">${h(c.name)}<i></i></th>`).join('')}<th class="sub">Semana</th></tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr><th class="sticky">Por clase</th>${foot}<td></td></tr></tfoot>
     </table></div>
     <div class="key" style="margin-top:12px"><span>✓ fui</span><span>✕ falté</span><span>– no hubo clase o feriado</span><span>vacío: sin cargar</span><span><span class="note-dot"></span>tiene nota: tocala para leerla</span></div></section>
+    ${oldAttendanceHtml()}
     <div class="mt">
       <section class="card"><div class="card-head"><h2>Tus números</h2></div><div class="mini-stats">
         <div><b>${st.current}</b><span>clases seguidas sin faltar</span></div>
@@ -1003,9 +1154,13 @@
     const st = S.settings;
     const yrs = [...new Set(S.courses.map((c) => c.year))].sort((a, b) => a - b);
     let body = '';
+    const mileChip = (m) => `<span class="mile">${m.sem === 'Anual' ? 'Todo el año: ' : ''}${h(m.text)} <button style="background:none;border:0;cursor:pointer;color:inherit" data-act="del-mile" data-id="${h(m.text)}" aria-label="Borrar hito">×</button></span>`;
     yrs.forEach((y) => {
       const yc = S.courses.filter((c) => c.year === y);
-      body += `<h2 class="year-h">${y}° año</h2>`;
+      // Hitos de todo el año (o de un cuatrimestre que todavía no tiene materias): van junto al título del año.
+      const sems = new Set(yc.map((c) => c.sem));
+      const yearMiles = (S.milestones || []).filter((m) => m.year === y && !sems.has(m.sem));
+      body += `<h2 class="year-h">${y}° año${yearMiles.length ? ` <span class="year-miles">${yearMiles.map(mileChip).join('')}</span>` : ''}</h2>`;
       [...new Set(yc.map((c) => c.sem))].forEach((sem) => {
         const sc = yc.filter((c) => c.sem === sem);
         const mile = (S.milestones || []).filter((m) => m.year === y && m.sem === sem);
@@ -1016,6 +1171,8 @@
         </tbody></table></div>`;
       });
     });
+    const orphan = (S.milestones || []).filter((m) => !yrs.includes(m.year));
+    if (orphan.length) body += `<h2 class="year-h">Otros hitos</h2><div class="sem-h">${orphan.sort((a, b) => a.year - b.year).map((m) => `<span class="mile">${h(termShort(m.year, m.sem))}: ${h(m.text)} <button style="background:none;border:0;cursor:pointer;color:inherit" data-act="del-mile" data-id="${h(m.text)}" aria-label="Borrar hito">×</button></span>`).join('')}</div>`;
     const lead = cs.total ? `${pl(cs.total - cs.approved - cs.current, 'materia', 'materias')} por delante, ${cs.current} en curso, ${pl(cs.approved, 'aprobada', 'aprobadas')}${st.entryYear ? `. Empezaste en ${h(st.entryYear)}` : ''}${st.university ? ` · ${h(st.university)}` : ''}.` : 'Cargá tu plan y mirá cuánto te falta.';
     return `
     <header class="head"><div><h1>${h(st.career || 'Tu carrera')}</h1><p class="lead">${lead}</p>${wrappedTerms().length ? '<button class="btn ghost small wrapped-btn" data-act="wrapped">Tu resumen del cuatrimestre</button>' : ''}</div>
@@ -1062,7 +1219,12 @@
     const kindF = present.includes(ui.kindFilter) ? ui.kindFilter : null;
     const chips = present.length > 1 ? `<div class="choice kind-chips" role="group" aria-label="Filtrar por tipo"><button data-act="kind-filter" data-k="" aria-pressed="${!kindF}">Todo</button>${present.map((k) => `<button data-act="kind-filter" data-k="${k}" aria-pressed="${kindF === k}">${h(KINDS[k].many)}</button>`).join('')}</div>` : '';
     const totalDoubts = S.practices.reduce((a, p) => a + doubtsOf(p).length, 0);
-    const boxes = subs.map((k) => {
+    // Archivadas: las que archivaste a mano, o las que ya no estás cursando. Sus datos quedan guardados abajo.
+    const arch = S.studyArchive || {};
+    const isArchived = (k) => { if (arch[k] === false) return false; if (arch[k]) return true; const co = latestOf(k); return !!co && !L.isCurrent(co); };
+    const activeSubs = subs.filter((k) => !isArchived(k));
+    const oldSubs = subs.filter(isArchived);
+    const box = (k, archived) => {
       const full = S.practices.filter((p) => subjOfPractice(p) === k);
       const list = full.filter((p) => !kindF || (p.kind || 'practica') === kindF);
       if (kindF && !list.length) return '';
@@ -1076,14 +1238,17 @@
       return `<details class="sbox" data-subj="${h(k)}" style="--mc:${colorOf(k)}"${open ? ' open' : ''}>
         <summary class="sbox-head" aria-label="${h(matLabel(k))}, ${aria}">${donut(st.pct, colorOf(k), !st.count, doneAll)}<div class="sbox-info"><h2>${h(matLabel(k))}</h2><p class="sub">${line}</p>${dz ? `<span class="pill doubt">${pl(dz, 'duda', 'dudas')} para consultar</span>` : ''}</div><span class="chev" aria-hidden="true"></span></summary>
         <div class="sbox-body">${list.map(materialRow).join('') || '<p class="sub sbox-empty">Sumá lo primero: una práctica, una lectura, un video o un TP. Si tiene ejercicios, vas a poder tildarlos uno por uno.</p>'}
-        <button class="btn ghost small sbox-add" data-act="add-prac" data-course="${h(co ? co.id : '')}">Agregar material</button></div>
+        <div class="sbox-tools">${archived ? '' : `<button class="btn ghost small sbox-add" data-act="add-prac" data-course="${h(co ? co.id : '')}">Agregar material</button>`}<button class="linkish" data-act="study-archive" data-subj="${h(k)}" data-v="${archived ? '' : '1'}">${archived ? 'Volver a Estudio' : 'Archivar materia'}</button></div></div>
       </details>`;
-    }).join('');
+    };
+    const boxes = activeSubs.map((k) => box(k, false)).join('');
+    const oldBoxes = oldSubs.map((k) => box(k, true)).join('');
     return `
     <header class="head"><div><h1>Estudio</h1><p class="lead">Tu avance en cada materia. Tocá una para ver sus prácticas, lecturas y TP, tildar lo que hiciste y marcar con <b>?</b> lo que te quedó en duda.</p></div>
       ${all.count ? `<div class="figs"><div class="fig"><b>${all.complete}<small> de ${all.count}</small></b><span>terminados</span></div>${totalDoubts ? `<div class="fig"><b>${totalDoubts}</b><span>${totalDoubts === 1 ? 'duda' : 'dudas'} para consultar</span></div>` : ''}</div>` : ''}</header>
     ${chips}
-    ${subs.length ? `<div class="study-grid mt">${boxes}</div>` : '<section class="card"><div class="empty"><b>Todavía no hay materias en curso.</b>Marcá qué estás cursando en Carrera, o agregá material a cualquier materia.</div></section>'}
+    ${activeSubs.length ? `<div class="study-grid mt">${boxes}</div>` : '<section class="card mt"><div class="empty"><b>Todavía no hay materias en curso.</b>Marcá qué estás cursando en Carrera, o agregá material a cualquier materia.</div></section>'}
+    ${oldSubs.length ? `<details class="study-old mt"${ui.showOldStudy ? ' open' : ''}><summary><span>Cursadas anteriores y archivadas</span><span class="sub">${pl(oldSubs.length, 'materia', 'materias')} · todo lo que tildaste queda guardado</span></summary><div class="study-grid mt">${oldBoxes}</div></details>` : ''}
     <div class="actions" style="justify-content:flex-start"><button class="btn ghost" data-act="add-prac" data-course="">Agregar material de otra materia</button></div>`;
   }
 
@@ -1179,12 +1344,14 @@
     return out;
   }
   let wrappedState = null;
-  function openWrapped(key) {
+  function openWrapped(key, pick) {
     const terms = wrappedTerms();
     if (!terms.length) return;
     const cur = currentTerm();
     const term = terms.find((t) => termKey(t) === key) || (cur && terms.find((t) => termKey(t) === termKey(cur))) || terms[terms.length - 1];
-    wrappedState = { term, i: 0, slides: wrappedSlides(wrappedData(term)), terms };
+    // Desde Carrera: primero elegís qué cuatrimestre ver.
+    const picker = pick && terms.length > 1 ? { cls: 'w-pick', html: `<p class="w-kicker">Tu resumen</p><h2 class="w-title">¿Qué cuatrimestre querés ver?</h2><div class="w-pick-list">${[...new Set(terms.map((x) => x.year))].map((y) => `<div class="w-pick-year"><span>${y}° año</span>${terms.filter((x) => x.year === y).map((x) => `<button data-w="term" data-term="${termKey(x)}">${x.sem === 'Anual' ? 'Anual' : `${x.sem === 'A' ? 'Primer' : 'Segundo'} ${(S.settings.termWord || 'cuatrimestre').toLowerCase()}`}${cur && termKey(cur) === termKey(x) ? ' <small>en curso</small>' : ''}</button>`).join('')}</div>`).join('')}</div>` } : null;
+    wrappedState = { term, i: 0, slides: picker ? [picker] : wrappedSlides(wrappedData(term)), terms, picking: !!picker };
     let dlg = $('#wrapped');
     if (!dlg) {
       dlg = document.createElement('dialog');
@@ -1194,7 +1361,7 @@
       dlg.addEventListener('click', (e) => {
         const b = e.target.closest('[data-w]');
         if (b) { e.stopPropagation(); const w = b.dataset.w; if (w === 'close') dlg.close(); else if (w === 'term') openWrapped(b.dataset.term); return; }
-        if (e.target.closest('.w-stage')) { const r = dlg.querySelector('.w-stage').getBoundingClientRect(); wrappedGo(e.clientX < r.left + r.width / 3 ? -1 : 1); }
+        if (e.target.closest('.w-stage') && !(wrappedState && wrappedState.picking)) { const r = dlg.querySelector('.w-stage').getBoundingClientRect(); wrappedGo(e.clientX < r.left + r.width / 3 ? -1 : 1); }
       });
       dlg.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); wrappedGo(1); } if (e.key === 'ArrowLeft') { e.preventDefault(); wrappedGo(-1); } });
     }
@@ -1209,8 +1376,12 @@
     wrappedState.i = i; drawWrapped();
   }
   function drawWrapped() {
-    const { slides, i, terms, term } = wrappedState;
+    const { slides, i, terms, term, picking } = wrappedState;
     const sl = slides[i];
+    if (picking) {
+      $('#wrapped').innerHTML = `<button class="w-close" data-w="close" aria-label="Cerrar">×</button><div class="w-stage w-pick" role="group"><div class="w-slide">${sl.html}</div></div>`;
+      return;
+    }
     $('#wrapped').innerHTML = `<div class="w-bars" aria-hidden="true">${slides.map((_, j) => `<i class="${j < i ? 'done' : j === i ? 'now' : ''}"></i>`).join('')}</div>
       <button class="w-close" data-w="close" aria-label="Cerrar">×</button>
       <div class="w-stage ${sl.cls}" role="group" aria-roledescription="historia" aria-label="${i + 1} de ${slides.length}"><div class="w-slide" aria-live="polite">${sl.html}</div></div>
@@ -1221,20 +1392,26 @@
   // ---------- BENEFICIOS
   function viewBeneficios() {
     const B = window.CursadaBenefits || { items: [] };
-    const cats = [['', 'Todos'], ['transporte', 'Transporte'], ['cultura', 'Cultura'], ['comida', 'Comida y compras'], ['salud', 'Salud'], ['bancos', 'Bancos'], ['programas', 'Programas y apps']];
+    const cats = [['', 'Todos', 'grid'], ['transporte', 'Transporte', 'bus'], ['cultura', 'Cultura', 'ticket'], ['comida', 'Comida y compras', 'cup'], ['salud', 'Salud', 'heart'], ['bancos', 'Bancos', 'bank'], ['programas', 'Programas y apps', 'laptop']];
+    // Por lugar. "Todo el país" también aparece en CABA y en Provincia.
+    const places = [['', 'Todos los lugares', 'pin', () => true], ['online', 'Online', 'globe', (w) => w === 'Online'], ['caba', 'CABA', 'pin', (w) => w === 'CABA' || w === 'Todo el país'], ['pba', 'Provincia', 'pin', (w) => w === 'Provincia de Buenos Aires' || w === 'La Plata' || w === 'Todo el país'], ['pais', 'Todo el país', 'pin', (w) => w === 'Todo el país'], ['facu', 'Tu facu', 'carrera', (w) => w === 'Tu universidad']];
     const f = ui.benefitFilter || '';
-    const list = B.items.filter((b) => !f || b.cat === f);
+    const pf = ui.placeFilter || '';
+    const place = places.find((x) => x[0] === pf) || places[0];
+    const list = B.items.filter((b) => (!f || b.cat === f) && place[3](b.where));
+    const chip = (act, k, n, ic, on) => `<button data-act="${act}" data-k="${k}" aria-pressed="${on}">${icon(ic)}<span>${n}</span></button>`;
     return `
     <header class="head"><div><h1>Beneficios</h1><p class="lead">Descuentos y cosas gratis por ser estudiante. La mayoría se piden con el certificado de alumno regular o con el mail de tu facu.</p></div></header>
-    <div class="choice kind-chips" role="group" aria-label="Filtrar beneficios">${cats.map(([k, n]) => `<button data-act="benefit-filter" data-k="${k}" aria-pressed="${f === k}">${n}</button>`).join('')}</div>
-    <div class="ben-grid mt">${list.map((b) => `<article class="card ben">
-      <div class="ben-top">${b.logo ? `<img class="ben-logo" src="icons/benefits/${h(b.logo)}.png" alt="" width="32" height="32" loading="lazy">` : ''}<span class="ben-org">${h(b.org || '')}</span><span class="pill">${h(b.where)}</span></div>
-      <h2>${h(b.title)}</h2>
+    <div class="ben-filters">
+      <div class="choice ico-chips" role="group" aria-label="Filtrar por tipo">${cats.map(([k, n, ic]) => chip('benefit-filter', k, n, ic, f === k)).join('')}</div>
+      <div class="choice ico-chips place-chips" role="group" aria-label="Filtrar por lugar">${places.map(([k, n, ic]) => chip('place-filter', k, n, ic, pf === k)).join('')}</div>
+    </div>
+    <p class="sub ben-count">${pl(list.length, 'beneficio', 'beneficios')}</p>
+    <div class="ben-grid">${list.map((b) => `<article class="card ben" data-act="benefit" data-i="${B.items.indexOf(b)}">
+      <div class="ben-top">${b.logo ? `<img class="ben-logo" src="icons/benefits/${h(b.logo)}.png" alt="" width="40" height="40" loading="lazy">` : `<span class="ben-logo ben-logo-ph" aria-hidden="true">${icon('beneficios')}</span>`}<div class="ben-head"><span class="ben-org">${h([b.org, b.where].filter((x, i, a) => x && a.indexOf(x) === i).join(' · '))}</span><h2>${h(b.title)}</h2></div></div>
       <p class="ben-what">${h(b.what)}</p>
-      <dl><dt>Qué necesitás</dt><dd>${h(b.need)}</dd><dt>Cómo se pide</dt><dd>${h(b.how)}</dd></dl>
-      ${b.note ? `<p class="sub">${h(b.note)}</p>` : ''}
-      <a class="linkish" href="${h(safeUrl(b.url))}" target="_blank" rel="noopener">Ver más</a>
-    </article>`).join('')}</div>
+      <button class="linkish ben-more-btn" data-act="benefit" data-i="${B.items.indexOf(b)}">Ver más</button>
+    </article>`).join('') || '<p class="sub">No hay beneficios con esos filtros. Probá con otro lugar.</p>'}</div>
     <p class="sub mt">Revisados en ${h(B.checked)}. Los beneficios cambian seguido: confirmá en el link antes de usarlos. Los logos son de sus dueños y están solo para que reconozcas cada lugar: ninguno auspicia ni está asociado a CursadOK.</p>`;
   }
 
@@ -1434,34 +1611,55 @@ Reglas:
     ];
     return `<div class="all-sum">${rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>${sched.unknown.length ? `<p class="auth-note">Del horario no reconocí: ${sched.unknown.map(h).join(', ')}. Fijate que esas materias estén en el plan.</p>` : ''}`;
   }
-  function addScheduleItems(items) {
-    const groups = {};
-    items.forEach((it) => { const k = `${it.dow}|${it.courseId}|${it.tipo}`; groups[k] = (groups[k] || 0) + 1; });
-    const seen = {};
+  // Empareja lo que te devolvió la IA con las clases que ya tenés: misma materia y mismo día,
+  // y si se puede, el mismo tipo ("Teórica" = "Teoría" = "Teórico"). Las que coinciden solo reciben el horario.
+  function matchSchedule(items) {
+    const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const stem = (x) => norm(x).replace(/[^a-z]/g, '').slice(0, 4);
+    const blockOf = (c) => { const m = /bloque (\d+)$/.exec(c.name); return m ? +m[1] : 0; };
     const touched = new Set();
-    const res = { added: 0, updated: 0 };
-    items.forEach((it) => {
+    const perDay = {};
+    items.forEach((it) => { const k = `${it.dow}|${it.courseId}`; perDay[k] = (perDay[k] || 0) + 1; });
+    return items.map((it) => {
       const co = course(it.courseId);
+      if (!co) return { it, co: null, match: null };
+      const pool = S.classes.filter((c) => !touched.has(c.id) && c.course === co.id && c.dow === it.dow).sort((a, b) => blockOf(a) - blockOf(b));
+      const name = `${it.tipo} ${label(co)}`;
+      let match = pool.find((c) => c.name === name)
+        || pool.find((c) => stem(c.name) === stem(it.tipo))
+        || (perDay[`${it.dow}|${it.courseId}`] === 1 && pool.length === 1 ? pool[0] : null)
+        || (pool.length && S.classes.filter((c) => c.course === co.id && c.dow === it.dow).length >= perDay[`${it.dow}|${it.courseId}`] ? pool[0] : null);
+      if (match) touched.add(match.id);
+      return { it, co, match };
+    });
+  }
+  function addScheduleItems(items) {
+    const res = { added: 0, updated: 0 };
+    const groups = {}; const seen = {};
+    items.forEach((it) => { const k = `${it.dow}|${it.courseId}|${it.tipo}`; groups[k] = (groups[k] || 0) + 1; });
+    const matched = matchSchedule(items);
+    const usedIds = new Set(matched.filter((x) => x.match).map((x) => x.match.id));
+    matched.forEach(({ it, co, match }) => {
       if (!co) return;
       if (!L.isCurrent(co)) co.status = 'cursando';
       ensureColor(co.subj);
       const k = `${it.dow}|${it.courseId}|${it.tipo}`;
       seen[k] = (seen[k] || 0) + 1;
-      const base = `${it.tipo} ${label(co)}`;
-      const name = groups[k] > 1 ? `${base} · bloque ${seen[k]}` : base;
-      // Si esa clase ya existe (misma materia, día y tipo), solo se le actualiza el horario: así no se pierde su asistencia.
-      const norm = (x) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const block = groups[k] > 1 ? seen[k] : 0;
-      const same = S.classes.find((c) => !touched.has(c.id) && c.course === co.id && c.dow === it.dow && (c.name === name || (norm(c.name).startsWith(norm(it.tipo)) && (block ? new RegExp(`bloque ${block}$`).test(c.name) : !/bloque \d+$/.test(c.name)))));
-      if (same) {
-        touched.add(same.id);
-        if (it.from) { same.from = it.from; same.to = it.to; }
+      if (match) {
+        // Ya la tenías: solo se le pone el horario. Nombre, día y asistencia quedan como estaban.
+        if (it.from) {
+          // Una clase de dos bloques con un solo horario ("14 a 18"): se reparte entre los bloques.
+          const base = match.name.replace(/ · bloque \d+$/, '');
+          const sibs = /bloque 1$/.test(match.name) ? S.classes.filter((c) => c !== match && c.course === match.course && c.dow === match.dow && c.name.startsWith(`${base} · bloque`) && !usedIds.has(c.id)) : [];
+          const parts = sibs.length + 1;
+          const span = toMin(it.to) - toMin(it.from);
+          [match, ...sibs].forEach((c, i) => { c.from = addMin(it.from, Math.round((span * i) / parts)); c.to = addMin(it.from, Math.round((span * (i + 1)) / parts)); usedIds.add(c.id); });
+        }
         res.updated++;
         return;
       }
-      const c = { id: uid('c'), name, mat: co.subj, course: co.id, dow: it.dow, ...(it.from ? { from: it.from, to: it.to } : {}) };
-      touched.add(c.id);
-      S.classes.push(c);
+      const base = `${it.tipo} ${label(co)}`;
+      S.classes.push({ id: uid('c'), name: groups[k] > 1 ? `${base} · bloque ${seen[k]}` : base, mat: co.subj, course: co.id, dow: it.dow, ...(it.from ? { from: it.from, to: it.to } : {}) });
       res.added++;
     });
     sortClasses();
@@ -1530,9 +1728,11 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   function schedPreviewHtml(text) {
     if (!text.trim()) return '';
     const r = L.parseSchedule(text, L.subjects(S));
+    const m = matchSchedule(r.items);
     const days = [...new Set(r.items.map((i) => i.dow))];
-    const list = days.map((d) => `<li><b>${cap(L.DIAS[d])}</b>${r.items.filter((i) => i.dow === d).map((i) => `${h(i.tipo)} ${h(label(course(i.courseId)))}${i.from ? ` (${i.from} a ${i.to})` : ''}`).join(' · ')}</li>`).join('');
-    return `${r.items.length ? `Encontré <b>${pl(r.items.length, 'clase', 'clases')}</b>.` : 'No encontré clases. Revisá que cada día esté como título.'}${r.unknown.length ? `<p class="auth-note">No reconocí estas materias: ${r.unknown.map(h).join(', ')}. Fijate que estén en tu plan, en Carrera.</p>` : ''}<ul class="plan-list">${list}</ul>${r.items.length ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><button type="button" class="btn" data-act="sched-apply">Cargar ${pl(r.items.length, 'clase', 'clases')}</button></div>` : ''}`;
+    const list = days.map((d) => `<li><b>${cap(L.DIAS[d])}</b>${m.filter((x) => x.it.dow === d).map(({ it: i, match }) => `<span class="sp-item${match ? ' is-known' : ''}">${match ? '✓ ' : '+ '}${h(match ? match.name : `${i.tipo} ${label(course(i.courseId))}`)}${i.from ? ` <span class="num">${i.from}–${i.to}</span>` : ''}</span>`).join('')}</li>`).join('');
+    const known = m.filter((x) => x.match).length; const fresh = r.items.length - known;
+    return `${r.items.length ? `Encontré <b>${pl(r.items.length, 'clase', 'clases')}</b>.${known ? ` <b>${known}</b> ya las tenías (✓): solo les pongo el horario y su asistencia queda igual.` : ''}${fresh ? ` <b>${fresh}</b> ${fresh === 1 ? 'es nueva' : 'son nuevas'} (+).` : ''}` : 'No encontré clases. Revisá que cada día esté como título.'}${r.unknown.length ? `<p class="auth-note">No reconocí estas materias: ${r.unknown.map(h).join(', ')}. Fijate que estén en tu plan, en Carrera.</p>` : ''}<ul class="plan-list">${list}</ul>${r.items.length ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><button type="button" class="btn" data-act="sched-apply">Cargar ${pl(r.items.length, 'clase', 'clases')}</button></div>` : ''}`;
   }
   function scheduleHtml(opts = {}) {
     const st = S.settings;
@@ -1700,7 +1900,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <hr class="divider"><p class="section-label" style="margin-top:0">Colores</p>${themePicker()}
       <hr class="divider"><p class="section-label" style="margin-top:0">Mascota</p>
       <p class="sub" style="margin:2px 0 8px">Te acompaña en Hoy y cambia de cara según lo que te pasa: racha, examen cerca, una mala nota, si es muy tarde.</p>
-      <div class="choice" role="group" aria-label="Mascota"><button type="button" data-act="pet-pick" data-v="" aria-pressed="${!st.pet}">Sin mascota</button>${Object.entries(PETS).map(([k, n]) => `<button type="button" data-act="pet-pick" data-v="${k}" aria-pressed="${st.pet === k}">${n}</button>`).join('')}<button type="button" disabled title="Próximamente">Gatito · pronto</button><button type="button" disabled title="Próximamente">Pez · pronto</button></div>
+      <div class="choice" role="group" aria-label="Mascota"><button type="button" data-act="pet-pick" data-v="" aria-pressed="${!st.pet}">Sin mascota</button>${Object.entries(PETS).map(([k, n]) => `<button type="button" data-act="pet-pick" data-v="${k}" aria-pressed="${st.pet === k}">${n}</button>`).join('')}</div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Frases motivadoras</p>
       <p class="sub" style="margin:2px 0 8px">Una frase por día en Hoy, según lo que te pase: un examen cerca, una racha, faltas justas o dudas anotadas.</p>
       <div class="choice" role="group" aria-label="Frases motivadoras"><button type="button" data-act="motivation" data-v="1" aria-pressed="${!!st.motivation}">Activadas</button><button type="button" data-act="motivation" data-v="" aria-pressed="${!st.motivation}">Desactivadas</button></div>
@@ -1898,10 +2098,20 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     theme(el) { S.settings.theme = el.dataset.id; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     font(el) { S.settings.font = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     progress(el) { S.settings.progress = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
+    stick() {
+      const text = (S.scratch || '').trim();
+      if (!text) { toast('Escribí algo en la nota rápida primero.'); return; }
+      const colors = Object.keys(STICKY_COLORS);
+      mutate(() => { S.stickies = S.stickies || []; S.stickies.unshift({ id: uid('n'), text: text.slice(0, 400), color: colors[S.stickies.length % colors.length], rot: Math.round((Math.random() * 6 - 3) * 10) / 10 }); S.scratch = ''; }, 'Pegado arriba de todo en Hoy');
+    },
+    sticky: (el) => stickyDialog(el.dataset.id),
+    'sticky-color'(el) { const n = S.stickies.find((x) => x.id === el.dataset.id); mutate(() => { n.color = el.dataset.v; }, null); stickyDialog(n.id); },
+    unstick(el) { const n = S.stickies.find((x) => x.id === el.dataset.id); closeModal(); mutate(() => { S.stickies = S.stickies.filter((x) => x !== n); }, 'Post-it despegado'); },
     'pet-tap'() {
       ui.petTap = (ui.petTap || 0) + 1;
       const pet = $('.pet'); if (!pet) return;
-      pet.querySelector('.pet-bubble').textContent = petLine(pet.dataset.mood);
+      if (ui.jokeI == null) ui.jokeI = Math.floor(Math.random() * PET_JOKES.length);
+      pet.querySelector('.pet-bubble').textContent = PET_JOKES[ui.jokeI++ % PET_JOKES.length];
       const b = pet.querySelector('.pet-btn'); b.classList.remove('jump'); void b.offsetWidth; b.classList.add('jump');
     },
     'class-len'(el) {
@@ -1944,11 +2154,27 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     'prac-all'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); const all = p.items.every(Boolean); ui.openPrac.add(p.id); mutate(() => { p.items = p.items.map(() => !all); }, `${p.name}: ${all ? 'todo destildado' : 'todo tildado'}`); },
     'del-prac'(el) { const p = S.practices.find((x) => x.id === el.dataset.id); closeModal(); mutate(() => { S.practices = S.practices.filter((x) => x !== p); }, `${p.name}: borrado`); },
     'benefit-filter'(el) { ui.benefitFilter = el.dataset.k || null; render(); },
+    benefit(el) {
+      const b = (window.CursadaBenefits || { items: [] }).items[+el.dataset.i];
+      if (!b) return;
+      openModal(`<div class="ben-top" style="margin-bottom:6px">${b.logo ? `<img class="ben-logo" src="icons/benefits/${h(b.logo)}.png" alt="" width="40" height="40">` : ''}<div class="ben-head"><span class="ben-org">${h([b.org, b.where].filter((x, i, a) => x && a.indexOf(x) === i).join(' · '))}</span></div></div>
+        <h2 id="modal-title">${h(b.title)}</h2><p style="margin:6px 0 4px">${h(b.what)}</p>
+        <dl class="ben-dl"><dt>Qué necesitás</dt><dd>${h(b.need)}</dd><dt>Cómo se pide</dt><dd>${h(b.how)}</dd></dl>
+        ${b.note ? `<p class="sub" style="margin-top:10px">${h(b.note)}</p>` : ''}
+        <div class="actions"><a class="btn" href="${h(safeUrl(b.url))}" target="_blank" rel="noopener">Ir a la fuente</a></div>`);
+    },
+    'study-archive'(el) {
+      const k = el.dataset.subj; const on = !!el.dataset.v;
+      S.studyArchive = S.studyArchive || {};
+      ui.showOldStudy = !on ? ui.showOldStudy : true;
+      mutate(() => { S.studyArchive[k] = on; }, on ? `${matLabel(k)}: archivada. La encontrás abajo, en Cursadas anteriores.` : `${matLabel(k)}: de vuelta en Estudio`);
+    },
+    'place-filter'(el) { ui.placeFilter = el.dataset.k || null; render(); },
     'kind-filter'(el) { ui.kindFilter = el.dataset.k || null; render(); },
     'edit-prac': (el) => pracDialog('', el.dataset.id),
     'pick-week'(el) { ui.phoneWeek = +el.dataset.w; render(); },
     'del-class'(el) { mutate(() => { S.classes = S.classes.filter((c) => c.id !== el.dataset.id); }, 'Clase borrada'); reopen(scheduleDialog); },
-    wrapped(el) { openWrapped(el.dataset.term || null); },
+    wrapped(el) { openWrapped(el.dataset.term || null, !el.dataset.term); },
     'new-sem'() {
       const t = L.tally(L.allCells(S));
       closeModal();
@@ -2059,6 +2285,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   document.addEventListener('toggle', (e) => {
     const d = e.target;
     if (d.matches && d.matches('details.pr')) { if (d.open) ui.openPrac.add(d.dataset.id); else ui.openPrac.delete(d.dataset.id); }
+    if (d.matches && d.matches('details.study-old')) ui.showOldStudy = d.open;
     if (d.matches && d.matches('details.study, details.sbox') && !ui.kindFilter) { if (d.open) ui.openSubj.add(d.dataset.subj); else ui.openSubj.delete(d.dataset.subj); }
   }, true);
 
@@ -2134,6 +2361,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         mutate(() => { p.known = true; p.items = Array.from({ length: n }, (_, i) => !!p.items[i]); }, `${p.name}: ${p.items.filter(Boolean).length} de ${n}`);
       }
       if (kind === 'class-len-min') { const n = parseInt(el.value, 10); if (n >= 10 && n <= 600) { S.settings.classLen = n; save(); refreshSchedule(); } else toast('Poné entre 10 y 600 minutos.'); return; }
+      if (kind === 'sticky-text') { const n = S.stickies.find((x) => x.id === el.dataset.id); const v = el.value.trim(); if (!n) return; if (!v) { closeModal(); mutate(() => { S.stickies = S.stickies.filter((x) => x !== n); }, 'Post-it despegado'); return; } mutate(() => { n.text = v.slice(0, 400); }, null); return; }
       if (kind === 'class-name' || kind === 'class-dow') {
         const c = S.classes.find((x) => x.id === el.dataset.id);
         if (!c) return;
@@ -2152,7 +2380,9 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
           if (el.dataset.f === 'from' && c.from && (!c.to || c.to <= c.from)) c.to = addMin(c.from, S.settings.classLen || 120);
           sortClasses();
         }, null);
-        refreshSchedule();
+        // No se redibuja el cuadro (en el iPhone cortaría la ruedita de la hora): solo se completa el final.
+        const toIn = el.closest('.cls-edit') && el.closest('.cls-edit').querySelector('[data-f="to"]');
+        if (toIn && c.to && toIn.value !== c.to) toIn.value = c.to;
         return;
       }
       if (kind === 'my-phrases') { S.settings.myPhrases = el.value.slice(0, 2000); save(); render(); return; }
@@ -2215,6 +2445,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     me = data.user;
     S = data.state ? migrate(data.state) : emptyState(me);
     rev = data.rev;
+    base = snap(S);
     render();
     scrollTo(0, 0);
   }
@@ -2315,7 +2546,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         }, 'Material agregado');
       }
     }
-    if (kind === 'mile') mutate(() => { S.milestones.push({ year: +d.year, sem: d.sem, text: d.preset === 'otro' ? d.text.trim() : d.preset }); }, 'Hito agregado');
+    if (kind === 'mile') mutate(() => { S.milestones.push({ year: +d.year, sem: d.sem, text: d.preset === 'otro' ? d.text.trim() : d.preset }); }, `Hito agregado: lo ves en Carrera, en ${d.year}° año${d.sem === 'Anual' ? ', junto al título del año' : ''}`);
     if (kind === 'plan') { if (!d.plan.trim()) { toast('Subí un archivo o pegá la lista primero.'); return; } let added = 0; mutate(() => { added = applyPlan(d.plan); }, null); toast(added ? `${pl(added, 'materia agregada', 'materias agregadas')}.` : 'No había materias nuevas en la lista.', !!added); }
   });
 
@@ -2351,7 +2582,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     if (document.hidden || !S || dirty || inflight || modal().open) return;
     try {
       const r = await api('GET', '/api/me');
-      if (r.status === 200 && r.data.rev !== rev && !dirty) { S = migrate(r.data.state); rev = r.data.rev; render(); }
+      if (r.status === 200 && r.data.rev !== rev && !dirty && !inflight) { S = migrate(r.data.state); rev = r.data.rev; base = snap(S); render(); }
     } catch (e) { /* sin conexión: seguimos con lo que hay */ }
   });
 
