@@ -216,7 +216,6 @@
   // Horario pegado (de una IA o escrito a mano): día como título y "Tipo - Materia" por renglón.
   const DAY_RE = /^(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado)\b[\s:.-]*/i;
   const DAY_IDX = { lunes: 0, martes: 1, miercoles: 2, 'miércoles': 2, jueves: 3, viernes: 4, sabado: 5, 'sábado': 5 };
-  const TIME_RE = /\b\d{1,2}([:.h]\d{2})?\s*(hs?)?\s*([-–a]+\s*\d{1,2}([:.h]\d{2})?\s*(hs?)?)?/gi;
   const plain = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
   // Palabras que aparecen en muchas materias y no sirven para reconocer una.
   const GENERIC = new Set(['general', 'generales', 'introduccion', 'fundamentos', 'taller', 'seminario', 'teoria', 'practica', 'aplicada', 'aplicadas', 'aplicado', 'avanzado', 'avanzada', 'principios', 'elementos', 'nociones', 'para', 'sobre', 'desde', 'entre']);
@@ -240,25 +239,54 @@
     const nameWords = new Set([c.name, c.short].filter(Boolean).flatMap((n) => plain(n).split(' ')));
     return text.split(/\s+/).filter((w) => !nameWords.has(plain(w))).join(' ');
   }
-  // "8:00 a 10:00", "8 a 10 hs", "18.30-20.30" → { from: '08:00', to: '10:00' }. Solo si hay dos horas.
+  // Horario de una clase. Se busca SOLO al final del renglón ("… - 14:40 a 16:10") o al principio
+  // ("14:40 a 16:10 Teórica …"), nunca en el medio: así "bloque 1" o "Química 2" no se leen como horas.
+  // Acepta 24 h ("14:40", "14.40", "14h40", "14 hs") y 12 h ("2:40 p. m.", "2pm").
+  const H_PART = String.raw`(\d{1,2})(?:[:.h](\d{2}))?\s*(a\.?\s?m\.?|p\.?\s?m\.?|hs?\.?)?`;
+  const H_SEP = String.raw`\s*(?:-|–|—|a|al|hasta)\s*`;
+  const RANGE_END = new RegExp(String.raw`(?:^|[\s(\[|,:–—-])${H_PART}${H_SEP}${H_PART}\s*[)\].]?\s*$`, 'i');
+  const RANGE_START = new RegExp(String.raw`^\s*${H_PART}${H_SEP}${H_PART}(?=\s|$|[|:,–—-])`, 'i');
+  const LOOKS_LIKE_TIME = /\b\d{1,2}\s*[:.h]\s*\d{2}\b|\b\d{1,2}\s*(a\.?\s?m|p\.?\s?m|hs)\b/i;
   function timesIn(line) {
-    const m = /\b(\d{1,2})(?:[:.h](\d{2}))?\s*(?:hs?)?\s*(?:-|–|a|al|hasta)\s*(\d{1,2})(?:[:.h](\d{2}))?\s*(?:hs?)?\b/i.exec(line);
-    if (!m) return {};
-    const t = (hh, mm) => { const H = +hh; const M = +(mm || 0); return H <= 23 && M <= 59 ? `${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')}` : null; };
-    const from = t(m[1], m[2]); const to = t(m[3], m[4]);
-    return from && to && from < to ? { from, to } : {};
+    const src = String(line);
+    let m = RANGE_END.exec(src); let rest = '';
+    if (m) rest = src.slice(0, m.index + (/^[\s(\[|,:–—-]/.test(m[0]) ? 1 : 0)).trim();
+    else { m = RANGE_START.exec(src); if (m) rest = src.slice(m[0].length).trim(); }
+    if (!m) return LOOKS_LIKE_TIME.test(src) ? { rest: src, error: 'No pude leer el horario: escribilo como 14:40 a 16:10.' } : { rest: src };
+    const [, h1, m1, s1, h2, m2, s2] = m;
+    const kind = (x) => (!x ? '' : /^p/i.test(x) ? 'pm' : /^a/i.test(x) ? 'am' : 'h');
+    let k1 = kind(s1); const k2 = kind(s2);
+    let H1 = +h1; let H2 = +h2; const M1 = +(m1 || 0); const M2 = +(m2 || 0);
+    // "2 a 4 p. m." → las dos son de la tarde; "11 a 1 p. m." → la primera es de la mañana.
+    if (!k1 && (k2 === 'am' || k2 === 'pm')) k1 = k2 === 'pm' && H1 > H2 && H1 !== 12 ? 'am' : k2;
+    const to24 = (H, k) => (k === 'pm' ? (H % 12) + 12 : k === 'am' ? H % 12 : H);
+    if ((k1 === 'am' || k1 === 'pm') && (H1 < 1 || H1 > 12)) return { rest, error: `"${h1}" no es una hora válida con a. m./p. m.` };
+    if ((k2 === 'am' || k2 === 'pm') && (H2 < 1 || H2 > 12)) return { rest, error: `"${h2}" no es una hora válida con a. m./p. m.` };
+    H1 = to24(H1, k1); H2 = to24(H2, k2);
+    if (H1 > 23 || H2 > 23 || M1 > 59 || M2 > 59) return { rest, error: 'Hay una hora que no existe.' };
+    // Sin minutos ni "hs"/"a. m." ("8 a 10") solo vale si parece un horario de clase, no "bloque 1 - 2".
+    if (!m1 && !m2 && !k1 && !k2 && (H1 < 6 || H2 < 6)) return { rest: src };
+    const f = (H, M) => `${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')}`;
+    const from = f(H1, M1); const to = f(H2, M2);
+    if (to <= from) return { rest, error: `La hora de fin (${to}) tiene que ser después de la de inicio (${from}).` };
+    return { from, to, rest };
   }
   function parseSchedule(text, courses) {
     let dow = null;
-    const items = []; const unknown = [];
+    const items = []; const unknown = []; const errors = [];
     for (const original of String(text).split(/\r?\n/)) {
       if (/^\s*(```|~~~)/.test(original)) continue;
       let line = original.replace(/^\s*#{1,6}\s*/, '').replace(/\*\*|__/g, '').replace(/^\s*(?:[-*•·]|\d+[.)])\s+/, '').trim();
       const d = DAY_RE.exec(line);
       if (d) { dow = DAY_IDX[d[1].toLowerCase()] ?? DAY_IDX[d[1].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')]; line = line.slice(d[0].length).trim(); }
-      const times = timesIn(line);
-      line = line.replace(TIME_RE, ' ').replace(/\s+/g, ' ').replace(/^[\s:,-]+|[\s:,-]+$/g, '');
+      const tm = timesIn(line);
+      const times = tm.from ? { from: tm.from, to: tm.to } : {};
+      line = tm.rest.replace(/\s+/g, ' ').replace(/^[\s:,–—-]+|[\s:,–—-]+$/g, '');
+      // "· bloque 2" se guarda aparte: no es parte del tipo de clase.
+      let block = 0;
+      line = line.replace(/\s*[·•-]?\s*bloque\s*(\d+)\s*$/i, (_, n) => { block = +n; return ''; }).trim();
       if (!line || dow === null || line.endsWith(':') || line.split(' ').length > 16) continue;
+      if (tm.error) { errors.push({ line: original.trim(), msg: tm.error }); }
       const parts = line.split(/\s+[-–—|]\s+|\t+|:\s+/).map((x) => x.trim()).filter(Boolean);
       let found = null; let score = 0; let tipo = '';
       parts.forEach((part, i) => {
@@ -277,9 +305,9 @@
         }
       }
       if (!found || score < 1.25) { unknown.push(line); continue; }
-      items.push({ dow, courseId: found.id, tipo: (tipo || 'Clase').replace(/^\w/, (ch) => ch.toUpperCase()), ...times });
+      items.push({ dow, courseId: found.id, tipo: (tipo || 'Clase').replace(/^\w/, (ch) => ch.toUpperCase()), ...times, ...(block ? { block } : {}), ...(tm.error ? { timeError: tm.error } : {}) });
     }
-    return { items, unknown };
+    return { items, unknown, errors };
   }
 
   // ---------- Calendario por fechas (en vez de contar semanas)

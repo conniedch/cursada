@@ -499,7 +499,7 @@
   }
 
   // ---------- MASCOTA (opcional, se activa en Ajustes): pingüino, gatito, pez o búho. Cambia de cara según lo que te pasa.
-  const PETS = { pinguino: 'Pingüino', gatito: 'Gatito', pez: 'Pez', buho: 'Búho' };
+  const PETS = { pinguino: 'Pingüino', gatito: 'Gatito', pez: 'Pez', buho: 'Búho', tortuga: 'Tortuga' };
   function petMood() {
     const t = today(); const hr = new Date().getHours();
     if (hr >= 23 || hr < 5) return 'sleepy';
@@ -577,28 +577,30 @@
         <ellipse cx="48" cy="118" rx="9.5" ry="4.6" fill="#FFA62B"/><ellipse cx="72" cy="118" rx="9.5" ry="4.6" fill="#FFA62B"/>`;
     },
     gatito(mood) {
-      const fur = '#A9AEC2'; const dark = '#7F849B'; const cream = '#F6F1EA';
-      const tail = mood === 'sad' ? 'M84 108q20 6 26 18' : 'M84 106q26-2 22-30q-2-10-11-8';
-      return `<path class="pet-tail${mood === 'happy' ? ' pet-wave-tail' : ''}" d="${tail}" fill="none" stroke="${fur}" stroke-width="9" stroke-linecap="round"/>
-        <ellipse cx="60" cy="102" rx="28" ry="21" fill="${fur}"/>
-        <ellipse cx="60" cy="106" rx="16" ry="13" fill="${cream}"/>
-        <path d="M29 42L33 13l20 17z" fill="${fur}"/><path d="M91 42L87 13 67 30z" fill="${fur}"/>
-        <path d="M34 34l2-13 10 9z" fill="#FFB3C4"/><path d="M86 34l-2-13-10 9z" fill="#FFB3C4"/>
-        <ellipse cx="60" cy="56" rx="35" ry="30" fill="${fur}"/>
-        <path d="M55 29v8M60 27v9M65 29v8" stroke="${dark}" stroke-width="2.6" stroke-linecap="round"/>
-        <ellipse cx="60" cy="67" rx="13" ry="8.5" fill="${cream}"/>
-        <circle cx="39" cy="63" r="4.5" fill="#FF8FA3" opacity=".5"/><circle cx="81" cy="63" r="4.5" fill="#FF8FA3" opacity=".5"/>
+      // Gatito naranja, cabezón y sentado.
+      const fur = '#F4A259'; const stripe = '#E0873A'; const cream = '#FFF4E6';
+      const tail = mood === 'sad' ? 'M38 112q-22 6-24 18' : 'M38 110q-22-2-20-24q1-9 9-7';
+      return `<path class="pet-tail${mood === 'happy' ? ' pet-wave-tail' : ''}" d="${tail}" fill="none" stroke="${fur}" stroke-width="10" stroke-linecap="round"/>
+        <ellipse cx="60" cy="103" rx="26" ry="19" fill="${fur}"/>
+        <ellipse cx="60" cy="106" rx="15" ry="12" fill="${cream}"/>
+        <path d="M30 40L32 17l19 14z" fill="${fur}" stroke="${fur}" stroke-width="5" stroke-linejoin="round"/><path d="M90 40L88 17 69 31z" fill="${fur}" stroke="${fur}" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M35 33l1-9 8 6z" fill="#FFC2C7" stroke="#FFC2C7" stroke-width="2" stroke-linejoin="round"/><path d="M85 33l-1-9-8 6z" fill="#FFC2C7" stroke="#FFC2C7" stroke-width="2" stroke-linejoin="round"/>
+        <ellipse cx="60" cy="57" rx="36" ry="31" fill="${fur}"/>
+        <path d="M54 30q1 5 0 9M60 28v10M66 30q-1 5 0 9" fill="none" stroke="${stripe}" stroke-width="3" stroke-linecap="round"/>
+        <path d="M25 52q5 1 8 4M95 52q-5 1-8 4" fill="none" stroke="${stripe}" stroke-width="2.6" stroke-linecap="round"/>
+        <ellipse cx="60" cy="68" rx="14" ry="10" fill="${cream}"/>
+        <circle cx="40" cy="64" r="5" fill="#FF8FA3" opacity=".55"/><circle cx="80" cy="64" r="5" fill="#FF8FA3" opacity=".55"/>
         ${petFace(mood)}
-        <path d="M57 62.5h6l-3 3.6z" fill="#FF8FA3"/>
-        <path d="M60 66q-2.5 4-6 1.5M60 66q2.5 4 6 1.5" fill="none" stroke="#121A2C" stroke-width="1.6" stroke-linecap="round"/>
-        <path d="M45 66l-15-3M45 70l-15 2M75 66l15-3M75 70l15 2" stroke="${dark}" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M57.2 63.5h5.6l-2.8 3.2z" fill="#E86B7E" stroke="#E86B7E" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M60 67q-2.2 3.4-5 1.2M60 67q2.2 3.4 5 1.2" fill="none" stroke="#121A2C" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M44 67h-9M44 70.5l-8 2M76 67h9M76 70.5l8 2" stroke="#B5652A" stroke-width="1.2" stroke-linecap="round" opacity=".7"/>
         ${petExtra(mood)}
-        <ellipse cx="49" cy="120" rx="8.5" ry="5" fill="${cream}"/><ellipse cx="71" cy="120" rx="8.5" ry="5" fill="${cream}"/>`;
+        <ellipse cx="50" cy="119" rx="8" ry="5.5" fill="${cream}"/><ellipse cx="70" cy="119" rx="8" ry="5.5" fill="${cream}"/>`;
     },
     pez(mood) {
+      // Pececito en su pecera: la pecera queda quieta y el pez nada adentro.
       const body = '#FF8A65'; const deep = '#F06A44';
-      return `<g class="pet-bubbles" fill="none" stroke="#9FD3FF" stroke-width="1.6"><circle cx="22" cy="40" r="4"/><circle cx="16" cy="24" r="2.6"/><circle cx="26" cy="12" r="1.8"/></g>
-        <path class="pet-fin" d="M90 72L114 50l-5 22 5 22z" fill="${deep}"/>
+      const fish = `<path class="pet-fin" d="M90 72L114 50l-5 22 5 22z" fill="${deep}"/>
         <path d="M42 46q16-22 34-2z" fill="${deep}"/>
         <ellipse cx="60" cy="70" rx="36" ry="30" fill="${body}"/>
         <ellipse cx="58" cy="82" rx="25" ry="14" fill="#FFD3BE"/>
@@ -607,6 +609,33 @@
         <g transform="translate(-8 8)">${petFace(mood)}</g>
         <circle cx="34" cy="64" r="3.4" fill="#FF8FA3" opacity=".6"/>
         <ellipse cx="26" cy="72" rx="3.6" ry="3" fill="#8A2E14"/>
+        ${petExtra(mood)}`;
+      return `<circle cx="60" cy="80" r="42" fill="#EAF7FF" stroke="#A9D8F5" stroke-width="2.5"/>
+        <path d="M20.8 64A42 42 0 1 0 99.2 64Z" fill="#BFE6FF" opacity=".85"/>
+        <path d="M20.8 64q39 7 78.4 0" fill="none" stroke="#8CCBF2" stroke-width="1.6"/>
+        <path d="M25.5 104Q60 96 94.5 104A42 42 0 0 1 25.5 104Z" fill="#F4DFA6"/>
+        <path d="M33 109q-7-15 2-28q4 13-2 28zM40 111q2-17 11-23q-2 15-11 23z" fill="#5CBF7A"/>
+        <circle cx="78" cy="108" r="3.4" fill="#E8C98A"/><circle cx="84" cy="110" r="2.4" fill="#D9B676"/>
+        <ellipse cx="60" cy="39.5" rx="23" ry="4.5" fill="none" stroke="#A9D8F5" stroke-width="3"/>
+        <g transform="translate(30 47) scale(.56)"><g class="pet-swim">${fish}</g></g>
+        <g class="pet-bubbles" fill="none" stroke="#fff" stroke-width="1.4"><circle cx="46" cy="70" r="2.6"/><circle cx="42" cy="58" r="1.8"/><circle cx="48" cy="48" r="1.3"/></g>
+        <path d="M28 70q3-16 16-24" stroke="#fff" stroke-width="3" fill="none" opacity=".7" stroke-linecap="round"/>`;
+    },
+    tortuga(mood) {
+      const skin = '#8FD18A'; const shell = '#4E9F5B'; const line = '#7CC48A';
+      const sad = mood === 'sad';
+      return `<ellipse cx="31" cy="112" rx="9" ry="6" fill="${skin}"/><ellipse cx="89" cy="112" rx="9" ry="6" fill="${skin}"/>
+        <path d="M96 100q10 2 12 8q-8 0-13-3z" fill="${skin}"/>
+        <ellipse cx="60" cy="96" rx="40" ry="24" fill="${shell}"/>
+        <path d="M60 74v44M38 82l8 14-8 16M82 82l-8 14 8 16M46 96h28" fill="none" stroke="${line}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+        <ellipse cx="60" cy="108" rx="40" ry="10" fill="none" stroke="#3D7F48" stroke-width="3"/>
+        <ellipse cx="44" cy="120" rx="8" ry="5" fill="${skin}"/><ellipse cx="76" cy="120" rx="8" ry="5" fill="${skin}"/>
+        <g${sad ? ' transform="translate(0 4)"' : ''}>
+          <circle cx="60" cy="56" r="25" fill="${skin}"/>
+          <circle cx="41" cy="64" r="4.5" fill="#FF8FA3" opacity=".5"/><circle cx="79" cy="64" r="4.5" fill="#FF8FA3" opacity=".5"/>
+          ${petFace(mood)}
+          <path d="${sad ? 'M55 68q5-4 10 0' : 'M54 65q6 5 12 0'}" fill="none" stroke="#2F6B37" stroke-width="2" stroke-linecap="round"/>
+        </g>
         ${petExtra(mood)}`;
     },
     buho(mood) {
@@ -631,6 +660,10 @@
       <g class="pet-body">${draw(mood)}</g>
     </svg>`;
   }
+  // Selector con dibujito: así se ve la mascota antes de elegirla.
+  function petPickerHtml(cur) {
+    return `<div class="pet-picker" role="group" aria-label="Mascota"><button type="button" data-act="pet-pick" data-v="" aria-pressed="${!cur}"><span class="pp-none" aria-hidden="true">✕</span><span>Sin mascota</span></button>${Object.entries(PETS).map(([k, n]) => `<button type="button" data-act="pet-pick" data-v="${k}" aria-pressed="${cur === k}">${petSvg(k, 'idle')}<span>${n}</span></button>`).join('')}</div>`;
+  }
   function petHtml() {
     if (!S.settings.pet) return '';
     const mood = petMood();
@@ -638,7 +671,8 @@
   }
 
   // ---------- POST-ITS: la nota rápida se pega arriba de Hoy como un papelito. Tocándolo se edita o se despega.
-  const STICKY_COLORS = { amarillo: 'Amarillo', rosa: 'Rosa', celeste: 'Celeste', verde: 'Verde', lila: 'Lila' };
+  // Colores de papel bien distintos del fondo de la app (que es lila, celeste, menta… según el tema).
+  const STICKY_COLORS = { amarillo: 'Amarillo', rosa: 'Rosa', naranja: 'Naranja', celeste: 'Celeste', verde: 'Verde' };
   function boardHtml() {
     const list = S.stickies || [];
     if (!list.length) return '';
@@ -1238,7 +1272,7 @@
       return `<details class="sbox" data-subj="${h(k)}" style="--mc:${colorOf(k)}"${open ? ' open' : ''}>
         <summary class="sbox-head" aria-label="${h(matLabel(k))}, ${aria}">${donut(st.pct, colorOf(k), !st.count, doneAll)}<div class="sbox-info"><h2>${h(matLabel(k))}</h2><p class="sub">${line}</p>${dz ? `<span class="pill doubt">${pl(dz, 'duda', 'dudas')} para consultar</span>` : ''}</div><span class="chev" aria-hidden="true"></span></summary>
         <div class="sbox-body">${list.map(materialRow).join('') || '<p class="sub sbox-empty">Sumá lo primero: una práctica, una lectura, un video o un TP. Si tiene ejercicios, vas a poder tildarlos uno por uno.</p>'}
-        <div class="sbox-tools">${archived ? '' : `<button class="btn ghost small sbox-add" data-act="add-prac" data-course="${h(co ? co.id : '')}">Agregar material</button>`}<button class="linkish" data-act="study-archive" data-subj="${h(k)}" data-v="${archived ? '' : '1'}">${archived ? 'Volver a Estudio' : 'Archivar materia'}</button></div></div>
+        <div class="sbox-tools">${archived ? '' : `<button class="btn ghost small sbox-add" data-act="add-prac" data-course="${h(co ? co.id : '')}">Agregar material</button>`}<button class="linkish" data-act="study-archive" data-subj="${h(k)}" data-v="${archived ? '' : '1'}">${archived ? 'Desarchivar' : 'Archivar materia'}</button></div></div>
       </details>`;
     };
     const boxes = activeSubs.map((k) => box(k, false)).join('');
@@ -1626,6 +1660,7 @@ Reglas:
       const pool = S.classes.filter((c) => !touched.has(c.id) && c.course === co.id && c.dow === it.dow).sort((a, b) => blockOf(a) - blockOf(b));
       const name = `${it.tipo} ${label(co)}`;
       let match = pool.find((c) => c.name === name)
+        || (it.block ? pool.find((c) => stem(c.name) === stem(it.tipo) && blockOf(c) === it.block) : null)
         || pool.find((c) => stem(c.name) === stem(it.tipo))
         || (perDay[`${it.dow}|${it.courseId}`] === 1 && pool.length === 1 ? pool[0] : null)
         || (pool.length && S.classes.filter((c) => c.course === co.id && c.dow === it.dow).length >= perDay[`${it.dow}|${it.courseId}`] ? pool[0] : null);
@@ -1650,7 +1685,7 @@ Reglas:
         if (it.from) {
           // Una clase de dos bloques con un solo horario ("14 a 18"): se reparte entre los bloques.
           const base = match.name.replace(/ · bloque \d+$/, '');
-          const sibs = /bloque 1$/.test(match.name) ? S.classes.filter((c) => c !== match && c.course === match.course && c.dow === match.dow && c.name.startsWith(`${base} · bloque`) && !usedIds.has(c.id)) : [];
+          const sibs = !it.block && /bloque 1$/.test(match.name) ? S.classes.filter((c) => c !== match && c.course === match.course && c.dow === match.dow && c.name.startsWith(`${base} · bloque`) && !usedIds.has(c.id)) : [];
           const parts = sibs.length + 1;
           const span = toMin(it.to) - toMin(it.from);
           [match, ...sibs].forEach((c, i) => { c.from = addMin(it.from, Math.round((span * i) / parts)); c.to = addMin(it.from, Math.round((span * (i + 1)) / parts)); usedIds.add(c.id); });
@@ -1659,7 +1694,7 @@ Reglas:
         return;
       }
       const base = `${it.tipo} ${label(co)}`;
-      S.classes.push({ id: uid('c'), name: groups[k] > 1 ? `${base} · bloque ${seen[k]}` : base, mat: co.subj, course: co.id, dow: it.dow, ...(it.from ? { from: it.from, to: it.to } : {}) });
+      S.classes.push({ id: uid('c'), name: it.block ? `${base} · bloque ${it.block}` : groups[k] > 1 ? `${base} · bloque ${seen[k]}` : base, mat: co.subj, course: co.id, dow: it.dow, ...(it.from ? { from: it.from, to: it.to } : {}) });
       res.added++;
     });
     sortClasses();
@@ -1730,9 +1765,12 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     const r = L.parseSchedule(text, L.subjects(S));
     const m = matchSchedule(r.items);
     const days = [...new Set(r.items.map((i) => i.dow))];
-    const list = days.map((d) => `<li><b>${cap(L.DIAS[d])}</b>${m.filter((x) => x.it.dow === d).map(({ it: i, match }) => `<span class="sp-item${match ? ' is-known' : ''}">${match ? '✓ ' : '+ '}${h(match ? match.name : `${i.tipo} ${label(course(i.courseId))}`)}${i.from ? ` <span class="num">${i.from}–${i.to}</span>` : ''}</span>`).join('')}</li>`).join('');
+    const len = S.settings.classLen || 120;
+    const durNote = (i) => { if (!i.from) return ''; const d = toMin(i.to) - toMin(i.from); return d !== len ? ` <span class="sp-warn">dura ${lenTxt(d)}, no ${lenTxt(len)}</span>` : ''; };
+    const list = days.map((d) => `<li><b>${cap(L.DIAS[d])}</b>${m.filter((x) => x.it.dow === d).map(({ it: i, match }) => `<span class="sp-item${match ? ' is-known' : ''}">${match ? '✓ ' : '+ '}${h(match ? match.name : `${i.tipo} ${label(course(i.courseId))}${i.block ? ` · bloque ${i.block}` : ''}`)}${i.from ? ` <span class="num">${i.from}–${i.to}</span>${durNote(i)}` : ''}${i.timeError ? ` <span class="sp-err">⚠ ${h(i.timeError)} (se carga sin horario)</span>` : ''}</span>`).join('')}</li>`).join('');
+    const odd = r.items.filter((i) => i.from && toMin(i.to) - toMin(i.from) !== len).length;
     const known = m.filter((x) => x.match).length; const fresh = r.items.length - known;
-    return `${r.items.length ? `Encontré <b>${pl(r.items.length, 'clase', 'clases')}</b>.${known ? ` <b>${known}</b> ya las tenías (✓): solo les pongo el horario y su asistencia queda igual.` : ''}${fresh ? ` <b>${fresh}</b> ${fresh === 1 ? 'es nueva' : 'son nuevas'} (+).` : ''}` : 'No encontré clases. Revisá que cada día esté como título.'}${r.unknown.length ? `<p class="auth-note">No reconocí estas materias: ${r.unknown.map(h).join(', ')}. Fijate que estén en tu plan, en Carrera.</p>` : ''}<ul class="plan-list">${list}</ul>${r.items.length ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><button type="button" class="btn" data-act="sched-apply">Cargar ${pl(r.items.length, 'clase', 'clases')}</button></div>` : ''}`;
+    return `${r.items.length ? `Encontré <b>${pl(r.items.length, 'clase', 'clases')}</b>.${known ? ` <b>${known}</b> ya las tenías (✓): solo les pongo el horario y su asistencia queda igual.` : ''}${fresh ? ` <b>${fresh}</b> ${fresh === 1 ? 'es nueva' : 'son nuevas'} (+).` : ''}${odd ? `<p class="auth-note">${pl(odd, 'clase dura', 'clases duran')} distinto de tu duración elegida (${lenTxt(len)}). Las cargo con el horario que pegaste; si está mal, corregilo antes.</p>` : ''}${r.errors.length ? `<p class="auth-note sp-errbox">No pude leer el horario de ${pl(r.errors.length, 'renglón', 'renglones')}: ${r.errors.map((e) => `<br>• "${h(e.line)}": ${h(e.msg)}`).join('')}</p>` : ''}` : 'No encontré clases. Revisá que cada día esté como título.'}${r.unknown.length ? `<p class="auth-note">No reconocí estas materias: ${r.unknown.map(h).join(', ')}. Fijate que estén en tu plan, en Carrera.</p>` : ''}<ul class="plan-list">${list}</ul>${r.items.length ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><button type="button" class="btn" data-act="sched-apply">Cargar ${pl(r.items.length, 'clase', 'clases')}</button></div>` : ''}`;
   }
   function scheduleHtml(opts = {}) {
     const st = S.settings;
@@ -1764,6 +1802,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     <p class="section-label">Tus clases</p>
     <p class="sub" style="margin:0 0 6px">Podés cambiar el nombre, el día o el horario de cada clase. Su asistencia no se pierde.</p>
     <div>${S.classes.map((c) => `<div class="cls-row cls-edit" style="--mc:${colorOf(c.mat)}"><span class="dot"></span><input class="cls-name" data-change="class-name" data-id="${h(c.id)}" value="${h(c.name)}" maxlength="80" aria-label="Nombre de la clase"><select class="cls-dow" data-change="class-dow" data-id="${h(c.id)}" aria-label="Día de ${h(c.name)}">${days.map((d, i) => `<option value="${i}"${c.dow === i ? ' selected' : ''}>${d}</option>`).join('')}</select><span class="cls-time"><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="from" value="${h(c.from || '')}" aria-label="Empieza ${h(c.name)}"><span aria-hidden="true">a</span><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="to" value="${h(c.to || '')}" aria-label="Termina ${h(c.name)}"></span><button class="linkish" data-act="del-class" data-id="${h(c.id)}" aria-label="Borrar ${h(c.name)}">Borrar</button></div>`).join('') || '<p class="sub">Todavía no agregaste clases.</p>'}</div>
+    ${S.classes.length ? '<div class="actions sched-save"><button type="button" class="btn" data-act="save-schedule">Guardar horario</button></div>' : ''}
     ${cur.length ? `<form data-form="class"><div class="fields c2" style="margin-top:12px">
       <label class="field">Materia<select name="course">${cur.map((c) => `<option value="${h(c.id)}">${h(label(c))}</option>`).join('')}</select></label>
       <label class="field">Tipo de clase<input name="tipo" required value="Teórica" list="tipos"><datalist id="tipos"><option value="Teórica"><option value="Práctica"><option value="Tutorial"><option value="Problemas"><option value="Taller"></datalist></label>
@@ -1803,7 +1842,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         <h3 class="mini-h">2. Pasáselos a tu IA</h3>
         <ol class="steps-ol"><li>Tocá <b>Copiar instrucción</b>.</li><li>Abrí la IA que uses, pegá la instrucción y subí los archivos en el mismo mensaje.</li><li>Copiá el bloque que te responde.</li></ol>
         <div class="plan-ai"><button type="button" class="btn" data-act="copy-prompt" data-prompt="all">Copiar instrucción</button>
-          <span class="ai-links"><a href="https://chatgpt.com/" target="_blank" rel="noopener">ChatGPT</a><a href="https://claude.ai/" target="_blank" rel="noopener">Claude</a><a href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini</a></span>
+          <span class="ai-links"><a class="linkish" href="https://chatgpt.com/" target="_blank" rel="noopener">ChatGPT</a><a class="linkish" href="https://claude.ai/" target="_blank" rel="noopener">Claude</a><a class="linkish" href="https://gemini.google.com/" target="_blank" rel="noopener">Gemini</a></span>
           <details><summary>Ver la instrucción</summary><pre class="prompt-box" id="all-prompt" tabindex="0">${h(allPrompt())}</pre></details></div>
         <h3 class="mini-h">3. Pegá la respuesta acá</h3>
         <textarea class="plan-in" id="all-text" aria-label="Respuesta de la IA" placeholder="PLAN&#10;1er año&#10;...&#10;&#10;HORARIO&#10;Lunes&#10;...">${h(ui.allDraft || '')}</textarea>
@@ -1820,15 +1859,41 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     } else if (step === 3) {
       body = `<h1>Tu ${h((st.termWord || 'cuatrimestre').toLowerCase())}</h1><p class="lead">Revisá las fechas y tus clases. Si cargaste con IA, ya está casi todo.</p><section class="card">${scheduleHtml({ ai: false })}</section>${nav('Seguir', 'Lo armo después')}`;
     } else {
-      body = `<h1>Hacelo tuyo</h1><p class="lead">Elegí un tema o tu propio color. Se aplica al toque.</p><section class="card">${themePicker()}</section>${nav('Entrar a mi panel')}`;
+      const st2 = S.settings;
+      body = `<h1>Hacelo tuyo</h1><p class="lead">Elegí un tema o tu propio color. Se aplica al toque.</p><section class="card">${themePicker()}</section>
+      <section class="card mt"><h2 class="wiz-h2">¿Querés una mascota?</h2><p class="sub" style="margin:2px 0 10px">Te acompaña en Hoy, cambia de cara según cómo te va y cuenta chistes si la tocás. Se cambia o se saca cuando quieras en Ajustes.</p>${petPickerHtml(st2.pet)}</section>
+      <section class="card mt"><h2 class="wiz-h2">¿Frases motivadoras?</h2><p class="sub" style="margin:2px 0 10px">Una frase por día en Hoy, según lo que te pasa: un examen cerca, una racha, si es muy tarde.</p><div class="choice" role="group" aria-label="Frases motivadoras"><button type="button" data-act="motivation" data-v="1" aria-pressed="${!!st2.motivation}">Sí, quiero</button><button type="button" data-act="motivation" data-v="" aria-pressed="${!st2.motivation}">Ahora no</button></div></section>
+      ${nav('Entrar a mi panel')}`;
     }
     return `<div class="wiz">${steps}${body}</div>`;
   }
 
   // ---------- Diálogos
   const modal = () => $('#modal');
-  function openModal(html) { const m = modal(); m.innerHTML = `<button class="icon-btn close" data-act="close" aria-label="Cerrar">×</button>${html}`; decorate(m); if (!m.open) m.showModal(); }
+  function openModal(html) { const m = modal(); if (S && m.open && m.querySelector('.cls-edit') && !m.querySelector('[data-form="class"]:focus-within')) commitScheduleInputs(); m.innerHTML = `<button class="icon-btn close" data-act="close" aria-label="Cerrar">×</button>${html}`; decorate(m); if (!m.open) m.showModal(); }
+  // Toma lo que esté escrito en las clases del horario (aunque el celular no haya avisado el cambio) y lo guarda ya.
+  function commitScheduleInputs() {
+    const rows = document.querySelectorAll('#modal .cls-edit, #view .cls-edit');
+    if (!rows.length) return false;
+    let changed = false;
+    rows.forEach((row) => {
+      const id = (row.querySelector('[data-id]') || {}).dataset?.id;
+      const c = S.classes.find((x) => x.id === id);
+      if (!c) return;
+      const nm = row.querySelector('.cls-name'); const dw = row.querySelector('.cls-dow');
+      const fr = row.querySelector('[data-f="from"]'); const to = row.querySelector('[data-f="to"]');
+      if (nm && nm.value.trim() && nm.value.trim() !== c.name) { c.name = nm.value.trim(); changed = true; }
+      if (dw && +dw.value !== c.dow) { c.dow = +dw.value; changed = true; }
+      [[fr, 'from'], [to, 'to']].forEach(([el, f]) => { if (!el) return; const v = el.value; if ((v || undefined) !== c[f]) { if (v) c[f] = v; else delete c[f]; changed = true; } });
+      if (c.from && (!c.to || c.to <= c.from)) { c.to = addMin(c.from, S.settings.classLen || 120); changed = true; }
+    });
+    if (changed) sortClasses();
+    if (changed || dirty) { dirty = true; clearTimeout(saveTimer); flush(); }
+    return changed;
+  }
   function closeModal() { const m = modal(); if (m.open) m.close(); }
+  // Al cerrar el cuadro del horario (con la ×, con Esc o tocando afuera) se guarda lo que haya escrito.
+  if (modal()) modal().addEventListener('close', () => { if (S && commitScheduleInputs()) render(); });
 
   function cellDialog(key) {
     const [w, id] = key.split(':');
@@ -1854,7 +1919,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       extra += `<p class="section-label">Asistencia</p><div style="margin:6px 0">${stitch(m.pct, { mark: S.settings.minAtt, warn: m.left < 0, n: 40 })}</div><p class="sub"><span class="num">${L.pct(m.pct)}</span> · faltaste ${m.a} de ${m.taken} · ${leftPill(m)}</p>`;
     }
     const prs = S.practices.filter((p) => p.course === id);
-    if (prs.length) extra += `<p class="section-label">Estudio</p><p class="sub">${pracStats(prs).complete} de ${pl(prs.length, 'material terminado', 'materiales terminados')}. <a href="#estudio" data-act="close-go">Abrir estudio</a></p>`;
+    if (prs.length) extra += `<p class="section-label">Estudio</p><p class="sub">${pracStats(prs).complete} de ${pl(prs.length, 'material terminado', 'materiales terminados')}. <a class="linkish" href="#estudio" data-act="close-go">Abrir estudio</a></p>`;
     const attempts = S.courses.filter((x) => x.subj === c.subj);
     const active = hasClass || prs.length || L.isCurrent(c);
     openModal(`<h2 id="modal-title">${h(c.name)}</h2><p class="sub">${h(termShort(c.year, c.sem))}${attempts.length > 1 ? ` · intento ${attempts.indexOf(c) + 1} de ${attempts.length}` : ''}</p>
@@ -1900,7 +1965,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <hr class="divider"><p class="section-label" style="margin-top:0">Colores</p>${themePicker()}
       <hr class="divider"><p class="section-label" style="margin-top:0">Mascota</p>
       <p class="sub" style="margin:2px 0 8px">Te acompaña en Hoy y cambia de cara según lo que te pasa: racha, examen cerca, una mala nota, si es muy tarde.</p>
-      <div class="choice" role="group" aria-label="Mascota"><button type="button" data-act="pet-pick" data-v="" aria-pressed="${!st.pet}">Sin mascota</button>${Object.entries(PETS).map(([k, n]) => `<button type="button" data-act="pet-pick" data-v="${k}" aria-pressed="${st.pet === k}">${n}</button>`).join('')}</div>
+      ${petPickerHtml(st.pet)}
       <hr class="divider"><p class="section-label" style="margin-top:0">Frases motivadoras</p>
       <p class="sub" style="margin:2px 0 8px">Una frase por día en Hoy, según lo que te pase: un examen cerca, una racha, faltas justas o dudas anotadas.</p>
       <div class="choice" role="group" aria-label="Frases motivadoras"><button type="button" data-act="motivation" data-v="1" aria-pressed="${!!st.motivation}">Activadas</button><button type="button" data-act="motivation" data-v="" aria-pressed="${!st.motivation}">Desactivadas</button></div>
@@ -2118,8 +2183,8 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       if (el.dataset.v === 'other') { const box = $('.len-other'); if (box) { box.hidden = false; box.querySelector('input').focus(); } return; }
       S.settings.classLen = +el.dataset.v; save(); refreshSchedule();
     },
-    'pet-pick'(el) { S.settings.pet = el.dataset.v; save(); render(); settingsDialog(); },
-    motivation(el) { S.settings.motivation = !!el.dataset.v; save(); render(); settingsDialog(); },
+    'pet-pick'(el) { S.settings.pet = el.dataset.v; save(); render(); if (!inWizard()) settingsDialog(); },
+    motivation(el) { S.settings.motivation = !!el.dataset.v; save(); render(); if (!inWizard()) settingsDialog(); },
     'custom-second-auto'() { S.settings.custom.second = ''; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     'custom-mode'(el) { S.settings.custom.mode = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     resolve(el) { mutate(() => { delete S.cellNotes[el.dataset.key].check; }, 'Nota marcada como revisada'); closeModal(); },
@@ -2163,11 +2228,15 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         ${b.note ? `<p class="sub" style="margin-top:10px">${h(b.note)}</p>` : ''}
         <div class="actions"><a class="btn" href="${h(safeUrl(b.url))}" target="_blank" rel="noopener">Ir a la fuente</a></div>`);
     },
+    'save-schedule'() {
+      commitScheduleInputs(); dirty = true; clearTimeout(saveTimer); flush();
+      closeModal(); render(); toast('Horario guardado');
+    },
     'study-archive'(el) {
       const k = el.dataset.subj; const on = !!el.dataset.v;
       S.studyArchive = S.studyArchive || {};
       ui.showOldStudy = !on ? ui.showOldStudy : true;
-      mutate(() => { S.studyArchive[k] = on; }, on ? `${matLabel(k)}: archivada. La encontrás abajo, en Cursadas anteriores.` : `${matLabel(k)}: de vuelta en Estudio`);
+      mutate(() => { S.studyArchive[k] = on; }, on ? `${matLabel(k)}: archivada. La encontrás abajo, en Cursadas anteriores.` : `${matLabel(k)}: desarchivada, de vuelta arriba`);
     },
     'place-filter'(el) { ui.placeFilter = el.dataset.k || null; render(); },
     'kind-filter'(el) { ui.kindFilter = el.dataset.k || null; render(); },

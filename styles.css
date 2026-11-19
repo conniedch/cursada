@@ -166,7 +166,11 @@ main { max-width: 1240px; margin: 0 auto; padding: 8px 24px 40px; outline: none;
 .btn.ghost { background: none; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
 .btn.ghost:hover { background: var(--card-2); opacity: 1; }
 .btn.small { padding: 4px 10px; min-height: 30px; font-size: 13px; }
-.linkish { background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; color: var(--ink-2); font-size: 13px; }
+.linkish { display: inline-flex; align-items: center; gap: 5px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; cursor: pointer; text-decoration: none; color: var(--ink); font: 600 13px/1.3 var(--body); vertical-align: middle; transition: border-color .15s, background .15s; }
+.linkish:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--card)); }
+.linkish:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.linkish.danger { color: var(--bad-ink); }
+.linkish.danger:hover { border-color: var(--bad-ink); background: var(--bad); }
 textarea.scratch { width: 100%; min-height: 110px; resize: vertical; border: 0; background: var(--hi); color: var(--hi-ink); border-radius: 6px; padding: 10px 12px; line-height: 1.45; }
 .days-to { font: 500 13px "DM Mono", monospace; white-space: nowrap; }
 .links { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -687,7 +691,7 @@ details.study[open] > summary .chev { transform: rotate(-135deg); margin-top: 4p
 .steps-ol li { margin-top: 3px; }
 .plan-ai { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .plan-ai details { flex-basis: 100%; }
-.ai-links { display: inline-flex; gap: 12px; font-size: 14px; }
+.ai-links { display: inline-flex; gap: 6px; flex-wrap: wrap; font-size: 14px; }
 .ai-links a { color: var(--ink-2); }
 .all-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px 14px; margin-top: 4px; }
 .all-sum div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--line); padding: 4px 0; font-size: 13.5px; }
@@ -1024,25 +1028,16 @@ body.is-auth .auth .card { box-shadow: 0 1px 0 var(--line), 0 18px 50px -18px co
   main { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
 }
 
-/* Pantalla de carga: la casilla del logo se tilda y se destilda, como en la app */
-.boot-loader { min-height: 70dvh; display: grid; place-content: center; justify-items: center; gap: 14px; opacity: 0; animation: bl-appear .25s .45s forwards; }
-/* Si tus datos llegan rápido, el loader ni se llega a ver. */
+/* Pantalla de carga: solo la casilla del logo, que se va tildando mientras llegan tus datos */
+.boot-loader { min-height: 70dvh; display: grid; place-content: center; opacity: 0; animation: bl-appear .25s .45s forwards; }
 @keyframes bl-appear { to { opacity: 1; } }
-.boot-loader svg { overflow: visible; animation: bl-pop 2.4s cubic-bezier(.3, 1.3, .5, 1) infinite; transform-origin: center; }
-.bl-box { fill: transparent; stroke: var(--accent); stroke-width: 2.2; animation: bl-fill 2.4s ease-in-out infinite; }
-.bl-check { fill: none; stroke: var(--accent-ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20; stroke-dashoffset: 20; animation: bl-draw 2.4s ease-in-out infinite; }
-.bl-name { font: 600 22px var(--display); color: var(--ink); letter-spacing: -.01em; }
-.bl-name b { color: var(--accent); }
-.bl-dots { display: flex; gap: 5px; }
-.bl-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: .25; animation: bl-dot 1s ease-in-out infinite; }
-.bl-dots i:nth-child(2) { animation-delay: .15s; }
-.bl-dots i:nth-child(3) { animation-delay: .3s; }
-/* 0–15%: vacía · 15–30%: se llena · 30–45%: se dibuja el tilde · 45–70%: tildada · 70–85%: se borra el tilde · 85–100%: se vacía */
-@keyframes bl-fill { 0%, 15% { fill: transparent; } 30%, 70% { fill: var(--accent); } 85%, 100% { fill: transparent; } }
-@keyframes bl-draw { 0%, 28% { stroke-dashoffset: 20; } 45%, 68% { stroke-dashoffset: 0; } 85%, 100% { stroke-dashoffset: -20; } }
-@keyframes bl-pop { 0%, 28% { transform: scale(1); } 36% { transform: scale(1.12); } 46%, 100% { transform: scale(1); } }
-@keyframes bl-dot { 0%, 100% { opacity: .25; transform: none; } 50% { opacity: 1; transform: translateY(-3px); } }
-@media (prefers-reduced-motion: reduce) { .boot-loader { animation: none; opacity: 1; } .boot-loader svg, .bl-box, .bl-check, .bl-dots i { animation: none; } .bl-box { fill: var(--accent); } .bl-check { stroke-dashoffset: 0; } }
+.boot-loader svg { overflow: visible; }
+.bl-box { fill: transparent; stroke: var(--accent); stroke-width: 2.2; animation: bl-fill 1.6s ease-in-out .45s forwards; }
+.bl-check { fill: none; stroke: var(--accent-ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20; stroke-dashoffset: 20; animation: bl-draw 2.4s cubic-bezier(.4, 0, .2, 1) .9s forwards; }
+/* La casilla se llena y el tilde avanza de a poco; si tarda, queda casi completo hasta que entra. */
+@keyframes bl-fill { to { fill: var(--accent); } }
+@keyframes bl-draw { 0% { stroke-dashoffset: 20; } 60% { stroke-dashoffset: 6; } 100% { stroke-dashoffset: 1.5; } }
+@media (prefers-reduced-motion: reduce) { .boot-loader { animation: none; opacity: 1; } .bl-box, .bl-check { animation: none; } .bl-box { fill: var(--accent); } .bl-check { stroke-dashoffset: 0; } }
 
 /* Pendiente hecho hoy: tachado hasta mañana */
 .todo-list li.is-done .todo-txt { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: color-mix(in srgb, var(--ok-ink) 70%, transparent); color: var(--muted); }
@@ -1114,16 +1109,16 @@ body.is-auth .auth .card { box-shadow: 0 1px 0 var(--line), 0 18px 50px -18px co
 
 /* Post-its pegados en Hoy */
 .board { display: flex; flex-wrap: wrap; gap: 18px 16px; margin: 4px 0 18px; padding: 6px 2px 2px; }
-.postit { --pc: #FFF1A8; --pi: #4A3C00; position: relative; width: 170px; min-height: 130px; padding: 22px 14px 14px; border: 0; text-align: left; cursor: pointer; background: linear-gradient(180deg, color-mix(in srgb, var(--pc) 92%, #fff) 0%, var(--pc) 70%, color-mix(in srgb, var(--pc) 88%, #000) 100%); color: var(--pi); transform: rotate(var(--r, -1.5deg)); box-shadow: 0 1px 1px rgba(0, 0, 0, .06), 0 10px 18px -10px rgba(40, 30, 0, .45), inset 0 -18px 18px -18px rgba(0, 0, 0, .12); border-radius: 2px 2px 18px 2px / 2px 2px 8px 2px; transition: transform .15s ease, box-shadow .15s ease; }
+.postit { --pc: #FFE45E; --pi: #3F3300; outline: 1px solid color-mix(in srgb, var(--pc) 70%, #000 12%); position: relative; width: 170px; min-height: 130px; padding: 22px 14px 14px; border: 0; text-align: left; cursor: pointer; background: linear-gradient(180deg, color-mix(in srgb, var(--pc) 92%, #fff) 0%, var(--pc) 70%, color-mix(in srgb, var(--pc) 88%, #000) 100%); color: var(--pi); transform: rotate(var(--r, -1.5deg)); box-shadow: 0 1px 1px rgba(0, 0, 0, .06), 0 10px 18px -10px rgba(40, 30, 0, .45), inset 0 -18px 18px -18px rgba(0, 0, 0, .12); border-radius: 2px 2px 18px 2px / 2px 2px 8px 2px; transition: transform .15s ease, box-shadow .15s ease; }
 .postit:hover { transform: rotate(0deg) translateY(-2px) scale(1.02); box-shadow: 0 2px 2px rgba(0, 0, 0, .06), 0 16px 26px -12px rgba(40, 30, 0, .5); }
 .postit:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .postit-tape { position: absolute; top: -9px; left: 50%; width: 64px; height: 20px; margin-left: -32px; transform: rotate(calc(var(--r, 0deg) * -1.6)); background: rgba(255, 255, 255, .55); border: 1px solid rgba(255, 255, 255, .7); box-shadow: 0 1px 2px rgba(0, 0, 0, .08); backdrop-filter: blur(1px); }
 .postit-txt { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; font: 600 20px/1.15 "Caveat", "Comic Sans MS", cursive; white-space: pre-wrap; word-break: break-word; }
-.c-amarillo { --pc: #FFF1A8; --pi: #4A3C00; }
-.c-rosa { --pc: #FFC9DA; --pi: #5A1630; }
-.c-celeste { --pc: #C6E6FF; --pi: #10365A; }
-.c-verde { --pc: #CFF3C4; --pi: #1C4A14; }
-.c-lila { --pc: #E2D4FF; --pi: #2E1660; }
+.c-amarillo { --pc: #FFE45E; --pi: #3F3300; }
+.c-rosa { --pc: #FF9EC4; --pi: #4A0F28; }
+.c-naranja, .c-lila { --pc: #FFB066; --pi: #4A2400; }
+.c-celeste { --pc: #7CCBFF; --pi: #062B4A; }
+.c-verde { --pc: #8EE08E; --pi: #0F3A0F; }
 .postit-edit { background: var(--pc); border-radius: 4px; padding: 12px; margin: 12px 0; box-shadow: 0 10px 18px -12px rgba(40, 30, 0, .45); }
 .postit-edit textarea { width: 100%; border: 0; background: transparent; resize: vertical; color: var(--pi); font: 600 22px/1.2 "Caveat", "Comic Sans MS", cursive; outline: none; }
 .sticky-colors .sw { width: 34px; height: 34px; padding: 0; border-radius: 50%; background: var(--pc); border: 2px solid transparent; }
@@ -1136,8 +1131,8 @@ body.is-auth .auth .card { box-shadow: 0 1px 0 var(--line), 0 18px 50px -18px co
 @media (prefers-reduced-motion: reduce) { .postit { transition: none; } }
 
 /* Animaciones propias de cada mascota */
-.pet-wave-tail { transform-origin: 84px 106px; animation: pet-tail 1.2s ease-in-out infinite; }
-.pet-gatito .pet-tail:not(.pet-wave-tail) { transform-origin: 84px 106px; animation: pet-tail 3.6s ease-in-out infinite; }
+.pet-wave-tail { transform-origin: 38px 110px; animation: pet-tail 1.2s ease-in-out infinite; }
+.pet-gatito .pet-tail:not(.pet-wave-tail) { transform-origin: 38px 110px; animation: pet-tail 3.6s ease-in-out infinite; }
 .pet-fin { transform-origin: 90px 72px; animation: pet-fin 1s ease-in-out infinite; }
 .pet-side-fin { transform-box: fill-box; transform-origin: left center; animation: pet-fin 1.4s ease-in-out infinite; }
 .pet-bubbles circle { animation: pet-bubble 3s ease-in infinite; }
@@ -1226,3 +1221,19 @@ body.is-auth .auth .card { box-shadow: 0 1px 0 var(--line), 0 18px 50px -18px co
 .old-sem > summary > span:first-child::before { content: "›"; display: inline-block; margin-right: 8px; color: var(--muted); transition: transform .15s; }
 .old-sem[open] > summary > span:first-child::before { transform: rotate(90deg); }
 .old-sem .list li > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+.sp-warn { display: inline-block; margin-left: 6px; font-size: 12px; color: var(--hi-ink); background: var(--hi); border-radius: 6px; padding: 0 6px; }
+.sp-err { display: block; font-size: 12.5px; color: var(--bad-ink); }
+.sp-errbox { background: var(--bad); color: var(--bad-ink); }
+
+/* Selector de mascota con dibujito */
+.pet-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.pet-picker button { display: grid; justify-items: center; gap: 4px; padding: 8px 4px 6px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: 600 12.5px var(--body); cursor: pointer; }
+.pet-picker button .pet-svg { width: 54px; height: 58px; }
+.pet-picker button .pet-svg * { animation: none !important; }
+.pet-picker button[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+.pp-none { display: grid; place-items: center; width: 54px; height: 58px; color: var(--muted); font-size: 22px; }
+/* Pez en pecera: la pecera queda quieta, el pez nada */
+.pet-pez .pet-body { animation: none; }
+.pet-swim { animation: pet-float 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) { .pet-swim { animation: none; } }
+.wiz-h2 { font: 700 18px var(--display); margin: 0; }
