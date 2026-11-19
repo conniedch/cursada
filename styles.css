@@ -1305,3 +1305,27 @@ body.is-auth .auth .card { box-shadow: 0 1px 0 var(--line), 0 18px 50px -18px co
 .icon-colors { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
 .icon-color { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
 .icon-color input { width: 44px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; cursor: pointer; }
+
+/* Estilo ilustrado: colores un poco más apagados (sin perder calidez) y el café humeando despacio */
+.pet-svg .pet-body { filter: saturate(.78) contrast(.97); }
+.pet-steam path { animation: pet-steam 4.5s ease-in-out infinite; }
+.pet-steam path:nth-child(2) { animation-delay: 1.6s; }
+@keyframes pet-steam { 0% { opacity: 0; transform: translateY(2px); } 30% { opacity: .75; } 100% { opacity: 0; transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .pet-steam path { animation: none; } }
+
+/* Mascotas ilustradas (acuarela y lápiz): la imagen y una capa de detalles encima */
+.pet-art { position: relative; display: block; width: 100%; height: 100%; }
+.pet-art .pet-img { position: absolute; inset: 6% 8% 0; width: 84%; height: 94%; object-fit: contain; object-position: center bottom; transform-origin: 50% 100%; animation: pet-breath-img 5.5s ease-in-out infinite; user-select: none; pointer-events: none; }
+.pet-art .pet-around { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+@keyframes pet-breath-img { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.006, 1.012); } }
+.pet-btn.jump .pet-img { animation: pet-nod-img .55s ease-out; }
+@keyframes pet-nod-img { 0% { transform: rotate(0); } 35% { transform: rotate(-2.5deg) translateY(1px); } 100% { transform: rotate(0); } }
+.pet-art.mood-sad .pet-img { filter: saturate(.75) brightness(.97); }
+.pet-art.mood-sleepy .pet-img { filter: brightness(.93) saturate(.85); }
+.pet-btn .pet-art { animation: none; }
+.pet-picker .pet-art { width: 64px; height: 66px; }
+.pet-picker .pet-art .pet-img { animation: none; }
+.pomo-pet .pet-art { width: 100%; height: 100%; }
+@media (prefers-reduced-motion: reduce) { .pet-art .pet-img { animation: none; } }
+.pet-btn { width: 132px; height: 142px; }
+@media (max-width: 760px) { .pet-btn { width: 88px; height: 96px; } }

@@ -499,7 +499,7 @@
   }
 
   // ---------- MASCOTA (opcional, se activa en Ajustes): pingüino, gatito, pez o búho. Cambia de cara según lo que te pasa.
-  const PETS = { pinguino: 'Pingüino', gatito: 'Gatito', yaguarete: 'Yaguareté', carpincho: 'Carpincho', condor: 'Cóndor', pato: 'Pato', buho: 'Búho', pez: 'Pez', tortuga: 'Tortuga' };
+  const PETS = { oso: 'Oso', pinguino: 'Pingüino', gatito: 'Gato', yaguarete: 'Yaguareté', carpincho: 'Carpincho', condor: 'Cóndor', pato: 'Pato', buho: 'Búho', pez: 'Pez', tortuga: 'Tortuga' };
   function petMood() {
     const t = today(); const hr = new Date().getHours();
     if (hr >= 23 || hr < 5) return 'sleepy';
@@ -539,190 +539,12 @@
       study: ex ? [`${cap(examPhrase(ex.a))} ${ex.n === 0 ? 'es hoy' : ex.n === 1 ? 'es mañana' : `es en ${ex.n} días`}. ¿Repasamos?`, 'Traje los anteojos. A estudiar.'] : ['A estudiar.'],
       sad: ['Ánimo. La próxima sale mejor.', 'Un mal momento no es toda la carrera.'],
       happy: [`¡${L.streaks(S).current} clases seguidas! Qué racha.`, '¡Así da gusto!'],
-      idle: ['Acá estoy. Tocame y te cuento un chiste.', 'Un pendiente a la vez.', '¿Qué toca hoy?'],
+      idle: coffeeTime() && S.settings.pet !== 'pez' ? ['Una hora ya. Café y seguimos.', 'Pausa de café. Estirá un poco y volvemos.'] : ['Acá estoy. Tocame y te cuento un chiste.', 'Un pendiente a la vez.', '¿Qué toca hoy?'],
     }[mood];
     return lines[(ui.petTap || 0) % lines.length];
   }
-  // Dibujados a mano. Todos viven en un viewBox de 120×130 con los ojos en (50,52) y (70,52):
-  // así las 5 caras (ojos, lágrima, anteojos, libro, zetas, brillitos) sirven para cualquier mascota.
-  function petFace(mood) {
-    const ink = '#121A2C';
-    return {
-      idle: `<g class="pet-eyes"><ellipse cx="50" cy="52" rx="4.6" ry="5.6" fill="${ink}"/><ellipse cx="70" cy="52" rx="4.6" ry="5.6" fill="${ink}"/><circle cx="51.6" cy="50" r="1.5" fill="#fff"/><circle cx="71.6" cy="50" r="1.5" fill="#fff"/></g>`,
-      happy: `<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><path d="M45 54q5-7 10 0"/><path d="M65 54q5-7 10 0"/></g>`,
-      sad: `<g><path d="M43.5 46.5l10-3.5M76.5 46.5l-10-3.5" stroke="${ink}" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="50" cy="54" rx="4" ry="4.6" fill="${ink}"/><ellipse cx="70" cy="54" rx="4" ry="4.6" fill="${ink}"/><path class="pet-tear" d="M45.5 59q-3.4 5 0 7.2q3.4-2.2 0-7.2z" fill="#6EC1FF"/></g>`,
-      sleepy: `<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><path d="M45 54q5 4 10 0"/><path d="M65 54q5 4 10 0"/></g>`,
-      study: `<g class="pet-eyes"><ellipse cx="50" cy="52" rx="4" ry="4.8" fill="${ink}"/><ellipse cx="70" cy="52" rx="4" ry="4.8" fill="${ink}"/></g><g fill="none" stroke="${ink}" stroke-width="2.2"><circle cx="50" cy="52" r="8.5"/><circle cx="70" cy="52" r="8.5"/><path d="M58.5 52h3"/></g>`,
-    }[mood];
-  }
-  function petExtra(mood) {
-    return {
-      sleepy: '<g class="pet-z" fill="var(--accent)" font-family="var(--display)" font-weight="800"><text x="88" y="30" font-size="14">z</text><text x="98" y="18" font-size="10">z</text></g>',
-      study: '<g><rect x="38" y="88" width="44" height="26" rx="3" fill="var(--accent)"/><rect x="41" y="91" width="17.5" height="20" rx="1.5" fill="#fff"/><rect x="61.5" y="91" width="17.5" height="20" rx="1.5" fill="#fff"/><path d="M44 96h11M44 100h11M44 104h8M64 96h11M64 100h11M64 104h8" stroke="#C9C3DD" stroke-width="1.4"/></g>',
-    }[mood] || '';
-  }
-  const PET_DRAW = {
-    pinguino(mood) {
-      const sad = mood === 'sad';
-      return `<path class="pet-flip-l" d="${sad ? 'M27 74q-8 20 4 34q4-14 2-34z' : 'M26 70q-12 18 2 34q6-14 4-34z'}" fill="#2B3556"/>
-        <path class="pet-flip-r${mood === 'happy' ? ' pet-wave' : ''}" d="${sad ? 'M93 74q8 20-4 34q-4-14-2-34z' : 'M94 70q12 18-2 34q-6-14-4-34z'}" fill="#2B3556"/>
-        <ellipse cx="60" cy="72" rx="37" ry="46" fill="#2B3556"/>
-        <ellipse cx="60" cy="84" rx="25" ry="32" fill="#FAF8FF"/>
-        <circle cx="49" cy="53" r="13.5" fill="#FAF8FF"/><circle cx="71" cy="53" r="13.5" fill="#FAF8FF"/>
-        <circle cx="41" cy="63" r="4.5" fill="#FF8FA3" opacity=".22"/><circle cx="79" cy="63" r="4.5" fill="#FF8FA3" opacity=".22"/>
-        ${petFace(mood)}
-        <path d="M54.5 61.5h11l-5.5 7z" fill="#FFA62B" stroke="#FFA62B" stroke-width="2" stroke-linejoin="round"/>
-        ${petExtra(mood)}
-        <ellipse cx="48" cy="118" rx="9.5" ry="4.6" fill="#FFA62B"/><ellipse cx="72" cy="118" rx="9.5" ry="4.6" fill="#FFA62B"/>`;
-    },
-    gatito(mood) {
-      // Gatito naranja, cabezón y sentado.
-      const fur = '#F4A259'; const stripe = '#E0873A'; const cream = '#FFF4E6';
-      const tail = mood === 'sad' ? 'M38 112q-22 6-24 18' : 'M38 110q-22-2-20-24q1-9 9-7';
-      return `<path class="pet-tail${mood === 'happy' ? ' pet-wave-tail' : ''}" d="${tail}" fill="none" stroke="${fur}" stroke-width="10" stroke-linecap="round"/>
-        <ellipse cx="60" cy="103" rx="26" ry="19" fill="${fur}"/>
-        <ellipse cx="60" cy="106" rx="15" ry="12" fill="${cream}"/>
-        <path d="M30 40L32 17l19 14z" fill="${fur}" stroke="${fur}" stroke-width="5" stroke-linejoin="round"/><path d="M90 40L88 17 69 31z" fill="${fur}" stroke="${fur}" stroke-width="5" stroke-linejoin="round"/>
-        <path d="M35 33l1-9 8 6z" fill="#FFC2C7" stroke="#FFC2C7" stroke-width="2" stroke-linejoin="round"/><path d="M85 33l-1-9-8 6z" fill="#FFC2C7" stroke="#FFC2C7" stroke-width="2" stroke-linejoin="round"/>
-        <ellipse cx="60" cy="57" rx="36" ry="31" fill="${fur}"/>
-        <path d="M54 30q1 5 0 9M60 28v10M66 30q-1 5 0 9" fill="none" stroke="${stripe}" stroke-width="3" stroke-linecap="round"/>
-        <path d="M25 52q5 1 8 4M95 52q-5 1-8 4" fill="none" stroke="${stripe}" stroke-width="2.6" stroke-linecap="round"/>
-        <ellipse cx="60" cy="68" rx="14" ry="10" fill="${cream}"/>
-        <circle cx="40" cy="64" r="5" fill="#FF8FA3" opacity=".22"/><circle cx="80" cy="64" r="5" fill="#FF8FA3" opacity=".22"/>
-        ${petFace(mood)}
-        <path d="M57.2 63.5h5.6l-2.8 3.2z" fill="#E86B7E" stroke="#E86B7E" stroke-width="1.4" stroke-linejoin="round"/>
-        <path d="M60 67q-2.2 3.4-5 1.2M60 67q2.2 3.4 5 1.2" fill="none" stroke="#121A2C" stroke-width="1.5" stroke-linecap="round"/>
-        <path d="M44 67h-9M44 70.5l-8 2M76 67h9M76 70.5l8 2" stroke="#B5652A" stroke-width="1.2" stroke-linecap="round" opacity=".7"/>
-        ${petExtra(mood)}
-        <ellipse cx="50" cy="119" rx="8" ry="5.5" fill="${cream}"/><ellipse cx="70" cy="119" rx="8" ry="5.5" fill="${cream}"/>`;
-    },
-    pez(mood) {
-      // Pececito en su pecera: la pecera queda quieta y el pez nada adentro.
-      const body = '#FF8A65'; const deep = '#F06A44';
-      const fish = `<path class="pet-fin" d="M90 72L114 50l-5 22 5 22z" fill="${deep}"/>
-        <path d="M42 46q16-22 34-2z" fill="${deep}"/>
-        <ellipse cx="60" cy="70" rx="36" ry="30" fill="${body}"/>
-        <ellipse cx="58" cy="82" rx="25" ry="14" fill="#FFD3BE"/>
-        <path d="M70 62q4 4 0 8M78 60q4 5 0 10M78 74q4 5 0 10" fill="none" stroke="${deep}" stroke-width="2" stroke-linecap="round"/>
-        <path class="pet-side-fin" d="M60 76q16-6 22 6q-14 5-22-6z" fill="${deep}"/>
-        <g transform="translate(-8 8)">${petFace(mood)}</g>
-        <circle cx="34" cy="64" r="3.4" fill="#FF8FA3" opacity=".22"/>
-        <ellipse cx="26" cy="72" rx="3.6" ry="3" fill="#8A2E14"/>
-        ${petExtra(mood)}`;
-      return `<circle cx="60" cy="80" r="42" fill="#EAF7FF" stroke="#A9D8F5" stroke-width="2.5"/>
-        <path d="M20.8 64A42 42 0 1 0 99.2 64Z" fill="#BFE6FF" opacity=".85"/>
-        <path d="M20.8 64q39 7 78.4 0" fill="none" stroke="#8CCBF2" stroke-width="1.6"/>
-        <path d="M25.5 104Q60 96 94.5 104A42 42 0 0 1 25.5 104Z" fill="#F4DFA6"/>
-        <path d="M33 109q-7-15 2-28q4 13-2 28zM40 111q2-17 11-23q-2 15-11 23z" fill="#5CBF7A"/>
-        <circle cx="78" cy="108" r="3.4" fill="#E8C98A"/><circle cx="84" cy="110" r="2.4" fill="#D9B676"/>
-        <ellipse cx="60" cy="39.5" rx="23" ry="4.5" fill="none" stroke="#A9D8F5" stroke-width="3"/>
-        <g transform="translate(30 47) scale(.56)"><g class="pet-swim">${fish}</g></g>
-        <g class="pet-bubbles" fill="none" stroke="#fff" stroke-width="1.4"><circle cx="46" cy="70" r="2.6"/><circle cx="42" cy="58" r="1.8"/><circle cx="48" cy="48" r="1.3"/></g>
-        <path d="M28 70q3-16 16-24" stroke="#fff" stroke-width="3" fill="none" opacity=".7" stroke-linecap="round"/>`;
-    },
-    tortuga(mood) {
-      // De frente: el caparazón grande atrás y arriba, la cabeza asomando adelante.
-      const skin = '#86B97A'; const skinD = '#5E8F55'; const shell = '#6B5A3A'; const scute = '#8C7650'; const rim = '#4C3F28';
-      const sad = mood === 'sad';
-      return `<path d="M22 92q-10 6-8 16q8 2 16-6zM98 92q10 6 8 16q-8 2-16-6z" fill="${skin}" stroke="${skinD}" stroke-width="1.5"/>
-        <path d="M14 78C14 40 36 22 60 22s46 18 46 56c0 8-4 14-12 16H26c-8-2-12-8-12-16z" fill="${shell}" stroke="${rim}" stroke-width="2.5"/>
-        <path d="M60 26v24M40 32l8 18M80 32l-8 18M48 50h24M24 60l24-10M96 60L72 50M24 60l6 22M96 60l-6 22M48 50l-6 30M72 50l6 30" fill="none" stroke="${scute}" stroke-width="2.2" stroke-linecap="round"/>
-        <path d="M22 88h76" stroke="${rim}" stroke-width="3" stroke-linecap="round"/>
-        <ellipse cx="42" cy="118" rx="9" ry="6" fill="${skin}" stroke="${skinD}" stroke-width="1.5"/><ellipse cx="78" cy="118" rx="9" ry="6" fill="${skin}" stroke="${skinD}" stroke-width="1.5"/>
-        <g transform="translate(0 ${sad ? 30 : 26})">
-          <ellipse cx="60" cy="56" rx="21" ry="19" fill="${skin}" stroke="${skinD}" stroke-width="1.8"/>
-          <path d="M48 46q12-6 24 0" fill="none" stroke="${skinD}" stroke-width="1.4" opacity=".6"/>
-          ${petFace(mood)}
-          <path d="${sad ? 'M55 67q5-3.5 10 0' : 'M54 64q6 4.5 12 0'}" fill="none" stroke="#2E4A28" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="57" cy="60" r="1" fill="#2E4A28"/><circle cx="63" cy="60" r="1" fill="#2E4A28"/>
-        </g>
-        ${mood === 'sleepy' ? petExtra(mood) : ''}
-        ${mood === 'study' ? '<g transform="translate(0 6)">' + petExtra(mood) + '</g>' : ''}`;
-    },
-    yaguarete(mood) {
-      // Yaguareté sentado: pelaje dorado con rosetas, orejas redondas y hocico ancho.
-      const fur = '#D9A441'; const furD = '#B98326'; const cream = '#F6E7C8'; const spot = '#3A2614';
-      const tail = mood === 'sad' ? 'M86 110q22 6 24 18' : 'M86 108q24-2 22-26q-1-8-8-6';
-      const rosette = (x, y, r) => `<path d="M${x - r} ${y}a${r} ${r} 0 1 1 ${r * 2} 0" fill="none" stroke="${spot}" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="${r * 1.2} ${r * 0.6}"/>`;
-      return `<path class="pet-tail${mood === 'happy' ? ' pet-wave-tail pet-tail-r' : ' pet-tail-r'}" d="${tail}" fill="none" stroke="${fur}" stroke-width="10" stroke-linecap="round"/>
-        <path d="${mood === 'sad' ? 'M104 122l6 6' : 'M100 76l2 6'}" stroke="${spot}" stroke-width="4" stroke-linecap="round"/>
-        <ellipse cx="60" cy="102" rx="28" ry="21" fill="${fur}" stroke="${furD}" stroke-width="1.6"/>
-        <ellipse cx="60" cy="106" rx="16" ry="13" fill="${cream}"/>
-        ${rosette(40, 98, 4)}${rosette(80, 98, 4)}${rosette(36, 110, 3)}${rosette(84, 110, 3)}
-        <circle cx="34" cy="30" r="10" fill="${fur}" stroke="${furD}" stroke-width="1.6"/><circle cx="86" cy="30" r="10" fill="${fur}" stroke="${furD}" stroke-width="1.6"/>
-        <circle cx="34" cy="31" r="5" fill="${spot}" opacity=".85"/><circle cx="86" cy="31" r="5" fill="${spot}" opacity=".85"/>
-        <ellipse cx="60" cy="56" rx="37" ry="32" fill="${fur}" stroke="${furD}" stroke-width="1.6"/>
-        ${rosette(34, 50, 4)}${rosette(86, 50, 4)}<circle cx="52" cy="32" r="2.4" fill="${spot}"/><circle cx="60" cy="29" r="2.4" fill="${spot}"/><circle cx="68" cy="32" r="2.4" fill="${spot}"/>
-        <ellipse cx="60" cy="69" rx="17" ry="12" fill="${cream}"/>
-        ${petFace(mood)}
-        <path d="M55.5 63h9l-4.5 4.6z" fill="#5A3A24" stroke="#5A3A24" stroke-width="1.6" stroke-linejoin="round"/>
-        <path d="M60 67.6q-2.6 4-6 1.6M60 67.6q2.6 4 6 1.6" fill="none" stroke="#3A2614" stroke-width="1.6" stroke-linecap="round"/>
-        <circle cx="49" cy="71" r=".9" fill="${spot}"/><circle cx="52" cy="73" r=".9" fill="${spot}"/><circle cx="71" cy="71" r=".9" fill="${spot}"/><circle cx="68" cy="73" r=".9" fill="${spot}"/>
-        ${petExtra(mood)}
-        <ellipse cx="49" cy="120" rx="9" ry="5.5" fill="${cream}" stroke="${furD}" stroke-width="1.2"/><ellipse cx="71" cy="120" rx="9" ry="5.5" fill="${cream}" stroke="${furD}" stroke-width="1.2"/>`;
-    },
-    carpincho(mood) {
-      // Carpincho: cuerpo grande y tranquilo, cabeza cuadrada con hocico ancho.
-      const fur = '#9A6B45'; const furD = '#7A5233'; const snout = '#6E4A2E';
-      return `<ellipse cx="60" cy="100" rx="40" ry="24" fill="${fur}" stroke="${furD}" stroke-width="1.8"/>
-        <path d="M34 92q4 6 2 12M86 92q-4 6-2 12" stroke="${furD}" stroke-width="1.6" fill="none" opacity=".6"/>
-        <ellipse cx="30" cy="30" rx="6" ry="5" fill="${furD}"/><ellipse cx="90" cy="30" rx="6" ry="5" fill="${furD}"/>
-        <rect x="27" y="28" width="66" height="56" rx="24" fill="${fur}" stroke="${furD}" stroke-width="1.8"/>
-        <rect x="38" y="58" width="44" height="26" rx="13" fill="${snout}"/>
-        <ellipse cx="52" cy="66" rx="3" ry="2" fill="#2B1B10"/><ellipse cx="68" cy="66" rx="3" ry="2" fill="#2B1B10"/>
-        <path d="${mood === 'sad' ? 'M54 78q6-3 12 0' : 'M54 75q6 4 12 0'}" fill="none" stroke="#2B1B10" stroke-width="1.8" stroke-linecap="round"/>
-        <g transform="translate(0 -4)">${petFace(mood)}</g>
-        ${petExtra(mood)}
-        <ellipse cx="44" cy="121" rx="9" ry="5" fill="${furD}"/><ellipse cx="76" cy="121" rx="9" ry="5" fill="${furD}"/>`;
-    },
-    condor(mood) {
-      // Cóndor andino: plumaje negro, collar blanco, cabeza pelada y pico ganchudo.
-      const black = '#23232B'; const head = '#B9867A'; const headD = '#94655A';
-      const sad = mood === 'sad';
-      return `<path class="pet-flip-l" d="${sad ? 'M26 70q-14 26 2 46q8-20 4-46z' : 'M28 62q-22 18-14 52q14-8 18-50z'}" fill="${black}"/>
-        <path class="pet-flip-r${mood === 'happy' ? ' pet-wave' : ''}" d="${sad ? 'M94 70q14 26-2 46q-8-20-4-46z' : 'M92 62q22 18 14 52q-14-8-18-50z'}" fill="${black}"/>
-        <path d="M20 96q4-10 12-14M100 96q-4-10-12-14" stroke="#E9E9EF" stroke-width="5" stroke-linecap="round" opacity=".9"/>
-        <ellipse cx="60" cy="88" rx="32" ry="34" fill="${black}"/>
-        <path d="M30 70q30 16 60 0q-4 10-30 12q-26-2-30-12z" fill="#F4F4F7"/>
-        <path d="M34 72q6 4 4 8M46 76q2 4 0 7M60 78v6M74 76q-2 4 0 7M86 72q-6 4-4 8" stroke="#D5D5DD" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-        <ellipse cx="60" cy="50" rx="24" ry="22" fill="${head}" stroke="${headD}" stroke-width="1.6"/>
-        <path d="M52 30q4-8 8-2q4-6 8 2q-8 4-16 0z" fill="${headD}"/>
-        ${petFace(mood)}
-        <path d="M54 58h12q2 8-4 14q-1-6-8-8z" fill="#E8D9B0" stroke="#B9A578" stroke-width="1.4" stroke-linejoin="round"/>
-        ${petExtra(mood)}
-        <path d="M46 118l-3 6M50 118v6M54 118l3 6M66 118l-3 6M70 118v6M74 118l3 6" stroke="#8A8A8A" stroke-width="2.4" stroke-linecap="round"/>`;
-    },
-    pato(mood) {
-      // Pato amarillo, de costado mirando al frente, con pico ancho.
-      const body = '#F2C94C'; const bodyD = '#D9A82E'; const bill = '#F28C28'; const billD = '#C96A14';
-      const sad = mood === 'sad';
-      return `<path d="M92 92q16-6 18-16q2 14-12 22z" fill="${body}" stroke="${bodyD}" stroke-width="1.6" stroke-linejoin="round"/>
-        <ellipse cx="62" cy="96" rx="36" ry="24" fill="${body}" stroke="${bodyD}" stroke-width="1.6"/>
-        <path class="pet-flip-r${mood === 'happy' ? ' pet-wave' : ''}" d="${sad ? 'M70 92q18 4 22 18q-16 0-22-18z' : 'M66 88q22-6 28 8q-14 10-28-8z'}" fill="${bodyD}" opacity=".75"/>
-        <circle cx="60" cy="52" r="27" fill="${body}" stroke="${bodyD}" stroke-width="1.6"/>
-        <path d="M56 26q4-8 10-6q-4 2-4 7" fill="${body}" stroke="${bodyD}" stroke-width="1.4" stroke-linejoin="round"/>
-        ${petFace(mood)}
-        <path d="M46 62q14-6 28 0q2 8-14 10q-16-2-14-10z" fill="${bill}" stroke="${billD}" stroke-width="1.6" stroke-linejoin="round"/>
-        <path d="${sad ? 'M50 67q10 3 20 0' : 'M49 65q11 4 22 0'}" fill="none" stroke="${billD}" stroke-width="1.4" stroke-linecap="round"/>
-        <circle cx="55" cy="63" r=".9" fill="${billD}"/><circle cx="65" cy="63" r=".9" fill="${billD}"/>
-        ${petExtra(mood)}
-        <path d="M44 116q-8 6 0 8h12q2-4-4-8zM68 116q-8 6 0 8h12q2-4-4-8z" fill="${bill}" stroke="${billD}" stroke-width="1.2" stroke-linejoin="round"/>`;
-    },
-    buho(mood) {
-      const feather = '#8C6B52'; const light = '#EBDCC7';
-      return `<path class="pet-flip-l" d="${mood === 'sad' ? 'M27 74q-8 22 6 34q2-16 0-34z' : 'M26 66q-14 20 4 40q6-18 2-40z'}" fill="#6F533F"/>
-        <path class="pet-flip-r${mood === 'happy' ? ' pet-wave' : ''}" d="${mood === 'sad' ? 'M93 74q8 22-6 34q-2-16 0-34z' : 'M94 66q14 20-4 40q-6-18-2-40z'}" fill="#6F533F"/>
-        <path d="M30 40l3-24 17 16z" fill="${feather}"/><path d="M90 40l-3-24-17 16z" fill="${feather}"/>
-        <ellipse cx="60" cy="72" rx="36" ry="45" fill="${feather}"/>
-        <ellipse cx="60" cy="88" rx="22" ry="27" fill="${light}"/>
-        <path d="M52 80l4 4 4-4 4 4 4-4M50 92l4 4 4-4 4 4 4-4 4 4M54 104l4 4 4-4 4 4" fill="none" stroke="#C4AC8E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="50" cy="52" r="14" fill="#F7EEE2"/><circle cx="70" cy="52" r="14" fill="#F7EEE2"/>
-        ${petFace(mood)}
-        <path d="M56.5 60h7l-3.5 7.5z" fill="#F2A33A"/>
-        ${petExtra(mood)}
-        <path d="M45 117l3 5 3-5 3 5 3-5M63 117l3 5 3-5 3 5 3-5" fill="none" stroke="#F2A33A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`;
-    },
-  };
+  // Las mascotas son ilustraciones (acuarela y lápiz de color, en icons/pets/). Los estados y las fechas
+  // se muestran con detalles chiquitos alrededor, en el mismo tono: no se tocan las ilustraciones.
   // Disfraces según la fecha (se pueden apagar en Ajustes).
   function petSeason(t = today()) {
     const m = t.getMonth() + 1; const d = t.getDate();
@@ -731,36 +553,57 @@
     if (m === 10 && d >= 24) return { kind: 'halloween' };
     if (m === 9 && d >= 18 && d <= 23) return { kind: 'spring' };
     if (m === 2 && d >= 12 && d <= 14) return { kind: 'love' };
+    // Algunos días hábiles (más o menos uno de cada cuatro, siempre el mismo para esa fecha): vincha con el día.
+    const dw = L.dow(t);
+    if (dw <= 4) {
+      const r = Math.abs(Math.sin((t.getFullYear() * 10000 + m * 100 + d) * 12.9898) * 43758.5453) % 1;
+      if (r < 0.25) return { kind: 'weekday', dow: dw };
+    }
     return null;
   }
-  const HAT_AT = { pato: [60, 28], pinguino: [60, 30], gatito: [60, 30], yaguarete: [60, 26], carpincho: [60, 30], condor: [60, 30], buho: [60, 30], pez: [60, 38], tortuga: [60, 64] };
-  function petDecor(kind, season) {
-    if (!season) return '';
-    const [x, y] = HAT_AT[kind] || [60, 30];
-    const at = (inner, sc = 1) => `<g transform="translate(${x} ${y}) scale(${sc})">${inner}</g>`;
-    if (season.kind === 'xmas') return at('<path d="M-17 0Q-8-30 15-24L18 0z" fill="#C8102E"/><path d="M-6-14q6-6 14-8" stroke="#E2384F" stroke-width="2" fill="none" opacity=".7"/><rect x="-20" y="-5" width="40" height="9" rx="4.5" fill="#FFF"/><circle cx="16" cy="-25" r="5.5" fill="#FFF"/>');
-    if (season.kind === 'newyear') return at(`<path d="M-12 0L0-30 12 0z" fill="var(--accent)"/><path d="M-8.5-7h17M-4.8-17h9.6" stroke="#FFE45E" stroke-width="2.6"/><circle cy="-31" r="3.6" fill="#FFE45E"/>`) + `<g transform="translate(${x + 26} ${y - 8}) rotate(14)"><rect x="-14" y="-8" width="28" height="13" rx="3" fill="#FFE45E"/><text x="0" y="2" text-anchor="middle" font-size="9" font-weight="800" font-family="var(--display)" fill="#3F3300">${season.year}</text></g>`;
-    if (season.kind === 'spring') return at(['#FF8FB1', '#FFD24D', '#9AD0FF', '#FF8FB1', '#B6E388'].map((c, i) => { const ang = (-60 + i * 30) * Math.PI / 180; const fx = Math.sin(ang) * 20; const fy = -Math.cos(ang) * 8 + 2; return `<g transform="translate(${fx.toFixed(1)} ${fy.toFixed(1)})"><circle r="4.6" fill="${c}"/><circle r="1.8" fill="#FFF7D6"/></g>`; }).join(''));
-    if (season.kind === 'halloween') return '<g transform="translate(103 112)"><ellipse rx="13" ry="10.5" fill="#F28C28" stroke="#C9650F" stroke-width="1.5"/><path d="M-4.5-10v20M4.5-10v20" stroke="#D96F10" stroke-width="1.6"/><path d="M0-10q1-6 5-7" stroke="#4E7A2A" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M-7-2l2.5-3 2.5 3zM2-2l2.5-3 2.5 3z" fill="#3A1D05"/><path d="M-6 3q6 4 12 0q-6 2-12 0z" fill="#3A1D05" stroke="#3A1D05" stroke-width="1.2" stroke-linejoin="round"/></g>';
-    if (season.kind === 'love') return '<g transform="translate(102 34)"><path d="M0 8C-10 0-10-8-4-9C-1-9.5 0-7 0-6C0-7 1-9.5 4-9C10-8 10 0 0 8z" fill="#E8466C"/></g>';
-    return '';
+  const INK = '#5A4636';
+  // Detalles alrededor de la ilustración (en una capa de 120×130 encima).
+  function petAround(kind, mood, season, coffee) {
+    let g = '';
+    if (mood === 'study') g += `<g transform="translate(6 104)"><path d="M0 4l12 3 12-3v14l-12 3-12-3z" fill="#8C6E4E" stroke="${INK}" stroke-width=".9" stroke-linejoin="round"/><path d="M1.6 4.8l10.4 2.6v12.2L1.6 17zM22.4 4.8L12 7.4v12.2l10.4-2.6z" fill="#F4ECDD" stroke="${INK}" stroke-width=".6"/><path d="M4 9l6 1.5M4 12l6 1.5M20 9l-6 1.5M20 12l-6 1.5" stroke="#B8A890" stroke-width=".6"/></g>`;
+    if (mood === 'sleepy') g += `<g fill="#8A7F76" font-family="Georgia, serif" font-style="italic" class="pet-z"><text x="98" y="22" font-size="12">z</text><text x="106" y="13" font-size="9">z</text></g>`;
+    if (mood === 'sad') g += `<g transform="translate(8 14)" class="pet-cloud"><path d="M2 10a5 5 0 0 1 4-6 6 6 0 0 1 11-1 4.5 4.5 0 0 1 4 7z" fill="#C9CFD6" stroke="#8C949E" stroke-width=".8"/><path d="M7 13l-1 3M12 13l-1 3M17 13l-1 3" stroke="#8DB3CF" stroke-width="1.2" stroke-linecap="round"/></g>`;
+    if (mood === 'happy') g += `<g transform="translate(100 18)" fill="none" stroke="#C9A24A" stroke-width="1.3" stroke-linecap="round"><path d="M0-6v4M0 2v4M-6 0h4M2 0h4"/></g>`;
+    if (coffee && kind !== 'pez') g += PET_MUG;
+    if (season) {
+      if (season.kind === 'xmas') g += '<g transform="translate(102 104)"><rect x="-9" y="-6" width="18" height="15" rx="1.5" fill="#B5473A" stroke="#6B2A22" stroke-width=".9"/><path d="M0-6v15M-9 1h18" stroke="#E8D9A8" stroke-width="2.2"/><path d="M0-6q-5-6-7-2 0 3 7 2q5-6 7-2 0 3-7 2z" fill="#E8D9A8" stroke="#B59A5A" stroke-width=".7"/></g>';
+      if (season.kind === 'newyear') g += `<g transform="translate(102 30) rotate(12)"><path d="M-8 6L0-14 8 6z" fill="#6B5B95" stroke="${INK}" stroke-width=".8"/><path d="M-5.5 0h11M-3-6h6" stroke="#E2C766" stroke-width="1.6"/><circle cy="-15" r="2.4" fill="#E2C766"/></g><g transform="translate(96 46) rotate(-6)"><rect x="-12" y="-6" width="24" height="11" rx="2" fill="#F4ECDD" stroke="${INK}" stroke-width=".8"/><text y="2.6" text-anchor="middle" font-size="7.5" font-weight="700" font-family="Georgia, serif" fill="${INK}">${season.year}</text></g>`;
+      if (season.kind === 'halloween') g += '<g transform="translate(103 112)"><ellipse rx="12" ry="9.5" fill="#D9822B" stroke="#8A4A14" stroke-width="1"/><path d="M-4-9v18M4-9v18" stroke="#B0631C" stroke-width="1.2"/><path d="M0-9q1-5 4-6" stroke="#4E6A2A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M-6-2l2.2-2.6 2.2 2.6zM1.8-2l2.2-2.6 2.2 2.6z" fill="#3A1D05"/><path d="M-5 3q5 3.4 10 0q-5 1.8-10 0z" fill="#3A1D05"/></g>';
+      if (season.kind === 'spring') g += '<g transform="translate(8 112)">' + [['#E89AAE', 0, 0], ['#E8C766', 9, -3], ['#9CC3E0', 17, 1]].map(([c, x, y]) => `<path d="M${x} ${y + 2}v8" stroke="#6E8F4E" stroke-width="1.2"/><g transform="translate(${x} ${y})">${[0, 72, 144, 216, 288].map((r) => `<ellipse rx="2" ry="3.4" cy="-3" fill="${c}" transform="rotate(${r})"/>`).join('')}<circle r="1.6" fill="#F4E6B0"/></g>`).join('') + '</g>';
+      if (season.kind === 'love') g += '<g transform="translate(102 20)"><path d="M0 8C-10 0-10-8-4-9C-1-9.5 0-7 0-6C0-7 1-9.5 4-9C10-8 10 0 0 8z" fill="#C9586F" stroke="#7E2E40" stroke-width=".8"/></g>';
+      if (season.kind === 'weekday') {
+        const word = cap(L.DIAS[season.dow]);
+        const color = ['#4E6E9E', '#A04A6A', '#4E8A5E', '#B8742E', '#6B5B95'][season.dow];
+        const w = Math.max(30, word.length * 5.4 + 10);
+        g += `<g transform="translate(${4 + w / 2} 12) rotate(-5)"><path d="M0-10v4" stroke="${INK}" stroke-width=".8"/><circle cy="-10.5" r="1.3" fill="${INK}"/><rect x="${-w / 2}" y="-6" width="${w}" height="13" rx="2" fill="#F4ECDD" stroke="${color}" stroke-width="1.4"/><text y="3.2" text-anchor="middle" font-size="8" font-weight="700" font-family="Georgia, serif" fill="${color}">${word}</text></g>`;
+      }
+    }
+    return g ? `<svg class="pet-around" viewBox="0 0 120 130" aria-hidden="true">${g}</svg>` : '';
   }
+  // La tacita de café (después de una hora con la app abierta).
+  const PET_MUG = `<g class="pet-mug" transform="translate(100 104)"><g class="pet-steam" fill="none" stroke="#A39A92" stroke-width="1.1" stroke-linecap="round"><path d="M-3-3q-2.4-3.5 0-7t0-7"/><path d="M2.6-4q-2.4-3.5 0-7t0-6"/></g><path d="M-8 0h15v11a6 6 0 0 1-6 6h-3a6 6 0 0 1-6-6z" fill="#EDE6DA" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round"/><path d="M7 2.5a4.2 4.2 0 0 1 0 8.4" fill="none" stroke="${INK}" stroke-width="1.2"/><path d="M-6.5 2h12" stroke="#7A5638" stroke-width="2" stroke-linecap="round"/></g>`;
   function petSvg(kind, mood, opts = {}) {
-    const draw = PET_DRAW[kind] || PET_DRAW.pinguino;
+    if (!PETS[kind]) kind = 'oso';
     const season = opts.decor === false ? null : (opts.season !== undefined ? opts.season : (S && S.settings.petDecor !== false ? petSeason() : null));
-    return `<svg class="pet-svg mood-${mood} pet-${kind}" viewBox="0 0 120 130" aria-hidden="true">
-      <ellipse class="pet-shadow" cx="60" cy="124" rx="30" ry="4" fill="rgba(20,12,50,.16)"/>
-      <g class="pet-body">${draw(mood)}${petDecor(kind, season)}</g>
-    </svg>`;
+    return `<span class="pet-svg pet-art pet-${kind} mood-${mood}"><img class="pet-img" src="icons/pets/${kind}.webp" alt="" draggable="false" decoding="async">${opts.decor === false ? '' : petAround(kind, mood, season, opts.coffee)}</span>`;
   }
   // Selector con dibujito: así se ve la mascota antes de elegirla.
   function petPickerHtml(cur) {
     return `<div class="pet-picker" role="group" aria-label="Mascota"><button type="button" data-act="pet-pick" data-v="" aria-pressed="${!cur}"><span class="pp-none" aria-hidden="true">✕</span><span>Sin mascota</span></button>${Object.entries(PETS).map(([k, n]) => `<button type="button" data-act="pet-pick" data-v="${k}" aria-pressed="${cur === k}">${petSvg(k, 'idle', { decor: false })}<span>${n}</span></button>`).join('')}</div>`;
   }
+  // Después de una hora con la app abierta, la mascota aparece con su café.
+  const PAGE_START = Date.now();
+  const coffeeTime = () => Date.now() - PAGE_START >= 60 * 60 * 1000 || /[?&]cafe=1/.test(location.search);
+  setTimeout(() => { if (S && S.settings.pet && route() === 'hoy') render(); }, 60 * 60 * 1000 + 500);
   function petHtml() {
     if (!S.settings.pet) return '';
     const mood = petMood();
-    return `<div class="pet" data-mood="${mood}"><p class="pet-bubble" aria-live="polite">${h(petLine(mood))}</p><button class="pet-btn" data-act="pet-tap" aria-label="Tu mascota, ${h(PETS[S.settings.pet] || '')}. Tocala">${petSvg(S.settings.pet, mood)}</button></div>`;
+    return `<div class="pet" data-mood="${mood}"><p class="pet-bubble" aria-live="polite">${h(petLine(mood))}</p><button class="pet-btn" data-act="pet-tap" aria-label="Tu mascota, ${h(PETS[S.settings.pet] || '')}. Tocala">${petSvg(S.settings.pet, mood, { coffee: coffeeTime() })}</button></div>`;
   }
 
   // ---------- POST-ITS: la nota rápida se pega arriba de Hoy como un papelito. Tocándolo se edita o se despega.
@@ -2081,7 +1924,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     } else {
       const st2 = S.settings;
       body = `<h1>Hacelo tuyo</h1><p class="lead">Elegí un tema o tu propio color. Se aplica al toque.</p><section class="card">${themePicker()}</section>
-      <section class="card mt"><h2 class="wiz-h2">¿Querés una mascota?</h2><p class="sub" style="margin:2px 0 10px">Te acompaña en Hoy, cambia de cara según cómo te va y cuenta chistes si la tocás. Se cambia o se saca cuando quieras en Ajustes.</p>${petPickerHtml(st2.pet)}</section>
+      <section class="card mt"><h2 class="wiz-h2">¿Querés una mascota?</h2><p class="sub" style="margin:2px 0 10px">Te acompaña en Hoy mientras estudiás y cuenta chistes si la tocás. Se cambia o se saca cuando quieras en Ajustes.</p>${petPickerHtml(st2.pet)}</section>
       <section class="card mt"><h2 class="wiz-h2">¿Frases motivadoras?</h2><p class="sub" style="margin:2px 0 10px">Una frase por día en Hoy, según lo que te pasa: un examen cerca, una racha, si es muy tarde.</p><div class="choice" role="group" aria-label="Frases motivadoras"><button type="button" data-act="motivation" data-v="1" aria-pressed="${!!st2.motivation}">Sí, quiero</button><button type="button" data-act="motivation" data-v="" aria-pressed="${!st2.motivation}">Ahora no</button></div></section>
       ${nav('Entrar a mi panel')}`;
     }
@@ -2188,9 +2031,9 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       </div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Colores</p>${themePicker()}
       <hr class="divider"><p class="section-label" style="margin-top:0">Mascota</p>
-      <p class="sub" style="margin:2px 0 8px">Te acompaña en Hoy y cambia de cara según lo que te pasa: racha, examen cerca, una mala nota, si es muy tarde.</p>
+      <p class="sub" style="margin:2px 0 8px">Te acompaña en Hoy. Según cómo te va aparece con un libro, una nubecita o su café, y si la tocás te cuenta un chiste.</p>
       ${petPickerHtml(st.pet)}
-      ${st.pet ? `<label class="check-line"><input type="checkbox" data-change="pet-decor" ${st.petDecor !== false ? 'checked' : ''}> Disfraces en fechas especiales: gorro en Navidad, calabaza en Halloween, gorrito de fiesta en Año Nuevo, flores el Día del Estudiante</label>` : ''}
+      ${st.pet ? `<label class="check-line"><input type="checkbox" data-change="pet-decor" ${st.petDecor !== false ? 'checked' : ''}> Detalles de fechas: regalo en Navidad, calabaza en Halloween, gorrito en Año Nuevo, flores el Día del Estudiante y, algunos días de semana, un cartelito con el día</label>` : ''}
       <hr class="divider"><p class="section-label" style="margin-top:0">Frases motivadoras</p>
       <p class="sub" style="margin:2px 0 8px">Una frase por día en Hoy, según lo que te pase: un examen cerca, una racha, faltas justas o dudas anotadas.</p>
       <div class="choice" role="group" aria-label="Frases motivadoras"><button type="button" data-act="motivation" data-v="1" aria-pressed="${!!st.motivation}">Activadas</button><button type="button" data-act="motivation" data-v="" aria-pressed="${!st.motivation}">Desactivadas</button></div>
