@@ -53,7 +53,7 @@
   function emptyState(user) {
     return {
       v: 2,
-      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', motivation: false, myPhrases: '', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
+      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', pet: '', classLen: 120, motivation: false, myPhrases: '', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
       classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], todos: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', matColors: {}, history: [],
     };
   }
@@ -465,6 +465,72 @@
     return out;
   }
 
+  // ---------- MASCOTA (opcional, se activa en Ajustes). Por ahora: pingüino. Cambia de cara según lo que te pasa.
+  const PETS = { pinguino: 'Pingüino' };
+  function petMood() {
+    const t = today(); const hr = new Date().getHours();
+    if (hr >= 23 || hr < 5) return 'sleepy';
+    const ex = S.agenda.map((a) => ({ a, n: L.daysBetween(t, L.parseDate(a.date)) })).filter((x) => x.n >= 0).sort((x, y) => x.n - y.n)[0];
+    if (ex && ex.n <= 4) return 'study';
+    const ct = currentTerm();
+    const over = mats().some((m) => { const st = L.materiaStats(S, m); return st.taken && st.left < 0; });
+    const failedNow = ct && S.courses.some((c) => c.status === 'desaprobada' && c.year === ct.year && c.sem === ct.sem);
+    if (over || failedNow) return 'sad';
+    if (L.streaks(S).current >= 5) return 'happy';
+    return 'idle';
+  }
+  function petLine(mood) {
+    const t = today();
+    const ex = S.agenda.map((a) => ({ a, n: L.daysBetween(t, L.parseDate(a.date)) })).filter((x) => x.n >= 0).sort((x, y) => x.n - y.n)[0];
+    const lines = {
+      sleepy: ['Zzz… vos también deberías dormir.', 'Ya es tarde. Mañana seguimos.'],
+      study: ex ? [`${cap(examPhrase(ex.a))} ${ex.n === 0 ? 'es hoy' : ex.n === 1 ? 'es mañana' : `es en ${ex.n} días`}. ¿Repasamos?`, 'Traje los anteojos. A estudiar.'] : ['A estudiar.'],
+      sad: ['Ánimo. La próxima sale mejor.', 'Un mal momento no es toda la carrera.'],
+      happy: [`¡${L.streaks(S).current} clases seguidas! Qué racha.`, '¡Así da gusto!'],
+      idle: ['Acá estoy. ¿Qué toca hoy?', 'Tocame si te aburrís.', 'Un pendiente a la vez.'],
+    }[mood];
+    return lines[(ui.petTap || 0) % lines.length];
+  }
+  // Dibujado a mano. Todo vive en un viewBox de 120×130; cada expresión cambia ojos, aletas y accesorios.
+  function penguinSvg(mood) {
+    const ink = '#121A2C';
+    const eyes = {
+      idle: `<g class="pet-eyes"><ellipse cx="50" cy="52" rx="4.6" ry="5.6" fill="${ink}"/><ellipse cx="70" cy="52" rx="4.6" ry="5.6" fill="${ink}"/><circle cx="51.6" cy="50" r="1.5" fill="#fff"/><circle cx="71.6" cy="50" r="1.5" fill="#fff"/></g>`,
+      happy: `<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><path d="M45 54q5-7 10 0"/><path d="M65 54q5-7 10 0"/></g>`,
+      sad: `<g><path d="M43.5 46.5l10-3.5M76.5 46.5l-10-3.5" stroke="${ink}" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="50" cy="54" rx="4" ry="4.6" fill="${ink}"/><ellipse cx="70" cy="54" rx="4" ry="4.6" fill="${ink}"/><path class="pet-tear" d="M45.5 59q-3.4 5 0 7.2q3.4-2.2 0-7.2z" fill="#6EC1FF"/></g>`,
+      sleepy: `<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><path d="M45 54q5 4 10 0"/><path d="M65 54q5 4 10 0"/></g>`,
+      study: `<g class="pet-eyes"><ellipse cx="50" cy="52" rx="4" ry="4.8" fill="${ink}"/><ellipse cx="70" cy="52" rx="4" ry="4.8" fill="${ink}"/></g><g fill="none" stroke="${ink}" stroke-width="2.2"><circle cx="50" cy="52" r="8.5"/><circle cx="70" cy="52" r="8.5"/><path d="M58.5 52h3"/></g>`,
+    }[mood];
+    const wave = mood === 'happy' ? ' pet-wave' : '';
+    const flipL = mood === 'sad' ? 'M27 74q-8 20 4 34q4-14 2-34z' : 'M26 70q-12 18 2 34q6-14 4-34z';
+    const flipR = mood === 'sad' ? 'M93 74q8 20-4 34q-4-14-2-34z' : 'M94 70q12 18-2 34q-6-14-4-34z';
+    const extra = {
+      sleepy: '<g class="pet-z" fill="var(--accent)" font-family="var(--display)" font-weight="800"><text x="88" y="30" font-size="14">z</text><text x="98" y="18" font-size="10">z</text></g>',
+      study: '<g><rect x="38" y="88" width="44" height="26" rx="3" fill="var(--accent)"/><rect x="41" y="91" width="17.5" height="20" rx="1.5" fill="#fff"/><rect x="61.5" y="91" width="17.5" height="20" rx="1.5" fill="#fff"/><path d="M44 96h11M44 100h11M44 104h8M64 96h11M64 100h11M64 104h8" stroke="#C9C3DD" stroke-width="1.4"/></g>',
+      happy: '<g class="pet-spark" fill="var(--hi-strong)"><path d="M14 30l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><path d="M104 46l1.4 3.4 3.4 1.4-3.4 1.4-1.4 3.4-1.4-3.4-3.4-1.4 3.4-1.4z"/></g>',
+    }[mood] || '';
+    return `<svg class="pet-svg mood-${mood}" viewBox="0 0 120 130" aria-hidden="true">
+      <ellipse class="pet-shadow" cx="60" cy="124" rx="30" ry="4" fill="rgba(20,12,50,.16)"/>
+      <g class="pet-body">
+        <path class="pet-flip-l" d="${flipL}" fill="#2B3556"/>
+        <path class="pet-flip-r${wave}" d="${flipR}" fill="#2B3556"/>
+        <ellipse cx="60" cy="72" rx="37" ry="46" fill="#2B3556"/>
+        <ellipse cx="60" cy="84" rx="25" ry="32" fill="#FAF8FF"/>
+        <circle cx="49" cy="53" r="13.5" fill="#FAF8FF"/><circle cx="71" cy="53" r="13.5" fill="#FAF8FF"/>
+        <circle cx="41" cy="63" r="4.5" fill="#FF8FA3" opacity=".55"/><circle cx="79" cy="63" r="4.5" fill="#FF8FA3" opacity=".55"/>
+        ${eyes}
+        <path d="M54.5 61.5h11l-5.5 7z" fill="#FFA62B" stroke="#FFA62B" stroke-width="2" stroke-linejoin="round"/>
+        ${extra}
+        <ellipse cx="48" cy="118" rx="9.5" ry="4.6" fill="#FFA62B"/><ellipse cx="72" cy="118" rx="9.5" ry="4.6" fill="#FFA62B"/>
+      </g>
+    </svg>`;
+  }
+  function petHtml() {
+    if (!S.settings.pet) return '';
+    const mood = petMood();
+    return `<div class="pet" data-mood="${mood}"><p class="pet-bubble" aria-live="polite">${h(petLine(mood))}</p><button class="pet-btn" data-act="pet-tap" aria-label="Tu mascota, ${h(PETS[S.settings.pet] || '')}. Tocala">${penguinSvg(mood)}</button></div>`;
+  }
+
   // ---------- Frases motivadoras (solo si las activaste en Ajustes). Una por día, según lo que te pasa.
   const MOTTOS = {
     examToday: ['Hoy es el día. Café, birome de repuesto y a romperla.', 'Lo que no estudiaste no lo vas a aprender en el colectivo. Confiá en lo que sabés.', 'Leé la consigna dos veces. La segunda siempre dice otra cosa.'],
@@ -648,7 +714,7 @@
       ...pendingDated().filter((p) => L.daysBetween(t, L.parseDate(p.date)) >= 0).map((p) => ({ kind: 'mat', id: p.id, text: p.name, meta: `${kindOf(p).n} · ${matLabel(subjOfPractice(p))}`, date: p.date })),
       ...S.practices.filter((p) => p.date && p.doneOn === tIso && isComplete(p)).map((p) => ({ kind: 'mat', id: p.id, text: p.name, meta: `${kindOf(p).n} · ${matLabel(subjOfPractice(p))}`, date: p.date, done: true })),
       ...(S.todos || []).filter((x) => !x.doneOn || x.doneOn === tIso).map((x) => ({ kind: 'todo', id: x.id, text: x.text, meta: '', date: x.date || '', done: !!x.doneOn })),
-    ].sort((a, b) => Number(!!a.done) - Number(!!b.done) || (a.date || '9999').localeCompare(b.date || '9999'));
+    ].sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999')); // lo tachado queda en su lugar
     const openCount = pend.filter((x) => !x.done).length;
     const due = (d) => { if (!d) return ''; const n = L.daysBetween(t, L.parseDate(d)); return n < 0 ? '<span class="days-to late">venció</span>' : `<span class="days-to">${n === 0 ? 'hoy' : n === 1 ? 'mañana' : `${n} días`}</span>`; };
     const pendHtml = `<section class="card"><div class="card-head"><h2>Pendientes</h2>${pend.length ? `<span class="sub">${openCount ? pl(openCount, 'cosa', 'cosas') : '¡Todo hecho por hoy!'}</span>` : ''}</div>
@@ -673,6 +739,7 @@
     return `
     <header class="head">
       <div><h1 class="hello">${h(st.greet)}, <em>${h(st.name)}</em></h1><p class="today-line">${h(line)}</p>${weeks}</div>
+      ${petHtml()}
       ${cs.total ? `<div class="figs"><div class="fig"><b>${L.fmt(cs.avgAll)}</b><span>promedio general</span></div><div class="fig"><b>${cs.approved}<small> de ${cs.total}</small></b><span>materias aprobadas</span></div></div>` : ''}
     </header>
     ${motto()}${insightsHtml()}
@@ -845,6 +912,15 @@
     else inner = 'Cargá el parcial 1 para ver cuánto necesitás en el 2.';
     return `<tr class="need-row" data-tail-row><td colspan="4">${inner}</td></tr>`;
   }
+  // Horario de una clase: se guarda mientras lo elegís (en el iPhone, si cerrás el cuadro antes, el "change" no llega).
+  document.addEventListener('input', (e) => {
+    const el = e.target;
+    if (!el.dataset || el.dataset.change !== 'class-time' || !S) return;
+    const c = S.classes.find((x) => x.id === el.dataset.id);
+    if (!c) return;
+    if (el.value) c[el.dataset.f] = el.value; else delete c[el.dataset.f];
+    save();
+  }, true);
   // Campos de solo números: lo que no es dígito no entra.
   document.addEventListener('input', (e) => {
     const el = e.target;
@@ -1362,6 +1438,8 @@ Reglas:
     const groups = {};
     items.forEach((it) => { const k = `${it.dow}|${it.courseId}|${it.tipo}`; groups[k] = (groups[k] || 0) + 1; });
     const seen = {};
+    const touched = new Set();
+    const res = { added: 0, updated: 0 };
     items.forEach((it) => {
       const co = course(it.courseId);
       if (!co) return;
@@ -1370,10 +1448,30 @@ Reglas:
       const k = `${it.dow}|${it.courseId}|${it.tipo}`;
       seen[k] = (seen[k] || 0) + 1;
       const base = `${it.tipo} ${label(co)}`;
-      S.classes.push({ id: uid('c'), name: groups[k] > 1 ? `${base} · bloque ${seen[k]}` : base, mat: co.subj, course: co.id, dow: it.dow, ...(it.from ? { from: it.from, to: it.to } : {}) });
+      const name = groups[k] > 1 ? `${base} · bloque ${seen[k]}` : base;
+      // Si esa clase ya existe (misma materia, día y tipo), solo se le actualiza el horario: así no se pierde su asistencia.
+      const norm = (x) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const block = groups[k] > 1 ? seen[k] : 0;
+      const same = S.classes.find((c) => !touched.has(c.id) && c.course === co.id && c.dow === it.dow && (c.name === name || (norm(c.name).startsWith(norm(it.tipo)) && (block ? new RegExp(`bloque ${block}$`).test(c.name) : !/bloque \d+$/.test(c.name)))));
+      if (same) {
+        touched.add(same.id);
+        if (it.from) { same.from = it.from; same.to = it.to; }
+        res.updated++;
+        return;
+      }
+      const c = { id: uid('c'), name, mat: co.subj, course: co.id, dow: it.dow, ...(it.from ? { from: it.from, to: it.to } : {}) };
+      touched.add(c.id);
+      S.classes.push(c);
+      res.added++;
     });
     sortClasses();
+    return res;
   }
+  // Suma minutos a "HH:MM" (sin pasar de medianoche).
+  const addMin = (hhmm, m) => { const [a, b] = hhmm.split(':').map(Number); const t = Math.min(23 * 60 + 59, a * 60 + b + m); return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
+  const LEN_OPTS = [[30, '30 min'], [60, '1 h'], [90, '1 h 30'], [120, '2 h'], [180, '3 h'], [240, '4 h']];
+  const lenTxt = (m) => (LEN_OPTS.find((x) => x[0] === m) || [0, m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60}` : ''}`])[1];
+  const refreshSchedule = () => { if (inWizard()) render(); else reopen(scheduleDialog); };
   const sortClasses = () => S.classes.sort((a, b) => a.dow - b.dow || (a.from || '99').localeCompare(b.from || '99'));
   function recomputeWeeks() {
     const st = S.settings;
@@ -1434,7 +1532,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     const r = L.parseSchedule(text, L.subjects(S));
     const days = [...new Set(r.items.map((i) => i.dow))];
     const list = days.map((d) => `<li><b>${cap(L.DIAS[d])}</b>${r.items.filter((i) => i.dow === d).map((i) => `${h(i.tipo)} ${h(label(course(i.courseId)))}${i.from ? ` (${i.from} a ${i.to})` : ''}`).join(' · ')}</li>`).join('');
-    return `${r.items.length ? `Encontré <b>${pl(r.items.length, 'clase', 'clases')}</b>.` : 'No encontré clases. Revisá que cada día esté como título.'}${r.unknown.length ? `<p class="auth-note">No reconocí estas materias: ${r.unknown.map(h).join(', ')}. Fijate que estén en tu plan, en Carrera.</p>` : ''}<ul class="plan-list">${list}</ul>${r.items.length ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><button type="button" class="btn" data-act="sched-apply">Agregar ${pl(r.items.length, 'clase', 'clases')}</button></div>` : ''}`;
+    return `${r.items.length ? `Encontré <b>${pl(r.items.length, 'clase', 'clases')}</b>.` : 'No encontré clases. Revisá que cada día esté como título.'}${r.unknown.length ? `<p class="auth-note">No reconocí estas materias: ${r.unknown.map(h).join(', ')}. Fijate que estén en tu plan, en Carrera.</p>` : ''}<ul class="plan-list">${list}</ul>${r.items.length ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><button type="button" class="btn" data-act="sched-apply">Cargar ${pl(r.items.length, 'clase', 'clases')}</button></div>` : ''}`;
   }
   function scheduleHtml(opts = {}) {
     const st = S.settings;
@@ -1459,15 +1557,20 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <textarea class="plan-in sched-in" id="sched-text" aria-label="Horario pegado" placeholder="Lunes&#10;Teórica - Cálculo&#10;Tutorial - Cálculo&#10;Martes&#10;..."></textarea>
       <div class="ok-line" id="sched-preview" aria-live="polite"></div>
     </section>`}
+    <p class="section-label">¿Cuánto dura cada clase?</p>
+    <p class="sub" style="margin:0 0 6px">Ponés solo la hora de inicio y el final se completa solo. Después lo podés cambiar en cada clase.</p>
+    <div class="choice len-choice" role="group" aria-label="Duración de las clases">${LEN_OPTS.map(([m, n]) => `<button type="button" data-act="class-len" data-v="${m}" aria-pressed="${(st.classLen || 120) === m}">${n}</button>`).join('')}${LEN_OPTS.some((x) => x[0] === (st.classLen || 120)) ? '<button type="button" data-act="class-len" data-v="other" aria-pressed="false">Otra</button>' : `<button type="button" data-act="class-len" data-v="other" aria-pressed="true">Otra: ${lenTxt(st.classLen)}</button>`}</div>
+    <div class="len-other" hidden><label class="field" style="max-width:220px">Minutos<div class="stepper"><button type="button" class="step-btn" data-act="step" data-d="-15" aria-label="15 minutos menos">−</button><input data-digits data-max="600" data-change="class-len-min" inputmode="numeric" maxlength="3" value="${st.classLen || 120}" aria-label="Duración en minutos"><button type="button" class="step-btn" data-act="step" data-d="15" aria-label="15 minutos más">+</button></div></label></div>
     <p class="section-label">Tus clases</p>
-    <div>${S.classes.map((c) => `<div class="cls-row"><span style="display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="dot" style="--mc:${colorOf(c.mat)}"></span>${h(c.name)} <span class="sub">${L.DIAS[c.dow]}</span></span><span class="cls-time"><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="from" value="${h(c.from || '')}" aria-label="Empieza ${h(c.name)}"><span aria-hidden="true">a</span><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="to" value="${h(c.to || '')}" aria-label="Termina ${h(c.name)}"></span><button class="linkish" data-act="del-class" data-id="${h(c.id)}" aria-label="Borrar ${h(c.name)}">Borrar</button></div>`).join('') || '<p class="sub">Todavía no agregaste clases.</p>'}</div>
+    <p class="sub" style="margin:0 0 6px">Podés cambiar el nombre, el día o el horario de cada clase. Su asistencia no se pierde.</p>
+    <div>${S.classes.map((c) => `<div class="cls-row cls-edit" style="--mc:${colorOf(c.mat)}"><span class="dot"></span><input class="cls-name" data-change="class-name" data-id="${h(c.id)}" value="${h(c.name)}" maxlength="80" aria-label="Nombre de la clase"><select class="cls-dow" data-change="class-dow" data-id="${h(c.id)}" aria-label="Día de ${h(c.name)}">${days.map((d, i) => `<option value="${i}"${c.dow === i ? ' selected' : ''}>${d}</option>`).join('')}</select><span class="cls-time"><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="from" value="${h(c.from || '')}" aria-label="Empieza ${h(c.name)}"><span aria-hidden="true">a</span><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="to" value="${h(c.to || '')}" aria-label="Termina ${h(c.name)}"></span><button class="linkish" data-act="del-class" data-id="${h(c.id)}" aria-label="Borrar ${h(c.name)}">Borrar</button></div>`).join('') || '<p class="sub">Todavía no agregaste clases.</p>'}</div>
     ${cur.length ? `<form data-form="class"><div class="fields c2" style="margin-top:12px">
       <label class="field">Materia<select name="course">${cur.map((c) => `<option value="${h(c.id)}">${h(label(c))}</option>`).join('')}</select></label>
       <label class="field">Tipo de clase<input name="tipo" required value="Teórica" list="tipos"><datalist id="tipos"><option value="Teórica"><option value="Práctica"><option value="Tutorial"><option value="Problemas"><option value="Taller"></datalist></label>
       <label class="field">Día<select name="dow">${days.map((d, i) => `<option value="${i}">${d}</option>`).join('')}</select></label>
       <label class="field" style="align-content:end"><span style="display:flex;gap:7px;align-items:center;min-height:38px"><input type="checkbox" name="x2" style="width:auto"> Son dos bloques</span></label>
-      <label class="field">Desde (opcional)<input type="time" name="from"></label>
-      <label class="field">Hasta (opcional)<input type="time" name="to"></label>
+      <label class="field">Empieza (opcional)<input type="time" name="from"></label>
+      <label class="field">Termina<input type="time" name="to" placeholder="Se completa sola"><span class="sub" style="font-weight:400">Si lo dejás vacío: ${lenTxt(st.classLen || 120)} después.</span></label>
     </div><div class="actions" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost" type="submit">Agregar clase</button></div></form>` : '<p class="sub" style="margin-top:8px">Marcá qué estás cursando en Carrera para poder agregar sus clases.</p>'}`;
   }
   function viewWizard() {
@@ -1595,6 +1698,9 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         ${yearField(st.entryYear)}
       </div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Colores</p>${themePicker()}
+      <hr class="divider"><p class="section-label" style="margin-top:0">Mascota</p>
+      <p class="sub" style="margin:2px 0 8px">Te acompaña en Hoy y cambia de cara según lo que te pasa: racha, examen cerca, una mala nota, si es muy tarde.</p>
+      <div class="choice" role="group" aria-label="Mascota"><button type="button" data-act="pet-pick" data-v="" aria-pressed="${!st.pet}">Sin mascota</button>${Object.entries(PETS).map(([k, n]) => `<button type="button" data-act="pet-pick" data-v="${k}" aria-pressed="${st.pet === k}">${n}</button>`).join('')}<button type="button" disabled title="Próximamente">Gatito · pronto</button><button type="button" disabled title="Próximamente">Pez · pronto</button></div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Frases motivadoras</p>
       <p class="sub" style="margin:2px 0 8px">Una frase por día en Hoy, según lo que te pase: un examen cerca, una racha, faltas justas o dudas anotadas.</p>
       <div class="choice" role="group" aria-label="Frases motivadoras"><button type="button" data-act="motivation" data-v="1" aria-pressed="${!!st.motivation}">Activadas</button><button type="button" data-act="motivation" data-v="" aria-pressed="${!st.motivation}">Desactivadas</button></div>
@@ -1792,6 +1898,17 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     theme(el) { S.settings.theme = el.dataset.id; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     font(el) { S.settings.font = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     progress(el) { S.settings.progress = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
+    'pet-tap'() {
+      ui.petTap = (ui.petTap || 0) + 1;
+      const pet = $('.pet'); if (!pet) return;
+      pet.querySelector('.pet-bubble').textContent = petLine(pet.dataset.mood);
+      const b = pet.querySelector('.pet-btn'); b.classList.remove('jump'); void b.offsetWidth; b.classList.add('jump');
+    },
+    'class-len'(el) {
+      if (el.dataset.v === 'other') { const box = $('.len-other'); if (box) { box.hidden = false; box.querySelector('input').focus(); } return; }
+      S.settings.classLen = +el.dataset.v; save(); refreshSchedule();
+    },
+    'pet-pick'(el) { S.settings.pet = el.dataset.v; save(); render(); settingsDialog(); },
     motivation(el) { S.settings.motivation = !!el.dataset.v; save(); render(); settingsDialog(); },
     'custom-second-auto'() { S.settings.custom.second = ''; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
     'custom-mode'(el) { S.settings.custom.mode = el.dataset.v; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
@@ -1801,8 +1918,9 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     'cal-pick'(el) { if (!agCal) return; agCal.sel = el.dataset.d; const f = el.closest('form'); f.elements.date.value = agCal.sel; const err = $('#ag-err'); if (err) err.textContent = ''; calRefresh(); const again = $(`#ag-cal [data-d="${agCal.sel}"]`); if (again) again.focus(); },
     step(el) {
       const inp = el.parentElement.querySelector('input');
-      const n = Math.max(0, Math.min(300, (parseInt(inp.value, 10) || 0) + Number(el.dataset.d)));
+      const n = Math.max(0, Math.min(+(inp.dataset.max || 300), (parseInt(inp.value, 10) || 0) + Number(el.dataset.d)));
       inp.value = n ? String(n) : '';
+      if (inp.dataset.change) inp.dispatchEvent(new Event('change', { bubbles: true }));
     },
     'add-link': linkDialog,
     'quick-link'(el) { mutate(() => { S.links.push({ id: uid('link'), name: el.dataset.name, url: el.dataset.url }); }, `${el.dataset.name} agregado`); linkDialog(); },
@@ -1885,8 +2003,9 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       const t = $('#sched-text');
       const r = L.parseSchedule(t.value, L.subjects(S));
       if (!r.items.length) return;
-      const n = r.items.length;
-      mutate(() => addScheduleItems(r.items), inWizard() ? null : `${pl(n, 'clase agregada', 'clases agregadas')}`);
+      let res = { added: 0, updated: 0 };
+      mutate(() => { res = addScheduleItems(r.items); }, null);
+      if (!inWizard()) toast([res.added ? pl(res.added, 'clase nueva', 'clases nuevas') : '', res.updated ? `${pl(res.updated, 'clase actualizada', 'clases actualizadas')} (su asistencia sigue igual)` : ''].filter(Boolean).join(' y ') + '.', true);
       reopen(scheduleDialog);
     },
     async install() { if (!installEvent) return; installEvent.prompt(); await installEvent.userChoice; installEvent = null; if (openDialogName() === 'Ajustes') settingsDialog(); },
@@ -2014,10 +2133,26 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         if (n < lastDone) { toast(`${p.name} tiene tildados hasta el ${lastDone}. Destildalos primero o poné un total mayor.`); el.value = p.known ? p.items.length : ''; return; }
         mutate(() => { p.known = true; p.items = Array.from({ length: n }, (_, i) => !!p.items[i]); }, `${p.name}: ${p.items.filter(Boolean).length} de ${n}`);
       }
+      if (kind === 'class-len-min') { const n = parseInt(el.value, 10); if (n >= 10 && n <= 600) { S.settings.classLen = n; save(); refreshSchedule(); } else toast('Poné entre 10 y 600 minutos.'); return; }
+      if (kind === 'class-name' || kind === 'class-dow') {
+        const c = S.classes.find((x) => x.id === el.dataset.id);
+        if (!c) return;
+        const v = kind === 'class-dow' ? +el.value : el.value.trim();
+        if (kind === 'class-name' && !v) { el.value = c.name; return; }
+        mutate(() => { c[kind === 'class-dow' ? 'dow' : 'name'] = v; sortClasses(); }, kind === 'class-dow' ? `${c.name}: ahora los ${L.DIAS[v]}` : 'Clase guardada');
+        refreshSchedule();
+        return;
+      }
       if (kind === 'class-time') {
         const c = S.classes.find((x) => x.id === el.dataset.id);
         if (!c) return;
-        mutate(() => { if (el.value) c[el.dataset.f] = el.value; else delete c[el.dataset.f]; sortClasses(); }, null);
+        mutate(() => {
+          if (el.value) c[el.dataset.f] = el.value; else delete c[el.dataset.f];
+          // Si cargás el inicio y no hay final (o quedó antes), se completa con la duración elegida.
+          if (el.dataset.f === 'from' && c.from && (!c.to || c.to <= c.from)) c.to = addMin(c.from, S.settings.classLen || 120);
+          sortClasses();
+        }, null);
+        refreshSchedule();
         return;
       }
       if (kind === 'my-phrases') { S.settings.myPhrases = el.value.slice(0, 2000); save(); render(); return; }
@@ -2134,8 +2269,12 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       mutate(() => {
         ensureColor(co.subj);
         const base = `${d.tipo.trim()} ${label(co)}`;
-        const tm = d.from && d.to && d.from < d.to ? { from: d.from, to: d.to } : {};
-        if (d.x2) [1, 2].forEach((b) => S.classes.push({ id: uid('c'), name: `${base} · bloque ${b}`, mat: co.subj, course: co.id, dow: +d.dow, ...(b === 1 ? tm : {}) }));
+        const len = S.settings.classLen || 120;
+        const end = d.to && d.from && d.to > d.from ? d.to : d.from ? addMin(d.from, len) : '';
+        const tm = d.from ? { from: d.from, to: end } : {};
+        // Dos bloques seguidos: el segundo arranca cuando termina el primero.
+        const tm2 = d.from ? { from: end, to: addMin(end, len) } : {};
+        if (d.x2) [1, 2].forEach((b) => S.classes.push({ id: uid('c'), name: `${base} · bloque ${b}`, mat: co.subj, course: co.id, dow: +d.dow, ...(b === 1 ? tm : tm2) }));
         else S.classes.push({ id: uid('c'), name: base, mat: co.subj, course: co.id, dow: +d.dow, ...tm });
         sortClasses();
       }, inWizard() ? null : 'Clase agregada');

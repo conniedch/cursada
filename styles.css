@@ -1023,21 +1023,23 @@ body.is-auth .auth .card { box-shadow: 0 1px 0 var(--line), 0 18px 50px -18px co
   main { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
 }
 
-/* Pantalla de carga: el tilde del logo se dibuja mientras llegan tus datos */
+/* Pantalla de carga: la casilla del logo se tilda y se destilda, como en la app */
 .boot-loader { min-height: 70dvh; display: grid; place-content: center; justify-items: center; gap: 14px; }
-.boot-loader svg { filter: drop-shadow(0 10px 24px color-mix(in srgb, var(--accent) 35%, transparent)); animation: bl-pop .5s cubic-bezier(.2, 1.4, .4, 1) both; }
-.bl-box { fill: var(--accent); }
-.bl-check { fill: none; stroke: var(--accent-ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20; stroke-dashoffset: 20; animation: bl-draw 1.1s .25s ease-in-out infinite alternate; }
+.boot-loader svg { overflow: visible; animation: bl-pop 2.4s cubic-bezier(.3, 1.3, .5, 1) infinite; transform-origin: center; }
+.bl-box { fill: transparent; stroke: var(--accent); stroke-width: 2.2; animation: bl-fill 2.4s ease-in-out infinite; }
+.bl-check { fill: none; stroke: var(--accent-ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20; stroke-dashoffset: 20; animation: bl-draw 2.4s ease-in-out infinite; }
 .bl-name { font: 600 22px var(--display); color: var(--ink); letter-spacing: -.01em; }
 .bl-name b { color: var(--accent); }
 .bl-dots { display: flex; gap: 5px; }
 .bl-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: .25; animation: bl-dot 1s ease-in-out infinite; }
 .bl-dots i:nth-child(2) { animation-delay: .15s; }
 .bl-dots i:nth-child(3) { animation-delay: .3s; }
-@keyframes bl-pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes bl-draw { 0%, 10% { stroke-dashoffset: 20; } 70%, 100% { stroke-dashoffset: 0; } }
+/* 0–15%: vacía · 15–30%: se llena · 30–45%: se dibuja el tilde · 45–70%: tildada · 70–85%: se borra el tilde · 85–100%: se vacía */
+@keyframes bl-fill { 0%, 15% { fill: transparent; } 30%, 70% { fill: var(--accent); } 85%, 100% { fill: transparent; } }
+@keyframes bl-draw { 0%, 28% { stroke-dashoffset: 20; } 45%, 68% { stroke-dashoffset: 0; } 85%, 100% { stroke-dashoffset: -20; } }
+@keyframes bl-pop { 0%, 28% { transform: scale(1); } 36% { transform: scale(1.12); } 46%, 100% { transform: scale(1); } }
 @keyframes bl-dot { 0%, 100% { opacity: .25; transform: none; } 50% { opacity: 1; transform: translateY(-3px); } }
-@media (prefers-reduced-motion: reduce) { .boot-loader svg, .bl-check, .bl-dots i { animation: none; stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .boot-loader svg, .bl-box, .bl-check, .bl-dots i { animation: none; } .bl-box { fill: var(--accent); } .bl-check { stroke-dashoffset: 0; } }
 
 /* Pendiente hecho hoy: tachado hasta mañana */
 .todo-list li.is-done .todo-txt { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: color-mix(in srgb, var(--ok-ink) 70%, transparent); color: var(--muted); }
@@ -1053,3 +1055,53 @@ body.is-auth .auth .card { box-shadow: 0 1px 0 var(--line), 0 18px 50px -18px co
 .cls-row { gap: 8px; flex-wrap: wrap; }
 .cls-time { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--muted); margin-left: auto; }
 .cls-time input { border: 1px solid var(--line); border-radius: 6px; padding: 3px 5px; font: 500 13px var(--body); color: var(--ink); background: var(--card); width: 92px; }
+
+/* Mascota: en Hoy, al lado del saludo. Animaciones simples: respira, parpadea, saluda. */
+.pet { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-left: auto; margin-right: 8px; }
+.pet-btn { border: 0; background: none; padding: 0; cursor: pointer; width: 104px; height: 112px; }
+.pet-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 12px; }
+.pet-svg { width: 100%; height: 100%; overflow: visible; }
+.pet-body { transform-origin: 60px 122px; animation: pet-breathe 3.2s ease-in-out infinite; }
+.pet-shadow { transform-origin: 60px 124px; animation: pet-shadow 3.2s ease-in-out infinite; }
+.pet-eyes { transform-origin: 60px 52px; animation: pet-blink 4.6s infinite; }
+.pet-wave { transform-origin: 92px 72px; animation: pet-wave 1.1s ease-in-out infinite; }
+.pet-tear { animation: pet-tear 2.4s ease-in infinite; }
+.pet-z text { animation: pet-z 2.6s ease-in-out infinite; }
+.pet-z text:nth-child(2) { animation-delay: .6s; }
+.pet-spark { animation: pet-spark 1.6s ease-in-out infinite; transform-origin: center; }
+.mood-sleepy .pet-body { animation-duration: 5s; }
+.mood-sad .pet-body { animation-duration: 4.5s; }
+.pet-btn.jump .pet-body { animation: pet-jump .6s cubic-bezier(.3, 1.6, .5, 1); }
+.pet-bubble { position: relative; max-width: 200px; margin: 0; padding: 7px 11px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); font-size: 13px; line-height: 1.3; color: var(--ink); text-align: center; box-shadow: 0 6px 16px -10px rgba(20, 12, 50, .3); }
+.pet-bubble::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 10px; height: 10px; margin-left: -5px; background: var(--card); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: rotate(45deg); }
+@keyframes pet-breathe { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-3px) scale(1.015, .99); } }
+@keyframes pet-shadow { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.9); opacity: .7; } }
+@keyframes pet-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes pet-wave { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-28deg); } }
+@keyframes pet-tear { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(16px); opacity: 0; } }
+@keyframes pet-z { 0% { transform: translate(0, 4px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(6px, -10px); opacity: 0; } }
+@keyframes pet-spark { 0%, 100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes pet-jump { 0% { transform: translateY(0); } 40% { transform: translateY(-16px) scale(1.04, .96); } 100% { transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .pet-body, .pet-shadow, .pet-eyes, .pet-wave, .pet-tear, .pet-z text, .pet-spark { animation: none !important; } }
+@media (max-width: 760px) {
+  .pet { flex-direction: row-reverse; align-items: center; justify-content: flex-end; width: 100%; margin: 4px 0 0; gap: 10px; }
+  .pet-btn { width: 72px; height: 78px; flex: none; }
+  .pet-bubble { max-width: none; flex: 1; text-align: left; }
+  .pet-bubble::after { left: -6px; bottom: auto; top: 50%; margin: -5px 0 0; border: 0; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+}
+.len-choice { margin-bottom: 8px; }
+.len-other { margin: 4px 0 10px; }
+.len-other .stepper input { width: 70px; }
+
+/* Clases del horario: cada una se puede editar ahí mismo */
+.cls-edit { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; grid-template-areas: "dot name name" ". dow dow" ". time del"; gap: 6px 8px; align-items: center; }
+.cls-edit .dot { grid-area: dot; }
+.cls-edit .cls-name { grid-area: name; width: 100%; border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; margin-left: -6px; font: 500 14.5px var(--body); color: var(--ink); background: transparent; }
+.cls-edit .cls-name:hover { border-color: var(--line); }
+.cls-edit .cls-name:focus { border-color: var(--accent); background: var(--card); outline: none; }
+.cls-edit .cls-dow { grid-area: dow; justify-self: start; border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; font: 500 13px var(--body); color: var(--ink); background: var(--card); }
+.cls-edit .cls-time { grid-area: time; margin-left: 0; justify-self: start; }
+.cls-edit > .linkish { grid-area: del; }
+@media (min-width: 761px) {
+  .cls-edit { grid-template-columns: 10px minmax(0, 1fr) auto auto auto; grid-template-areas: "dot name dow time del"; }
+}
