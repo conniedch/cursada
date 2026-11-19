@@ -574,31 +574,40 @@
   // Detalles alrededor de la ilustración (en una capa de 120×130 encima).
   function petAround(kind, mood, season, coffee) {
     let g = '';
-    if (mood === 'study') g += `<g transform="translate(6 104)"><path d="M0 4l12 3 12-3v14l-12 3-12-3z" fill="#8C6E4E" stroke="${INK}" stroke-width=".9" stroke-linejoin="round"/><path d="M1.6 4.8l10.4 2.6v12.2L1.6 17zM22.4 4.8L12 7.4v12.2l10.4-2.6z" fill="#F4ECDD" stroke="${INK}" stroke-width=".6"/><path d="M4 9l6 1.5M4 12l6 1.5M20 9l-6 1.5M20 12l-6 1.5" stroke="#B8A890" stroke-width=".6"/></g>`;
+    if (mood === 'study') g += `<g transform="translate(6 104) scale(1.35)"><path d="M0 4l12 3 12-3v14l-12 3-12-3z" fill="#8C6E4E" stroke="${INK}" stroke-width=".9" stroke-linejoin="round"/><path d="M1.6 4.8l10.4 2.6v12.2L1.6 17zM22.4 4.8L12 7.4v12.2l10.4-2.6z" fill="#F4ECDD" stroke="${INK}" stroke-width=".6"/><path d="M4 9l6 1.5M4 12l6 1.5M20 9l-6 1.5M20 12l-6 1.5" stroke="#B8A890" stroke-width=".6"/></g>`;
     if (mood === 'sleepy') g += `<g fill="#8A7F76" font-family="Georgia, serif" font-style="italic" class="pet-z"><text x="98" y="22" font-size="12">z</text><text x="106" y="13" font-size="9">z</text></g>`;
-    if (mood === 'happy') g += `<g transform="translate(100 18)" fill="none" stroke="#C9A24A" stroke-width="1.3" stroke-linecap="round"><path d="M0-6v4M0 2v4M-6 0h4M2 0h4"/></g>`;
+    if (mood === 'happy') g += `<g transform="translate(100 18) scale(1.35)" fill="none" stroke="#C9A24A" stroke-width="1.3" stroke-linecap="round"><path d="M0-6v4M0 2v4M-6 0h4M2 0h4"/></g>`;
     if (coffee && kind !== 'pez') g += PET_MUG;
     if (season) {
-      if (season.kind === 'xmas') g += '<g transform="translate(102 104)"><rect x="-9" y="-6" width="18" height="15" rx="1.5" fill="#B5473A" stroke="#6B2A22" stroke-width=".9"/><path d="M0-6v15M-9 1h18" stroke="#E8D9A8" stroke-width="2.2"/><path d="M0-6q-5-6-7-2 0 3 7 2q5-6 7-2 0 3-7 2z" fill="#E8D9A8" stroke="#B59A5A" stroke-width=".7"/></g>';
-      if (season.kind === 'newyear') g += `<g transform="translate(102 30) rotate(12)"><path d="M-8 6L0-14 8 6z" fill="#6B5B95" stroke="${INK}" stroke-width=".8"/><path d="M-5.5 0h11M-3-6h6" stroke="#E2C766" stroke-width="1.6"/><circle cy="-15" r="2.4" fill="#E2C766"/></g><g transform="translate(96 46) rotate(-6)"><rect x="-12" y="-6" width="24" height="11" rx="2" fill="#F4ECDD" stroke="${INK}" stroke-width=".8"/><text y="2.6" text-anchor="middle" font-size="7.5" font-weight="700" font-family="Georgia, serif" fill="${INK}">${season.year}</text></g>`;
-      if (season.kind === 'halloween') g += '<g transform="translate(103 112)"><ellipse rx="12" ry="9.5" fill="#D9822B" stroke="#8A4A14" stroke-width="1"/><path d="M-4-9v18M4-9v18" stroke="#B0631C" stroke-width="1.2"/><path d="M0-9q1-5 4-6" stroke="#4E6A2A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M-6-2l2.2-2.6 2.2 2.6zM1.8-2l2.2-2.6 2.2 2.6z" fill="#3A1D05"/><path d="M-5 3q5 3.4 10 0q-5 1.8-10 0z" fill="#3A1D05"/></g>';
-      if (season.kind === 'spring') g += '<g transform="translate(8 112)">' + [['#E89AAE', 0, 0], ['#E8C766', 9, -3], ['#9CC3E0', 17, 1]].map(([c, x, y]) => `<path d="M${x} ${y + 2}v8" stroke="#6E8F4E" stroke-width="1.2"/><g transform="translate(${x} ${y})">${[0, 72, 144, 216, 288].map((r) => `<ellipse rx="2" ry="3.4" cy="-3" fill="${c}" transform="rotate(${r})"/>`).join('')}<circle r="1.6" fill="#F4E6B0"/></g>`).join('') + '</g>';
-      if (season.kind === 'love') g += '<g transform="translate(102 20)"><path d="M0 8C-10 0-10-8-4-9C-1-9.5 0-7 0-6C0-7 1-9.5 4-9C10-8 10 0 0 8z" fill="#C9586F" stroke="#7E2E40" stroke-width=".8"/></g>';
+      if (season.kind === 'xmas') g += '<g transform="translate(102 104) scale(1.35)"><rect x="-9" y="-6" width="18" height="15" rx="1.5" fill="#B5473A" stroke="#6B2A22" stroke-width=".9"/><path d="M0-6v15M-9 1h18" stroke="#E8D9A8" stroke-width="2.2"/><path d="M0-6q-5-6-7-2 0 3 7 2q5-6 7-2 0 3-7 2z" fill="#E8D9A8" stroke="#B59A5A" stroke-width=".7"/></g>';
+      if (season.kind === 'newyear') g += `<g transform="translate(102 30) rotate(12) scale(1.35)"><path d="M-8 6L0-14 8 6z" fill="#6B5B95" stroke="${INK}" stroke-width=".8"/><path d="M-5.5 0h11M-3-6h6" stroke="#E2C766" stroke-width="1.6"/><circle cy="-15" r="2.4" fill="#E2C766"/></g><g transform="translate(96 46) rotate(-6) scale(1.35)"><rect x="-12" y="-6" width="24" height="11" rx="2" fill="#F4ECDD" stroke="${INK}" stroke-width=".8"/><text y="2.6" text-anchor="middle" font-size="7.5" font-weight="700" font-family="Georgia, serif" fill="${INK}">${season.year}</text></g>`;
+      if (season.kind === 'halloween') g += '<g transform="translate(103 112) scale(1.35)"><ellipse rx="12" ry="9.5" fill="#D9822B" stroke="#8A4A14" stroke-width="1"/><path d="M-4-9v18M4-9v18" stroke="#B0631C" stroke-width="1.2"/><path d="M0-9q1-5 4-6" stroke="#4E6A2A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M-6-2l2.2-2.6 2.2 2.6zM1.8-2l2.2-2.6 2.2 2.6z" fill="#3A1D05"/><path d="M-5 3q5 3.4 10 0q-5 1.8-10 0z" fill="#3A1D05"/></g>';
+      if (season.kind === 'spring') g += '<g transform="translate(8 112) scale(1.35)">' + [['#E89AAE', 0, 0], ['#E8C766', 9, -3], ['#9CC3E0', 17, 1]].map(([c, x, y]) => `<path d="M${x} ${y + 2}v8" stroke="#6E8F4E" stroke-width="1.2"/><g transform="translate(${x} ${y}) scale(1.35)">${[0, 72, 144, 216, 288].map((r) => `<ellipse rx="2" ry="3.4" cy="-3" fill="${c}" transform="rotate(${r})"/>`).join('')}<circle r="1.6" fill="#F4E6B0"/></g>`).join('') + '</g>';
+      if (season.kind === 'love') g += '<g transform="translate(102 20) scale(1.35)"><path d="M0 8C-10 0-10-8-4-9C-1-9.5 0-7 0-6C0-7 1-9.5 4-9C10-8 10 0 0 8z" fill="#C9586F" stroke="#7E2E40" stroke-width=".8"/></g>';
       if (season.kind === 'weekday') {
         const word = cap(L.DIAS[season.dow]);
         const color = ['#4E6E9E', '#A04A6A', '#4E8A5E', '#B8742E', '#6B5B95'][season.dow];
         const w = Math.max(30, word.length * 5.4 + 10);
-        g += `<g transform="translate(${4 + w / 2} 12) rotate(-5)"><path d="M0-10v4" stroke="${INK}" stroke-width=".8"/><circle cy="-10.5" r="1.3" fill="${INK}"/><rect x="${-w / 2}" y="-6" width="${w}" height="13" rx="2" fill="#F4ECDD" stroke="${color}" stroke-width="1.4"/><text y="3.2" text-anchor="middle" font-size="8" font-weight="700" font-family="Georgia, serif" fill="${color}">${word}</text></g>`;
+        g += `<g transform="translate(${4 + w * 0.68} 18) rotate(-5) scale(1.35)"><path d="M0-10v4" stroke="${INK}" stroke-width=".8"/><circle cy="-10.5" r="1.3" fill="${INK}"/><rect x="${-w / 2}" y="-6" width="${w}" height="13" rx="2" fill="#F4ECDD" stroke="${color}" stroke-width="1.4"/><text y="3.2" text-anchor="middle" font-size="8" font-weight="700" font-family="Georgia, serif" fill="${color}">${word}</text></g>`;
       }
     }
     return g ? `<svg class="pet-around" viewBox="0 0 120 130" aria-hidden="true">${g}</svg>` : '';
   }
   // La tacita de café (después de una hora con la app abierta).
-  const PET_MUG = `<g class="pet-mug" transform="translate(100 104)"><g class="pet-steam" fill="none" stroke="#A39A92" stroke-width="1.1" stroke-linecap="round"><path d="M-3-3q-2.4-3.5 0-7t0-7"/><path d="M2.6-4q-2.4-3.5 0-7t0-6"/></g><path d="M-8 0h15v11a6 6 0 0 1-6 6h-3a6 6 0 0 1-6-6z" fill="#EDE6DA" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round"/><path d="M7 2.5a4.2 4.2 0 0 1 0 8.4" fill="none" stroke="${INK}" stroke-width="1.2"/><path d="M-6.5 2h12" stroke="#7A5638" stroke-width="2" stroke-linecap="round"/></g>`;
+  const PET_MUG = `<g class="pet-mug" transform="translate(100 104) scale(1.3)"><g class="pet-steam" fill="none" stroke="#A39A92" stroke-width="1.1" stroke-linecap="round"><path d="M-3-3q-2.4-3.5 0-7t0-7"/><path d="M2.6-4q-2.4-3.5 0-7t0-6"/></g><path d="M-8 0h15v11a6 6 0 0 1-6 6h-3a6 6 0 0 1-6-6z" fill="#EDE6DA" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round"/><path d="M7 2.5a4.2 4.2 0 0 1 0 8.4" fill="none" stroke="${INK}" stroke-width="1.2"/><path d="M-6.5 2h12" stroke="#7A5638" stroke-width="2" stroke-linecap="round"/></g>`;
   function petSvg(kind, mood, opts = {}) {
     if (!PETS[kind]) kind = 'oso';
-    const season = opts.decor === false ? null : (opts.season !== undefined ? opts.season : (S && S.settings.petDecor !== false ? petSeason() : null));
+    const pick = S && S.settings.petDecorPick && S.settings.petDecorPick.d === L.iso(today()) ? S.settings.petDecorPick.season : undefined;
+    const season = opts.decor === false ? null : (opts.season !== undefined ? opts.season : (S && S.settings.petDecor !== false ? (pick !== undefined ? pick : petSeason()) : null));
     return `<span class="pet-svg pet-art pet-${kind} mood-${mood}"><img class="pet-img" src="icons/pets/${kind}.webp" alt="" draggable="false" decoding="async">${opts.decor === false ? '' : petAround(kind, mood, season, opts.coffee)}</span>`;
+  }
+  // Todos los detalles de fechas con tu mascota; tocando uno, lo lleva puesto hoy.
+  function petDecorPreviewHtml(kind) {
+    const t = today(); const dw = L.dow(t);
+    const opts = [['weekday', `Cartel de ${L.DIAS[dw <= 4 ? dw : 0]}`, { kind: 'weekday', dow: dw <= 4 ? dw : 0 }], ['xmas', 'Navidad', { kind: 'xmas' }], ['halloween', 'Halloween', { kind: 'halloween' }], ['newyear', 'Año Nuevo', { kind: 'newyear', year: t.getMonth() === 0 ? t.getFullYear() : t.getFullYear() + 1 }], ['spring', 'Día del Estudiante', { kind: 'spring' }], ['love', 'San Valentín', { kind: 'love' }]];
+    const pick = S.settings.petDecorPick && S.settings.petDecorPick.d === L.iso(t) ? S.settings.petDecorPick.season : null;
+    return `<p class="section-label" style="margin:12px 0 4px">Detalles de fechas</p><p class="sub" style="margin:0 0 8px">Aparecen solos en su fecha. Tocá uno para que tu mascota lo lleve hoy.</p>
+      <div class="decor-picker" role="group" aria-label="Detalle para hoy">${opts.map(([k, n, se]) => `<button type="button" data-act="decor-pick" data-k="${k}" aria-pressed="${!!pick && pick.kind === k}">${petSvg(kind, 'idle', { season: se })}<span>${h(n)}</span></button>`).join('')}${pick ? '<button type="button" class="decor-off" data-act="decor-pick" data-k="">Sacárselo</button>' : ''}</div>`;
   }
   // Selector con dibujito: así se ve la mascota antes de elegirla.
   function petPickerHtml(cur) {
@@ -2041,6 +2050,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <hr class="divider"><p class="section-label" style="margin-top:0">Mascota</p>
       <p class="sub" style="margin:2px 0 8px">Te acompaña en Hoy. Según cómo te va aparece con un libro, una nubecita o su café, y si la tocás te cuenta un chiste.</p>
       ${petPickerHtml(st.pet)}
+      ${st.pet && st.petDecor !== false ? petDecorPreviewHtml(st.pet) : ''}
       ${st.pet ? `<label class="check-line"><input type="checkbox" data-change="pet-decor" ${st.petDecor !== false ? 'checked' : ''}> Detalles de fechas: regalo en Navidad, calabaza en Halloween, gorrito en Año Nuevo, flores el Día del Estudiante y, algunos días de semana, un cartelito con el día</label>` : ''}
       <hr class="divider"><p class="section-label" style="margin-top:0">Frases motivadoras</p>
       <p class="sub" style="margin:2px 0 8px">Una frase por día en Hoy, según lo que te pase: un examen cerca, una racha, faltas justas o dudas anotadas.</p>
@@ -2261,6 +2271,12 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       S.settings.classLen = +el.dataset.v; save(); refreshSchedule();
     },
     'app-icon'(el) { S.settings.appIcon = el.dataset.v; save(); applyAppIcon(); if (el.dataset.v === 'clasico') { document.querySelector('link[rel="apple-touch-icon"]').href = 'icons/apple-touch-icon.png'; document.querySelector('link[rel="manifest"]').href = 'manifest.webmanifest'; } settingsDialog(); toast('Ícono elegido. Volvé a agregar CursadOK a la pantalla de inicio para verlo.'); },
+    'decor-pick'(el) {
+      const t = today(); const dw = L.dow(t); const k = el.dataset.k;
+      const map = { weekday: { kind: 'weekday', dow: dw <= 4 ? dw : 0 }, xmas: { kind: 'xmas' }, halloween: { kind: 'halloween' }, newyear: { kind: 'newyear', year: t.getMonth() === 0 ? t.getFullYear() : t.getFullYear() + 1 }, spring: { kind: 'spring' }, love: { kind: 'love' } };
+      S.settings.petDecorPick = k ? { d: L.iso(t), season: map[k] } : null;
+      save(); render(); settingsDialog();
+    },
     'pet-pick'(el) { S.settings.pet = el.dataset.v; save(); render(); if (!inWizard()) settingsDialog(); },
     motivation(el) { S.settings.motivation = !!el.dataset.v; save(); render(); if (!inWizard()) settingsDialog(); },
     'custom-second-auto'() { S.settings.custom.second = ''; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
@@ -2750,7 +2766,20 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   // Instalar como app: Android ofrece el botón; en iPhone se explica cómo hacerlo.
   let installEvent = null;
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvent = e; });
-  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+      // Al volver a la app, se fija si hay una versión nueva.
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+    }).catch(() => {});
+    // Cuando llega una versión nueva, recarga una vez (salvo que estés escribiendo algo).
+    let reloaded = false; const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloaded || !hadController) return; reloaded = true;
+      const busy = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+      if (busy || dirty) { toast('Hay una versión nueva de CursadOK. Se va a ver la próxima vez que la abras.'); return; }
+      location.reload();
+    });
+  }
   const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   // ---------- ÍCONO DE LA APP: se dibuja acá mismo (canvas) y se usa para la pantalla de inicio.
   const APP_ICONS = { clasico: 'Clásico', tucolor: 'Tu color', degrade: 'Degradé', byn: 'Blanco y negro', propio: 'Personalizado' };
