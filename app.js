@@ -77,7 +77,7 @@
   function emptyState(user) {
     return {
       v: 2,
-      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', pet: '', classLen: 120, motivation: false, myPhrases: '', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
+      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', pet: '', petDecor: true, appIcon: 'clasico', classLen: 120, motivation: false, myPhrases: '', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
       classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], todos: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', stickies: [], studyArchive: {}, matColors: {}, history: [],
     };
   }
@@ -499,7 +499,7 @@
   }
 
   // ---------- MASCOTA (opcional, se activa en Ajustes): pingüino, gatito, pez o búho. Cambia de cara según lo que te pasa.
-  const PETS = { pinguino: 'Pingüino', gatito: 'Gatito', pez: 'Pez', buho: 'Búho', tortuga: 'Tortuga' };
+  const PETS = { pinguino: 'Pingüino', gatito: 'Gatito', yaguarete: 'Yaguareté', carpincho: 'Carpincho', condor: 'Cóndor', buho: 'Búho', pez: 'Pez', tortuga: 'Tortuga' };
   function petMood() {
     const t = today(); const hr = new Date().getHours();
     if (hr >= 23 || hr < 5) return 'sleepy';
@@ -559,7 +559,6 @@
     return {
       sleepy: '<g class="pet-z" fill="var(--accent)" font-family="var(--display)" font-weight="800"><text x="88" y="30" font-size="14">z</text><text x="98" y="18" font-size="10">z</text></g>',
       study: '<g><rect x="38" y="88" width="44" height="26" rx="3" fill="var(--accent)"/><rect x="41" y="91" width="17.5" height="20" rx="1.5" fill="#fff"/><rect x="61.5" y="91" width="17.5" height="20" rx="1.5" fill="#fff"/><path d="M44 96h11M44 100h11M44 104h8M64 96h11M64 100h11M64 104h8" stroke="#C9C3DD" stroke-width="1.4"/></g>',
-      happy: '<g class="pet-spark" fill="var(--hi-strong)"><path d="M14 30l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><path d="M104 46l1.4 3.4 3.4 1.4-3.4 1.4-1.4 3.4-1.4-3.4-3.4-1.4 3.4-1.4z"/></g>',
     }[mood] || '';
   }
   const PET_DRAW = {
@@ -570,7 +569,7 @@
         <ellipse cx="60" cy="72" rx="37" ry="46" fill="#2B3556"/>
         <ellipse cx="60" cy="84" rx="25" ry="32" fill="#FAF8FF"/>
         <circle cx="49" cy="53" r="13.5" fill="#FAF8FF"/><circle cx="71" cy="53" r="13.5" fill="#FAF8FF"/>
-        <circle cx="41" cy="63" r="4.5" fill="#FF8FA3" opacity=".55"/><circle cx="79" cy="63" r="4.5" fill="#FF8FA3" opacity=".55"/>
+        <circle cx="41" cy="63" r="4.5" fill="#FF8FA3" opacity=".22"/><circle cx="79" cy="63" r="4.5" fill="#FF8FA3" opacity=".22"/>
         ${petFace(mood)}
         <path d="M54.5 61.5h11l-5.5 7z" fill="#FFA62B" stroke="#FFA62B" stroke-width="2" stroke-linejoin="round"/>
         ${petExtra(mood)}
@@ -589,7 +588,7 @@
         <path d="M54 30q1 5 0 9M60 28v10M66 30q-1 5 0 9" fill="none" stroke="${stripe}" stroke-width="3" stroke-linecap="round"/>
         <path d="M25 52q5 1 8 4M95 52q-5 1-8 4" fill="none" stroke="${stripe}" stroke-width="2.6" stroke-linecap="round"/>
         <ellipse cx="60" cy="68" rx="14" ry="10" fill="${cream}"/>
-        <circle cx="40" cy="64" r="5" fill="#FF8FA3" opacity=".55"/><circle cx="80" cy="64" r="5" fill="#FF8FA3" opacity=".55"/>
+        <circle cx="40" cy="64" r="5" fill="#FF8FA3" opacity=".22"/><circle cx="80" cy="64" r="5" fill="#FF8FA3" opacity=".22"/>
         ${petFace(mood)}
         <path d="M57.2 63.5h5.6l-2.8 3.2z" fill="#E86B7E" stroke="#E86B7E" stroke-width="1.4" stroke-linejoin="round"/>
         <path d="M60 67q-2.2 3.4-5 1.2M60 67q2.2 3.4 5 1.2" fill="none" stroke="#121A2C" stroke-width="1.5" stroke-linecap="round"/>
@@ -607,7 +606,7 @@
         <path d="M70 62q4 4 0 8M78 60q4 5 0 10M78 74q4 5 0 10" fill="none" stroke="${deep}" stroke-width="2" stroke-linecap="round"/>
         <path class="pet-side-fin" d="M60 76q16-6 22 6q-14 5-22-6z" fill="${deep}"/>
         <g transform="translate(-8 8)">${petFace(mood)}</g>
-        <circle cx="34" cy="64" r="3.4" fill="#FF8FA3" opacity=".6"/>
+        <circle cx="34" cy="64" r="3.4" fill="#FF8FA3" opacity=".22"/>
         <ellipse cx="26" cy="72" rx="3.6" ry="3" fill="#8A2E14"/>
         ${petExtra(mood)}`;
       return `<circle cx="60" cy="80" r="42" fill="#EAF7FF" stroke="#A9D8F5" stroke-width="2.5"/>
@@ -622,21 +621,76 @@
         <path d="M28 70q3-16 16-24" stroke="#fff" stroke-width="3" fill="none" opacity=".7" stroke-linecap="round"/>`;
     },
     tortuga(mood) {
-      const skin = '#8FD18A'; const shell = '#4E9F5B'; const line = '#7CC48A';
+      // De frente: el caparazón grande atrás y arriba, la cabeza asomando adelante.
+      const skin = '#86B97A'; const skinD = '#5E8F55'; const shell = '#6B5A3A'; const scute = '#8C7650'; const rim = '#4C3F28';
       const sad = mood === 'sad';
-      return `<ellipse cx="31" cy="112" rx="9" ry="6" fill="${skin}"/><ellipse cx="89" cy="112" rx="9" ry="6" fill="${skin}"/>
-        <path d="M96 100q10 2 12 8q-8 0-13-3z" fill="${skin}"/>
-        <ellipse cx="60" cy="96" rx="40" ry="24" fill="${shell}"/>
-        <path d="M60 74v44M38 82l8 14-8 16M82 82l-8 14 8 16M46 96h28" fill="none" stroke="${line}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
-        <ellipse cx="60" cy="108" rx="40" ry="10" fill="none" stroke="#3D7F48" stroke-width="3"/>
-        <ellipse cx="44" cy="120" rx="8" ry="5" fill="${skin}"/><ellipse cx="76" cy="120" rx="8" ry="5" fill="${skin}"/>
-        <g${sad ? ' transform="translate(0 4)"' : ''}>
-          <circle cx="60" cy="56" r="25" fill="${skin}"/>
-          <circle cx="41" cy="64" r="4.5" fill="#FF8FA3" opacity=".5"/><circle cx="79" cy="64" r="4.5" fill="#FF8FA3" opacity=".5"/>
+      return `<path d="M22 92q-10 6-8 16q8 2 16-6zM98 92q10 6 8 16q-8 2-16-6z" fill="${skin}" stroke="${skinD}" stroke-width="1.5"/>
+        <path d="M14 78C14 40 36 22 60 22s46 18 46 56c0 8-4 14-12 16H26c-8-2-12-8-12-16z" fill="${shell}" stroke="${rim}" stroke-width="2.5"/>
+        <path d="M60 26v24M40 32l8 18M80 32l-8 18M48 50h24M24 60l24-10M96 60L72 50M24 60l6 22M96 60l-6 22M48 50l-6 30M72 50l6 30" fill="none" stroke="${scute}" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M22 88h76" stroke="${rim}" stroke-width="3" stroke-linecap="round"/>
+        <ellipse cx="42" cy="118" rx="9" ry="6" fill="${skin}" stroke="${skinD}" stroke-width="1.5"/><ellipse cx="78" cy="118" rx="9" ry="6" fill="${skin}" stroke="${skinD}" stroke-width="1.5"/>
+        <g transform="translate(0 ${sad ? 30 : 26})">
+          <ellipse cx="60" cy="56" rx="21" ry="19" fill="${skin}" stroke="${skinD}" stroke-width="1.8"/>
+          <path d="M48 46q12-6 24 0" fill="none" stroke="${skinD}" stroke-width="1.4" opacity=".6"/>
           ${petFace(mood)}
-          <path d="${sad ? 'M55 68q5-4 10 0' : 'M54 65q6 5 12 0'}" fill="none" stroke="#2F6B37" stroke-width="2" stroke-linecap="round"/>
+          <path d="${sad ? 'M55 67q5-3.5 10 0' : 'M54 64q6 4.5 12 0'}" fill="none" stroke="#2E4A28" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="57" cy="60" r="1" fill="#2E4A28"/><circle cx="63" cy="60" r="1" fill="#2E4A28"/>
         </g>
-        ${petExtra(mood)}`;
+        ${mood === 'sleepy' ? petExtra(mood) : ''}
+        ${mood === 'study' ? '<g transform="translate(0 6)">' + petExtra(mood) + '</g>' : ''}`;
+    },
+    yaguarete(mood) {
+      // Yaguareté sentado: pelaje dorado con rosetas, orejas redondas y hocico ancho.
+      const fur = '#D9A441'; const furD = '#B98326'; const cream = '#F6E7C8'; const spot = '#3A2614';
+      const tail = mood === 'sad' ? 'M86 110q22 6 24 18' : 'M86 108q24-2 22-26q-1-8-8-6';
+      const rosette = (x, y, r) => `<path d="M${x - r} ${y}a${r} ${r} 0 1 1 ${r * 2} 0" fill="none" stroke="${spot}" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="${r * 1.2} ${r * 0.6}"/>`;
+      return `<path class="pet-tail${mood === 'happy' ? ' pet-wave-tail pet-tail-r' : ' pet-tail-r'}" d="${tail}" fill="none" stroke="${fur}" stroke-width="10" stroke-linecap="round"/>
+        <path d="${mood === 'sad' ? 'M104 122l6 6' : 'M100 76l2 6'}" stroke="${spot}" stroke-width="4" stroke-linecap="round"/>
+        <ellipse cx="60" cy="102" rx="28" ry="21" fill="${fur}" stroke="${furD}" stroke-width="1.6"/>
+        <ellipse cx="60" cy="106" rx="16" ry="13" fill="${cream}"/>
+        ${rosette(40, 98, 4)}${rosette(80, 98, 4)}${rosette(36, 110, 3)}${rosette(84, 110, 3)}
+        <circle cx="34" cy="30" r="10" fill="${fur}" stroke="${furD}" stroke-width="1.6"/><circle cx="86" cy="30" r="10" fill="${fur}" stroke="${furD}" stroke-width="1.6"/>
+        <circle cx="34" cy="31" r="5" fill="${spot}" opacity=".85"/><circle cx="86" cy="31" r="5" fill="${spot}" opacity=".85"/>
+        <ellipse cx="60" cy="56" rx="37" ry="32" fill="${fur}" stroke="${furD}" stroke-width="1.6"/>
+        ${rosette(34, 50, 4)}${rosette(86, 50, 4)}<circle cx="52" cy="32" r="2.4" fill="${spot}"/><circle cx="60" cy="29" r="2.4" fill="${spot}"/><circle cx="68" cy="32" r="2.4" fill="${spot}"/>
+        <ellipse cx="60" cy="69" rx="17" ry="12" fill="${cream}"/>
+        ${petFace(mood)}
+        <path d="M55.5 63h9l-4.5 4.6z" fill="#5A3A24" stroke="#5A3A24" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M60 67.6q-2.6 4-6 1.6M60 67.6q2.6 4 6 1.6" fill="none" stroke="#3A2614" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="49" cy="71" r=".9" fill="${spot}"/><circle cx="52" cy="73" r=".9" fill="${spot}"/><circle cx="71" cy="71" r=".9" fill="${spot}"/><circle cx="68" cy="73" r=".9" fill="${spot}"/>
+        ${petExtra(mood)}
+        <ellipse cx="49" cy="120" rx="9" ry="5.5" fill="${cream}" stroke="${furD}" stroke-width="1.2"/><ellipse cx="71" cy="120" rx="9" ry="5.5" fill="${cream}" stroke="${furD}" stroke-width="1.2"/>`;
+    },
+    carpincho(mood) {
+      // Carpincho: cuerpo grande y tranquilo, cabeza cuadrada con hocico ancho.
+      const fur = '#9A6B45'; const furD = '#7A5233'; const snout = '#6E4A2E';
+      return `<ellipse cx="60" cy="100" rx="40" ry="24" fill="${fur}" stroke="${furD}" stroke-width="1.8"/>
+        <path d="M34 92q4 6 2 12M86 92q-4 6-2 12" stroke="${furD}" stroke-width="1.6" fill="none" opacity=".6"/>
+        <ellipse cx="30" cy="30" rx="6" ry="5" fill="${furD}"/><ellipse cx="90" cy="30" rx="6" ry="5" fill="${furD}"/>
+        <rect x="27" y="28" width="66" height="56" rx="24" fill="${fur}" stroke="${furD}" stroke-width="1.8"/>
+        <rect x="38" y="58" width="44" height="26" rx="13" fill="${snout}"/>
+        <ellipse cx="52" cy="66" rx="3" ry="2" fill="#2B1B10"/><ellipse cx="68" cy="66" rx="3" ry="2" fill="#2B1B10"/>
+        <path d="${mood === 'sad' ? 'M54 78q6-3 12 0' : 'M54 75q6 4 12 0'}" fill="none" stroke="#2B1B10" stroke-width="1.8" stroke-linecap="round"/>
+        <g transform="translate(0 -4)">${petFace(mood)}</g>
+        ${petExtra(mood)}
+        <ellipse cx="44" cy="121" rx="9" ry="5" fill="${furD}"/><ellipse cx="76" cy="121" rx="9" ry="5" fill="${furD}"/>`;
+    },
+    condor(mood) {
+      // Cóndor andino: plumaje negro, collar blanco, cabeza pelada y pico ganchudo.
+      const black = '#23232B'; const head = '#B9867A'; const headD = '#94655A';
+      const sad = mood === 'sad';
+      return `<path class="pet-flip-l" d="${sad ? 'M26 70q-14 26 2 46q8-20 4-46z' : 'M28 62q-22 18-14 52q14-8 18-50z'}" fill="${black}"/>
+        <path class="pet-flip-r${mood === 'happy' ? ' pet-wave' : ''}" d="${sad ? 'M94 70q14 26-2 46q-8-20-4-46z' : 'M92 62q22 18 14 52q-14-8-18-50z'}" fill="${black}"/>
+        <path d="M20 96q4-10 12-14M100 96q-4-10-12-14" stroke="#E9E9EF" stroke-width="5" stroke-linecap="round" opacity=".9"/>
+        <ellipse cx="60" cy="88" rx="32" ry="34" fill="${black}"/>
+        <path d="M30 70q30 16 60 0q-4 10-30 12q-26-2-30-12z" fill="#F4F4F7"/>
+        <path d="M34 72q6 4 4 8M46 76q2 4 0 7M60 78v6M74 76q-2 4 0 7M86 72q-6 4-4 8" stroke="#D5D5DD" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        <ellipse cx="60" cy="50" rx="24" ry="22" fill="${head}" stroke="${headD}" stroke-width="1.6"/>
+        <path d="M52 30q4-8 8-2q4-6 8 2q-8 4-16 0z" fill="${headD}"/>
+        ${petFace(mood)}
+        <path d="M54 58h12q2 8-4 14q-1-6-8-8z" fill="#E8D9B0" stroke="#B9A578" stroke-width="1.4" stroke-linejoin="round"/>
+        ${petExtra(mood)}
+        <path d="M46 118l-3 6M50 118v6M54 118l3 6M66 118l-3 6M70 118v6M74 118l3 6" stroke="#8A8A8A" stroke-width="2.4" stroke-linecap="round"/>`;
     },
     buho(mood) {
       const feather = '#8C6B52'; const light = '#EBDCC7';
@@ -653,16 +707,39 @@
         <path d="M45 117l3 5 3-5 3 5 3-5M63 117l3 5 3-5 3 5 3-5" fill="none" stroke="#F2A33A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`;
     },
   };
-  function petSvg(kind, mood) {
+  // Disfraces según la fecha (se pueden apagar en Ajustes).
+  function petSeason(t = today()) {
+    const m = t.getMonth() + 1; const d = t.getDate();
+    if ((m === 12 && d >= 27) || (m === 1 && d <= 3)) return { kind: 'newyear', year: m === 12 ? t.getFullYear() + 1 : t.getFullYear() };
+    if (m === 12 && d <= 26) return { kind: 'xmas' };
+    if (m === 10 && d >= 24) return { kind: 'halloween' };
+    if (m === 9 && d >= 18 && d <= 23) return { kind: 'spring' };
+    if (m === 2 && d >= 12 && d <= 14) return { kind: 'love' };
+    return null;
+  }
+  const HAT_AT = { pinguino: [60, 30], gatito: [60, 30], yaguarete: [60, 26], carpincho: [60, 30], condor: [60, 30], buho: [60, 30], pez: [60, 38], tortuga: [60, 64] };
+  function petDecor(kind, season) {
+    if (!season) return '';
+    const [x, y] = HAT_AT[kind] || [60, 30];
+    const at = (inner, sc = 1) => `<g transform="translate(${x} ${y}) scale(${sc})">${inner}</g>`;
+    if (season.kind === 'xmas') return at('<path d="M-17 0Q-8-30 15-24L18 0z" fill="#C8102E"/><path d="M-6-14q6-6 14-8" stroke="#E2384F" stroke-width="2" fill="none" opacity=".7"/><rect x="-20" y="-5" width="40" height="9" rx="4.5" fill="#FFF"/><circle cx="16" cy="-25" r="5.5" fill="#FFF"/>');
+    if (season.kind === 'newyear') return at(`<path d="M-12 0L0-30 12 0z" fill="var(--accent)"/><path d="M-8.5-7h17M-4.8-17h9.6" stroke="#FFE45E" stroke-width="2.6"/><circle cy="-31" r="3.6" fill="#FFE45E"/>`) + `<g transform="translate(${x + 26} ${y - 8}) rotate(14)"><rect x="-14" y="-8" width="28" height="13" rx="3" fill="#FFE45E"/><text x="0" y="2" text-anchor="middle" font-size="9" font-weight="800" font-family="var(--display)" fill="#3F3300">${season.year}</text></g>`;
+    if (season.kind === 'spring') return at(['#FF8FB1', '#FFD24D', '#9AD0FF', '#FF8FB1', '#B6E388'].map((c, i) => { const ang = (-60 + i * 30) * Math.PI / 180; const fx = Math.sin(ang) * 20; const fy = -Math.cos(ang) * 8 + 2; return `<g transform="translate(${fx.toFixed(1)} ${fy.toFixed(1)})"><circle r="4.6" fill="${c}"/><circle r="1.8" fill="#FFF7D6"/></g>`; }).join(''));
+    if (season.kind === 'halloween') return '<g transform="translate(103 112)"><ellipse rx="13" ry="10.5" fill="#F28C28" stroke="#C9650F" stroke-width="1.5"/><path d="M-4.5-10v20M4.5-10v20" stroke="#D96F10" stroke-width="1.6"/><path d="M0-10q1-6 5-7" stroke="#4E7A2A" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M-7-2l2.5-3 2.5 3zM2-2l2.5-3 2.5 3z" fill="#3A1D05"/><path d="M-6 3q6 4 12 0q-6 2-12 0z" fill="#3A1D05" stroke="#3A1D05" stroke-width="1.2" stroke-linejoin="round"/></g>';
+    if (season.kind === 'love') return '<g transform="translate(102 34)"><path d="M0 8C-10 0-10-8-4-9C-1-9.5 0-7 0-6C0-7 1-9.5 4-9C10-8 10 0 0 8z" fill="#E8466C"/></g>';
+    return '';
+  }
+  function petSvg(kind, mood, opts = {}) {
     const draw = PET_DRAW[kind] || PET_DRAW.pinguino;
+    const season = opts.decor === false ? null : (opts.season !== undefined ? opts.season : (S && S.settings.petDecor !== false ? petSeason() : null));
     return `<svg class="pet-svg mood-${mood} pet-${kind}" viewBox="0 0 120 130" aria-hidden="true">
       <ellipse class="pet-shadow" cx="60" cy="124" rx="30" ry="4" fill="rgba(20,12,50,.16)"/>
-      <g class="pet-body">${draw(mood)}</g>
+      <g class="pet-body">${draw(mood)}${petDecor(kind, season)}</g>
     </svg>`;
   }
   // Selector con dibujito: así se ve la mascota antes de elegirla.
   function petPickerHtml(cur) {
-    return `<div class="pet-picker" role="group" aria-label="Mascota"><button type="button" data-act="pet-pick" data-v="" aria-pressed="${!cur}"><span class="pp-none" aria-hidden="true">✕</span><span>Sin mascota</span></button>${Object.entries(PETS).map(([k, n]) => `<button type="button" data-act="pet-pick" data-v="${k}" aria-pressed="${cur === k}">${petSvg(k, 'idle')}<span>${n}</span></button>`).join('')}</div>`;
+    return `<div class="pet-picker" role="group" aria-label="Mascota"><button type="button" data-act="pet-pick" data-v="" aria-pressed="${!cur}"><span class="pp-none" aria-hidden="true">✕</span><span>Sin mascota</span></button>${Object.entries(PETS).map(([k, n]) => `<button type="button" data-act="pet-pick" data-v="${k}" aria-pressed="${cur === k}">${petSvg(k, 'idle', { decor: false })}<span>${n}</span></button>`).join('')}</div>`;
   }
   function petHtml() {
     if (!S.settings.pet) return '';
@@ -1801,7 +1878,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     <div class="len-other" hidden><label class="field" style="max-width:220px">Minutos<div class="stepper"><button type="button" class="step-btn" data-act="step" data-d="-15" aria-label="15 minutos menos">−</button><input data-digits data-max="600" data-change="class-len-min" inputmode="numeric" maxlength="3" value="${st.classLen || 120}" aria-label="Duración en minutos"><button type="button" class="step-btn" data-act="step" data-d="15" aria-label="15 minutos más">+</button></div></label></div>
     <p class="section-label">Tus clases</p>
     <p class="sub" style="margin:0 0 6px">Podés cambiar el nombre, el día o el horario de cada clase. Su asistencia no se pierde.</p>
-    <div>${S.classes.map((c) => `<div class="cls-row cls-edit" style="--mc:${colorOf(c.mat)}"><span class="dot"></span><input class="cls-name" data-change="class-name" data-id="${h(c.id)}" value="${h(c.name)}" maxlength="80" aria-label="Nombre de la clase"><select class="cls-dow" data-change="class-dow" data-id="${h(c.id)}" aria-label="Día de ${h(c.name)}">${days.map((d, i) => `<option value="${i}"${c.dow === i ? ' selected' : ''}>${d}</option>`).join('')}</select><span class="cls-time"><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="from" value="${h(c.from || '')}" aria-label="Empieza ${h(c.name)}"><span aria-hidden="true">a</span><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="to" value="${h(c.to || '')}" aria-label="Termina ${h(c.name)}"></span><button class="linkish" data-act="del-class" data-id="${h(c.id)}" aria-label="Borrar ${h(c.name)}">Borrar</button></div>`).join('') || '<p class="sub">Todavía no agregaste clases.</p>'}</div>
+    <div>${S.classes.map((c) => `<div class="cls-row cls-edit" style="--mc:${colorOf(c.mat)}"><span class="dot"></span><input class="cls-name" data-change="class-name" data-id="${h(c.id)}" value="${h(c.name)}" data-orig="${h(c.name)}" maxlength="80" aria-label="Nombre de la clase"><select class="cls-dow" data-change="class-dow" data-id="${h(c.id)}" data-orig="${c.dow}" aria-label="Día de ${h(c.name)}">${days.map((d, i) => `<option value="${i}"${c.dow === i ? ' selected' : ''}>${d}</option>`).join('')}</select><span class="cls-time"><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="from" value="${h(c.from || '')}" data-orig="${h(c.from || '')}" aria-label="Empieza ${h(c.name)}"><span aria-hidden="true">a</span><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="to" value="${h(c.to || '')}" data-orig="${h(c.to || '')}" aria-label="Termina ${h(c.name)}"></span><button class="linkish" data-act="del-class" data-id="${h(c.id)}" aria-label="Borrar ${h(c.name)}">Borrar</button></div>`).join('') || '<p class="sub">Todavía no agregaste clases.</p>'}</div>
     ${S.classes.length ? '<div class="actions sched-save"><button type="button" class="btn" data-act="save-schedule">Guardar horario</button></div>' : ''}
     ${cur.length ? `<form data-form="class"><div class="fields c2" style="margin-top:12px">
       <label class="field">Materia<select name="course">${cur.map((c) => `<option value="${h(c.id)}">${h(label(c))}</option>`).join('')}</select></label>
@@ -1870,7 +1947,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
 
   // ---------- Diálogos
   const modal = () => $('#modal');
-  function openModal(html) { const m = modal(); if (S && m.open && m.querySelector('.cls-edit') && !m.querySelector('[data-form="class"]:focus-within')) commitScheduleInputs(); m.innerHTML = `<button class="icon-btn close" data-act="close" aria-label="Cerrar">×</button>${html}`; decorate(m); if (!m.open) m.showModal(); }
+  function openModal(html) { const m = modal(); m.innerHTML = `<button class="icon-btn close" data-act="close" aria-label="Cerrar">×</button>${html}`; decorate(m); if (!m.open) m.showModal(); }
   // Toma lo que esté escrito en las clases del horario (aunque el celular no haya avisado el cambio) y lo guarda ya.
   function commitScheduleInputs() {
     const rows = document.querySelectorAll('#modal .cls-edit, #view .cls-edit');
@@ -1880,12 +1957,16 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       const id = (row.querySelector('[data-id]') || {}).dataset?.id;
       const c = S.classes.find((x) => x.id === id);
       if (!c) return;
+      // Solo lo que cambiaste en pantalla (distinto de cómo se mostró): nunca pisa lo que se cargó por otro lado.
+      const edited = (el) => el && el.value !== (el.dataset.orig ?? el.value);
       const nm = row.querySelector('.cls-name'); const dw = row.querySelector('.cls-dow');
       const fr = row.querySelector('[data-f="from"]'); const to = row.querySelector('[data-f="to"]');
-      if (nm && nm.value.trim() && nm.value.trim() !== c.name) { c.name = nm.value.trim(); changed = true; }
-      if (dw && +dw.value !== c.dow) { c.dow = +dw.value; changed = true; }
-      [[fr, 'from'], [to, 'to']].forEach(([el, f]) => { if (!el) return; const v = el.value; if ((v || undefined) !== c[f]) { if (v) c[f] = v; else delete c[f]; changed = true; } });
-      if (c.from && (!c.to || c.to <= c.from)) { c.to = addMin(c.from, S.settings.classLen || 120); changed = true; }
+      if (edited(nm) && nm.value.trim() && nm.value.trim() !== c.name) { c.name = nm.value.trim(); changed = true; }
+      if (edited(dw) && +dw.value !== c.dow) { c.dow = +dw.value; changed = true; }
+      [[fr, 'from'], [to, 'to']].forEach(([el, f]) => { if (!edited(el)) return; const v = el.value; if ((v || undefined) !== c[f]) { if (v) c[f] = v; else delete c[f]; changed = true; } });
+      if (edited(fr) && c.from && (!c.to || c.to <= c.from)) { c.to = addMin(c.from, S.settings.classLen || 120); changed = true; }
+      // Lo ya guardado pasa a ser el nuevo punto de partida.
+      [nm, dw, fr, to].forEach((el) => { if (el) el.dataset.orig = el.value; });
     });
     if (changed) sortClasses();
     if (changed || dirty) { dirty = true; clearTimeout(saveTimer); flush(); }
@@ -1966,12 +2047,14 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <hr class="divider"><p class="section-label" style="margin-top:0">Mascota</p>
       <p class="sub" style="margin:2px 0 8px">Te acompaña en Hoy y cambia de cara según lo que te pasa: racha, examen cerca, una mala nota, si es muy tarde.</p>
       ${petPickerHtml(st.pet)}
+      ${st.pet ? `<label class="check-line"><input type="checkbox" data-change="pet-decor" ${st.petDecor !== false ? 'checked' : ''}> Disfraces en fechas especiales: gorro en Navidad, calabaza en Halloween, gorrito de fiesta en Año Nuevo, flores el Día del Estudiante</label>` : ''}
       <hr class="divider"><p class="section-label" style="margin-top:0">Frases motivadoras</p>
       <p class="sub" style="margin:2px 0 8px">Una frase por día en Hoy, según lo que te pase: un examen cerca, una racha, faltas justas o dudas anotadas.</p>
       <div class="choice" role="group" aria-label="Frases motivadoras"><button type="button" data-act="motivation" data-v="1" aria-pressed="${!!st.motivation}">Activadas</button><button type="button" data-act="motivation" data-v="" aria-pressed="${!st.motivation}">Desactivadas</button></div>
       ${st.motivation ? `<label class="field" style="margin-top:10px">Tus propias frases (opcional, una por línea)<textarea rows="3" data-change="my-phrases" maxlength="2000" placeholder="Paso a paso se llega\nEl lunes arranco con Cálculo">${h(st.myPhrases || '')}</textarea><span class="sub" style="font-weight:400">Se mezclan con las de la app.</span></label>` : ''}
       <hr class="divider"><p class="section-label" style="margin-top:0">¿Cómo se usa?</p><div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost" data-act="tour">Ver guía de uso</button></div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Tenela como app en el celular</p>${installHtml()}
+      <p class="section-label">Ícono de la app</p>${appIconPickerHtml()}
       <hr class="divider"><p class="section-label" style="margin-top:0">Cuatrimestre</p><div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost" data-act="schedule">Editar horario</button></div>
       <hr class="divider"><p class="section-label" style="margin-top:0">Tus datos</p>
       <div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost" data-act="export">Exportar copia</button><label class="btn ghost plan-file">Importar copia<input class="vh" type="file" data-change="import" aria-label="Importar copia de tus datos"></label></div>
@@ -2183,6 +2266,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       if (el.dataset.v === 'other') { const box = $('.len-other'); if (box) { box.hidden = false; box.querySelector('input').focus(); } return; }
       S.settings.classLen = +el.dataset.v; save(); refreshSchedule();
     },
+    'app-icon'(el) { S.settings.appIcon = el.dataset.v; save(); applyAppIcon(); if (el.dataset.v === 'clasico') { document.querySelector('link[rel="apple-touch-icon"]').href = 'icons/apple-touch-icon.png'; document.querySelector('link[rel="manifest"]').href = 'manifest.webmanifest'; } settingsDialog(); toast('Ícono elegido. Volvé a agregar CursadOK a la pantalla de inicio para verlo.'); },
     'pet-pick'(el) { S.settings.pet = el.dataset.v; save(); render(); if (!inWizard()) settingsDialog(); },
     motivation(el) { S.settings.motivation = !!el.dataset.v; save(); render(); if (!inWizard()) settingsDialog(); },
     'custom-second-auto'() { S.settings.custom.second = ''; save(); render(); if (openDialogName() === 'Ajustes') settingsDialog(); },
@@ -2454,6 +2538,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         if (toIn && c.to && toIn.value !== c.to) toIn.value = c.to;
         return;
       }
+      if (kind === 'pet-decor') { S.settings.petDecor = el.checked; save(); render(); return; }
       if (kind === 'my-phrases') { S.settings.myPhrases = el.value.slice(0, 2000); save(); render(); return; }
       if (kind === 'setting') {
         S.settings[el.dataset.f] = el.value.trim();
@@ -2516,6 +2601,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     rev = data.rev;
     base = snap(S);
     render();
+    applyAppIcon();
     scrollTo(0, 0);
   }
   document.addEventListener('submit', async (e) => {
@@ -2660,6 +2746,76 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvent = e; });
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  // ---------- ÍCONO DE LA APP: se dibuja acá mismo (canvas) y se usa para la pantalla de inicio.
+  const APP_ICONS = {
+    clasico: 'Clásico', tucolor: 'Tu color', cuaderno: 'Cuaderno', pizarron: 'Pizarrón', postit: 'Post-it', kraft: 'Papel madera', degrade: 'Degradé', neon: 'Neón',
+  };
+  const iconCache = {};
+  function drawAppIcon(design, size) {
+    const key = `${design}|${size}|${design === 'tucolor' ? getComputedStyle(document.documentElement).getPropertyValue('--accent') : ''}`;
+    if (iconCache[key]) return iconCache[key];
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const g = c.getContext('2d'); const u = size / 24;
+    const noise = (alpha, n = size * 6) => { for (let i = 0; i < n; i++) { g.fillStyle = `rgba(${Math.random() < 0.5 ? '255,255,255' : '0,0,0'},${Math.random() * alpha})`; g.fillRect(Math.random() * size, Math.random() * size, u * 0.25, u * 0.25); } };
+    const check = (color, width = 3, glow = 0) => {
+      g.save(); g.strokeStyle = color; g.lineWidth = width * u; g.lineCap = 'round'; g.lineJoin = 'round';
+      if (glow) { g.shadowColor = color; g.shadowBlur = glow * u; }
+      g.beginPath(); g.moveTo(6.5 * u, 12.6 * u); g.lineTo(10.4 * u, 16.4 * u); g.lineTo(17.6 * u, 8.4 * u); g.stroke(); g.restore();
+    };
+    const box = (fill, stroke, w = 1.6) => { g.save(); const r = 4 * u; const x = 3.6 * u; const y = 3.6 * u; const s2 = 16.8 * u; g.beginPath(); g.roundRect ? g.roundRect(x, y, s2, s2, r) : g.rect(x, y, s2, s2); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = w * u; g.stroke(); } g.restore(); };
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#674EA7';
+    if (design === 'tucolor') { g.fillStyle = accent; g.fillRect(0, 0, size, size); check('#fff'); }
+    else if (design === 'cuaderno') {
+      g.fillStyle = '#FBF8EF'; g.fillRect(0, 0, size, size);
+      g.strokeStyle = 'rgba(70,110,170,.22)'; g.lineWidth = Math.max(1, u * 0.12);
+      for (let i = 1; i < 12; i++) { g.beginPath(); g.moveTo(0, i * 2 * u); g.lineTo(size, i * 2 * u); g.stroke(); g.beginPath(); g.moveTo(i * 2 * u, 0); g.lineTo(i * 2 * u, size); g.stroke(); }
+      g.strokeStyle = 'rgba(220,70,80,.55)'; g.lineWidth = u * 0.25; g.beginPath(); g.moveTo(3 * u, 0); g.lineTo(3 * u, size); g.stroke();
+      box(null, '#22305A', 1.4); check('#22305A', 2.6);
+    } else if (design === 'pizarron') {
+      g.fillStyle = '#7A5230'; g.fillRect(0, 0, size, size);
+      g.fillStyle = '#244A3A'; g.fillRect(1.6 * u, 1.6 * u, size - 3.2 * u, size - 3.2 * u); noise(0.08, size * 10);
+      g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(4 * u, 17 * u, 10 * u, 1.2 * u);
+      box(null, 'rgba(240,240,230,.85)', 1.2); check('rgba(245,245,235,.95)', 2.6);
+    } else if (design === 'postit') {
+      const gr = g.createLinearGradient(0, 0, 0, size); gr.addColorStop(0, '#FFF07A'); gr.addColorStop(1, '#FFD93B');
+      g.fillStyle = gr; g.fillRect(0, 0, size, size); noise(0.05);
+      g.fillStyle = 'rgba(255,255,255,.55)'; g.save(); g.translate(12 * u, 2 * u); g.rotate(-0.06); g.fillRect(-5 * u, -1.2 * u, 10 * u, 2.6 * u); g.restore();
+      check('#1F3A93', 2.8);
+    } else if (design === 'kraft') {
+      g.fillStyle = '#C9A57A'; g.fillRect(0, 0, size, size); noise(0.12, size * 14);
+      box(null, '#3A2A1A', 1.2); check('#1E1A16', 2.8);
+    } else if (design === 'degrade') {
+      const gr = g.createLinearGradient(0, 0, size, size); gr.addColorStop(0, '#5B3FD9'); gr.addColorStop(1, '#E2477F');
+      g.fillStyle = gr; g.fillRect(0, 0, size, size); check('#fff');
+    } else if (design === 'neon') {
+      g.fillStyle = '#0B0B16'; g.fillRect(0, 0, size, size);
+      box(null, '#3CF0FF', 0.9); check('#3CF0FF', 2.4, 3);
+    } else { g.fillStyle = '#22305A'; g.fillRect(0, 0, size, size); check('#fff'); }
+    return (iconCache[key] = c.toDataURL('image/png'));
+  }
+  // Pone el ícono elegido en la pestaña, en "Agregar a inicio" del iPhone y en la instalación de Android.
+  let manifestUrl = null;
+  function applyAppIcon() {
+    if (!S) return;
+    const d = S.settings.appIcon || 'clasico';
+    if (d === 'clasico') return; // el de siempre, con los archivos originales
+    try {
+      const i180 = drawAppIcon(d, 180); const i192 = drawAppIcon(d, 192); const i512 = drawAppIcon(d, 512);
+      const setLink = (rel, href) => { let l = document.querySelector(`link[rel="${rel}"]`); if (!l) { l = document.createElement('link'); l.rel = rel; document.head.append(l); } l.href = href; };
+      setLink('apple-touch-icon', i180); setLink('icon', i192);
+      const here = new URL('./', location.href).href;
+      const man = { name: 'CursadOK', short_name: 'CursadOK', lang: 'es-AR', start_url: `${here}#hoy`, scope: here, display: 'standalone', background_color: '#ECEEF2', theme_color: '#22305A', icons: [{ src: i192, sizes: '192x192', type: 'image/png' }, { src: i512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }] };
+      if (manifestUrl) URL.revokeObjectURL(manifestUrl);
+      manifestUrl = URL.createObjectURL(new Blob([JSON.stringify(man)], { type: 'application/manifest+json' }));
+      setLink('manifest', manifestUrl);
+    } catch (e) { /* si el navegador no deja, queda el ícono de siempre */ }
+  }
+  function appIconPickerHtml() {
+    const cur = S.settings.appIcon || 'clasico';
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    return `<div class="icon-picker" role="group" aria-label="Ícono de la app">${Object.entries(APP_ICONS).map(([k, n]) => `<button type="button" data-act="app-icon" data-v="${k}" aria-pressed="${cur === k}"><img src="${drawAppIcon(k, 112)}" alt="" width="56" height="56"><span>${n}</span></button>`).join('')}</div>
+      <p class="sub" style="margin-top:8px">${isStandalone() || ios ? 'Para que cambie en la pantalla de inicio: borrá el acceso de CursadOK y volvé a agregarlo (en Safari: Compartir → Agregar a inicio). Así funciona en el iPhone: el ícono se toma al agregarla.' : 'Se usa al instalarla. Si ya la tenés instalada, desinstalala y volvé a instalarla para ver el ícono nuevo.'}</p>`;
+  }
   function installHtml() {
     if (isStandalone()) return '<p class="sub">Ya la estás usando como app.</p>';
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
