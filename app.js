@@ -77,8 +77,8 @@
   function emptyState(user) {
     return {
       v: 2,
-      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', pet: '', petDecor: true, appIcon: 'clasico', classLen: 120, motivation: false, myPhrases: '', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
-      classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], todos: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', stickies: [], studyArchive: {}, matColors: {}, history: [],
+      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', pet: '', petDecor: true, appIcon: 'clasico', appIconColors: { g1: '#5B3FD9', g2: '#E2477F', bg: '#FFFFFF', fg: '#22305A' }, pomo: { work: 25, brk: 5, sound: '', vol: 0.5 }, classLen: 120, motivation: false, myPhrases: '', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
+      classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], todos: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', stickies: [], studyArchive: {}, pomodoros: [], matColors: {}, history: [],
     };
   }
   // Acepta datos viejos o importados y los deja en la forma actual.
@@ -499,7 +499,7 @@
   }
 
   // ---------- MASCOTA (opcional, se activa en Ajustes): pingüino, gatito, pez o búho. Cambia de cara según lo que te pasa.
-  const PETS = { pinguino: 'Pingüino', gatito: 'Gatito', yaguarete: 'Yaguareté', carpincho: 'Carpincho', condor: 'Cóndor', buho: 'Búho', pez: 'Pez', tortuga: 'Tortuga' };
+  const PETS = { pinguino: 'Pingüino', gatito: 'Gatito', yaguarete: 'Yaguareté', carpincho: 'Carpincho', condor: 'Cóndor', pato: 'Pato', buho: 'Búho', pez: 'Pez', tortuga: 'Tortuga' };
   function petMood() {
     const t = today(); const hr = new Date().getHours();
     if (hr >= 23 || hr < 5) return 'sleepy';
@@ -692,6 +692,22 @@
         ${petExtra(mood)}
         <path d="M46 118l-3 6M50 118v6M54 118l3 6M66 118l-3 6M70 118v6M74 118l3 6" stroke="#8A8A8A" stroke-width="2.4" stroke-linecap="round"/>`;
     },
+    pato(mood) {
+      // Pato amarillo, de costado mirando al frente, con pico ancho.
+      const body = '#F2C94C'; const bodyD = '#D9A82E'; const bill = '#F28C28'; const billD = '#C96A14';
+      const sad = mood === 'sad';
+      return `<path d="M92 92q16-6 18-16q2 14-12 22z" fill="${body}" stroke="${bodyD}" stroke-width="1.6" stroke-linejoin="round"/>
+        <ellipse cx="62" cy="96" rx="36" ry="24" fill="${body}" stroke="${bodyD}" stroke-width="1.6"/>
+        <path class="pet-flip-r${mood === 'happy' ? ' pet-wave' : ''}" d="${sad ? 'M70 92q18 4 22 18q-16 0-22-18z' : 'M66 88q22-6 28 8q-14 10-28-8z'}" fill="${bodyD}" opacity=".75"/>
+        <circle cx="60" cy="52" r="27" fill="${body}" stroke="${bodyD}" stroke-width="1.6"/>
+        <path d="M56 26q4-8 10-6q-4 2-4 7" fill="${body}" stroke="${bodyD}" stroke-width="1.4" stroke-linejoin="round"/>
+        ${petFace(mood)}
+        <path d="M46 62q14-6 28 0q2 8-14 10q-16-2-14-10z" fill="${bill}" stroke="${billD}" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="${sad ? 'M50 67q10 3 20 0' : 'M49 65q11 4 22 0'}" fill="none" stroke="${billD}" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="55" cy="63" r=".9" fill="${billD}"/><circle cx="65" cy="63" r=".9" fill="${billD}"/>
+        ${petExtra(mood)}
+        <path d="M44 116q-8 6 0 8h12q2-4-4-8zM68 116q-8 6 0 8h12q2-4-4-8z" fill="${bill}" stroke="${billD}" stroke-width="1.2" stroke-linejoin="round"/>`;
+    },
     buho(mood) {
       const feather = '#8C6B52'; const light = '#EBDCC7';
       return `<path class="pet-flip-l" d="${mood === 'sad' ? 'M27 74q-8 22 6 34q2-16 0-34z' : 'M26 66q-14 20 4 40q6-18 2-40z'}" fill="#6F533F"/>
@@ -717,7 +733,7 @@
     if (m === 2 && d >= 12 && d <= 14) return { kind: 'love' };
     return null;
   }
-  const HAT_AT = { pinguino: [60, 30], gatito: [60, 30], yaguarete: [60, 26], carpincho: [60, 30], condor: [60, 30], buho: [60, 30], pez: [60, 38], tortuga: [60, 64] };
+  const HAT_AT = { pato: [60, 28], pinguino: [60, 30], gatito: [60, 30], yaguarete: [60, 26], carpincho: [60, 30], condor: [60, 30], buho: [60, 30], pez: [60, 38], tortuga: [60, 64] };
   function petDecor(kind, season) {
     if (!season) return '';
     const [x, y] = HAT_AT[kind] || [60, 30];
@@ -1357,11 +1373,138 @@
     return `
     <header class="head"><div><h1>Estudio</h1><p class="lead">Tu avance en cada materia. Tocá una para ver sus prácticas, lecturas y TP, tildar lo que hiciste y marcar con <b>?</b> lo que te quedó en duda.</p></div>
       ${all.count ? `<div class="figs"><div class="fig"><b>${all.complete}<small> de ${all.count}</small></b><span>terminados</span></div>${totalDoubts ? `<div class="fig"><b>${totalDoubts}</b><span>${totalDoubts === 1 ? 'duda' : 'dudas'} para consultar</span></div>` : ''}</div>` : ''}</header>
+    ${pomoHtml()}
     ${chips}
     ${activeSubs.length ? `<div class="study-grid mt">${boxes}</div>` : '<section class="card mt"><div class="empty"><b>Todavía no hay materias en curso.</b>Marcá qué estás cursando en Carrera, o agregá material a cualquier materia.</div></section>'}
     ${oldSubs.length ? `<details class="study-old mt"${ui.showOldStudy ? ' open' : ''}><summary><span>Cursadas anteriores y archivadas</span><span class="sub">${pl(oldSubs.length, 'materia', 'materias')} · todo lo que tildaste queda guardado</span></summary><div class="study-grid mt">${oldBoxes}</div></details>` : ''}
     <div class="actions" style="justify-content:flex-start"><button class="btn ghost" data-act="add-prac" data-course="">Agregar material de otra materia</button></div>`;
   }
+
+  // ---------- POMODORO: bloques de concentración y descanso, con sonidos de ambiente hechos acá mismo.
+  // El reloj vive aparte de la pantalla: si cambiás de sección, sigue corriendo.
+  const POMO_PRESETS = [[25, 5], [50, 10], [15, 3]];
+  const POMO_SOUNDS = { '': 'Silencio', lluvia: 'Lluvia', olas: 'Olas', ruido: 'Ruido suave', viento: 'Viento' };
+  const pomo = { mode: 'focus', running: false, endAt: 0, left: null, cycle: 0, subj: '' };
+  try { Object.assign(pomo, JSON.parse(localStorage.getItem('cursadok-pomo') || '{}')); } catch (e) { /* sin almacenamiento: arranca de cero */ }
+  const pomoKeep = () => { try { localStorage.setItem('cursadok-pomo', JSON.stringify(pomo)); } catch (e) { /* no pasa nada */ } };
+  const pomoCfg = () => ({ work: 25, brk: 5, sound: '', vol: 0.5, ...((S && S.settings.pomo) || {}) });
+  const pomoTotal = (mode = pomo.mode) => (mode === 'focus' ? pomoCfg().work : mode === 'long' ? Math.max(15, pomoCfg().brk * 3) : pomoCfg().brk) * 60000;
+  const pomoLeft = () => (pomo.running ? Math.max(0, pomo.endAt - Date.now()) : (pomo.left ?? pomoTotal()));
+  const mmss = (ms) => { const t = Math.ceil(ms / 1000); return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
+  const POMO_MODE = { focus: 'Concentración', break: 'Descanso', long: 'Descanso largo' };
+  function pomoToday() {
+    const d = L.iso(today());
+    const list = (S.pomodoros || []).filter((p) => p.d === d);
+    return { n: list.length, min: list.reduce((a, p) => a + (p.min || 0), 0) };
+  }
+  function pomoHtml() {
+    const cfg = pomoCfg(); const left = pomoLeft(); const total = pomoTotal();
+    const subs = S.courses.filter(L.isCurrent);
+    const td = pomoToday();
+    const r = 52; const c = 2 * Math.PI * r; const done = 1 - left / total;
+    const petOn = S.settings.pet && pomo.mode === 'focus' && pomo.running;
+    return `<section class="card pomo mt pomo-${pomo.mode}${pomo.running ? ' is-running' : ''}" aria-label="Pomodoro">
+      <div class="card-head"><h2>Pomodoro</h2><span class="sub" id="pomo-today">${td.n ? `Hoy: ${pl(td.n, 'pomodoro', 'pomodoros')} · ${td.min} min` : 'Bloques de concentración con descansos cortos'}</span></div>
+      <div class="pomo-main">
+        <div class="pomo-ring" role="timer" aria-live="off" aria-label="${POMO_MODE[pomo.mode]}">
+          <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="pomo-bg" cx="60" cy="60" r="${r}"/><circle class="pomo-fg" id="pomo-arc" cx="60" cy="60" r="${r}" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - done)).toFixed(1)}"/></svg>
+          <div class="pomo-read"><b id="pomo-time">${mmss(left)}</b><span id="pomo-mode">${POMO_MODE[pomo.mode]}</span></div>
+          ${petOn ? `<span class="pomo-pet">${petSvg(S.settings.pet, 'study')}</span>` : ''}
+        </div>
+        <div class="pomo-side">
+          <div class="choice pomo-presets" role="group" aria-label="Duración">${POMO_PRESETS.map(([w, b]) => `<button type="button" data-act="pomo-preset" data-w="${w}" data-b="${b}" aria-pressed="${cfg.work === w && cfg.brk === b}">${w} / ${b} min</button>`).join('')}</div>
+          <label class="field">Estudiando<select data-change="pomo-subj" aria-label="Materia que estudiás"><option value="">Sin materia en particular</option>${subs.map((co) => `<option value="${h(co.subj)}"${pomo.subj === co.subj ? ' selected' : ''}>${h(label(co))}</option>`).join('')}</select></label>
+          <div class="actions pomo-btns">
+            <button type="button" class="btn" data-act="pomo-toggle">${pomo.running ? 'Pausar' : left < total ? 'Seguir' : 'Empezar'}</button>
+            <button type="button" class="btn ghost" data-act="pomo-reset">Reiniciar</button>
+            <button type="button" class="btn ghost" data-act="pomo-skip">${pomo.mode === 'focus' ? 'Ir al descanso' : 'Volver a estudiar'}</button>
+          </div>
+        </div>
+      </div>
+      <div class="pomo-sound"><span class="section-label" style="margin:0">Sonido de fondo</span>
+        <div class="choice" role="group" aria-label="Sonido de fondo">${Object.entries(POMO_SOUNDS).map(([k, n]) => `<button type="button" data-act="pomo-sound" data-v="${k}" aria-pressed="${cfg.sound === k}">${n}</button>`).join('')}</div>
+        ${cfg.sound ? `<label class="pomo-vol">Volumen<input type="range" min="0" max="1" step="0.05" value="${cfg.vol}" data-change="pomo-vol" aria-label="Volumen del sonido"></label>` : ''}
+        <span class="sub">Suena mientras te concentrás. Al terminar cada bloque, suena una campanita.</span>
+      </div>
+    </section>`;
+  }
+  // Sonidos de ambiente: ruido generado y filtrado (no se descarga nada).
+  let actx = null; let amb = null;
+  function ambStop() { if (amb) { try { amb.nodes.forEach((n) => { try { n.stop && n.stop(); } catch (e) { /* ya parado */ } n.disconnect && n.disconnect(); }); } catch (e) { /* nada */ } amb = null; } }
+  function ambStart() {
+    ambStop();
+    const { sound, vol } = pomoCfg();
+    if (!sound || pomo.mode !== 'focus' || !pomo.running) return;
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      const sr = actx.sampleRate; const buf = actx.createBuffer(1, sr * 6, sr); const d = buf.getChannelData(0);
+      let last = 0;
+      for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1; if (sound === 'lluvia') d[i] = w * 0.5; else { last = (last + 0.02 * w) / 1.02; d[i] = last * 3.2; } }
+      const src = actx.createBufferSource(); src.buffer = buf; src.loop = true;
+      const master = actx.createGain(); master.gain.value = 0;
+      const nodes = [src, master];
+      let chain = src;
+      const filt = (type, f, q = 0.7) => { const b = actx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; chain.connect(b); chain = b; nodes.push(b); return b; };
+      if (sound === 'lluvia') { filt('highpass', 900); filt('lowpass', 7000); }
+      if (sound === 'ruido') filt('lowpass', 900);
+      if (sound === 'olas' || sound === 'viento') {
+        const bp = sound === 'viento' ? filt('bandpass', 420, 1.4) : filt('lowpass', 700);
+        const swell = actx.createGain(); chain.connect(swell); chain = swell; nodes.push(swell);
+        const lfo = actx.createOscillator(); lfo.frequency.value = sound === 'olas' ? 0.09 : 0.17;
+        const depth = actx.createGain(); depth.gain.value = sound === 'olas' ? 0.45 : 0.3; swell.gain.value = 0.6;
+        lfo.connect(depth); depth.connect(swell.gain); lfo.start(); nodes.push(lfo, depth);
+        if (sound === 'viento') { const lfo2 = actx.createOscillator(); lfo2.frequency.value = 0.07; const d2 = actx.createGain(); d2.gain.value = 180; lfo2.connect(d2); d2.connect(bp.frequency); lfo2.start(); nodes.push(lfo2, d2); }
+      }
+      chain.connect(master); master.connect(actx.destination);
+      src.start();
+      master.gain.linearRampToValueAtTime(Number(vol) * 0.6, actx.currentTime + 1.2);
+      amb = { nodes, master };
+    } catch (e) { /* el navegador no deja audio: el timer sigue igual */ }
+  }
+  function bell() {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      [880, 1320, 1760].forEach((f, i) => {
+        const o = actx.createOscillator(); const g = actx.createGain(); o.type = 'sine'; o.frequency.value = f;
+        const t0 = actx.currentTime + i * 0.12; g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.25 / (i + 1), t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.6);
+        o.connect(g); g.connect(actx.destination); o.start(t0); o.stop(t0 + 1.7);
+      });
+    } catch (e) { /* sin audio */ }
+    try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) { /* sin vibración */ }
+  }
+  let pomoTimer = null;
+  function pomoTick() {
+    const left = pomoLeft();
+    const t = $('#pomo-time'); if (t) t.textContent = mmss(left);
+    const arc = $('#pomo-arc'); if (arc) { const c = 2 * Math.PI * 52; arc.setAttribute('stroke-dashoffset', (c * (left / pomoTotal())).toFixed(1)); }
+    pomoChip();
+    if (pomo.running) document.title = `${mmss(left)} · ${pomo.mode === 'focus' ? 'Concentración' : 'Descanso'} · ${APP_NAME}`;
+    if (pomo.running && left <= 0) pomoFinish(true);
+  }
+  function pomoRun() { clearInterval(pomoTimer); if (pomo.running) pomoTimer = setInterval(pomoTick, 500); pomoTick(); }
+  function pomoFinish(counted) {
+    if (pomo.mode === 'focus') {
+      if (counted) { const min = pomoCfg().work; mutate(() => { S.pomodoros = S.pomodoros || []; S.pomodoros.push({ d: L.iso(today()), subj: pomo.subj || '', min }); }, null); }
+      pomo.cycle += 1; pomo.mode = pomo.cycle % 4 === 0 ? 'long' : 'break';
+    } else pomo.mode = 'focus';
+    pomo.left = null;
+    if (counted) { bell(); toast(pomo.mode === 'focus' ? 'Terminó el descanso. ¡A seguir!' : pomo.mode === 'long' ? '¡Cuatro pomodoros! Te ganaste un descanso largo.' : 'Bloque terminado. Tomate un descanso.'); }
+    pomo.endAt = Date.now() + pomoTotal(); pomo.running = counted ? true : pomo.running;
+    if (!pomo.running) pomo.endAt = 0;
+    pomoKeep(); ambStart(); pomoRun();
+    if (route() === 'estudio') render();
+  }
+  function pomoChip() {
+    const top = $('.top'); if (!top || !S) return;
+    let chip = $('#pomo-chip');
+    const show = pomo.running || (pomo.left != null && pomo.left < pomoTotal());
+    if (!show || route() === 'estudio') { if (chip) chip.remove(); if (!pomo.running) document.title = APP_NAME; return; }
+    if (!chip) { chip = document.createElement('a'); chip.id = 'pomo-chip'; chip.href = '#estudio'; chip.className = 'pomo-chip'; top.insertBefore(chip, top.querySelector('[data-act="settings"]')); }
+    chip.textContent = `${pomo.running ? '' : '❚❚ '}${mmss(pomoLeft())} · ${pomo.mode === 'focus' ? 'estudiando' : 'descanso'}`;
+    chip.setAttribute('aria-label', `Pomodoro: ${mmss(pomoLeft())}. Ir a Estudio`);
+  }
+  if (pomo.running) setTimeout(pomoRun, 0);
 
   // ---------- WRAPPED: el resumen del cuatrimestre, como historias. Se abre solo cuando termina y desde Carrera.
   const SEM_ORDER = { A: 0, B: 1, Anual: 2 };
@@ -2316,6 +2459,15 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       commitScheduleInputs(); dirty = true; clearTimeout(saveTimer); flush();
       closeModal(); render(); toast('Horario guardado');
     },
+    'pomo-toggle'() {
+      if (pomo.running) { pomo.left = pomoLeft(); pomo.running = false; ambStop(); }
+      else { pomo.endAt = Date.now() + pomoLeft(); pomo.left = null; pomo.running = true; ambStart(); }
+      pomoKeep(); pomoRun(); render();
+    },
+    'pomo-reset'() { pomo.running = false; pomo.left = null; pomo.endAt = 0; pomo.mode = 'focus'; pomo.cycle = 0; ambStop(); pomoKeep(); pomoRun(); document.title = APP_NAME; render(); },
+    'pomo-skip'() { pomoFinish(false); render(); },
+    'pomo-preset'(el) { S.settings.pomo = { ...pomoCfg(), work: +el.dataset.w, brk: +el.dataset.b }; save(); if (!pomo.running) pomo.left = null; pomoKeep(); render(); },
+    'pomo-sound'(el) { S.settings.pomo = { ...pomoCfg(), sound: el.dataset.v }; save(); ambStart(); render(); },
     'study-archive'(el) {
       const k = el.dataset.subj; const on = !!el.dataset.v;
       S.studyArchive = S.studyArchive || {};
@@ -2538,6 +2690,9 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         if (toIn && c.to && toIn.value !== c.to) toIn.value = c.to;
         return;
       }
+      if (kind === 'icon-color') { S.settings.appIconColors = { ...iconColors(), [el.dataset.f]: el.value }; save(); applyAppIcon(); settingsDialog(); return; }
+      if (kind === 'pomo-subj') { pomo.subj = el.value; pomoKeep(); return; }
+      if (kind === 'pomo-vol') { S.settings.pomo = { ...pomoCfg(), vol: +el.value }; save(); if (amb && actx) amb.master.gain.linearRampToValueAtTime(+el.value * 0.6, actx.currentTime + 0.2); return; }
       if (kind === 'pet-decor') { S.settings.petDecor = el.checked; save(); render(); return; }
       if (kind === 'my-phrases') { S.settings.myPhrases = el.value.slice(0, 2000); save(); render(); return; }
       if (kind === 'setting') {
@@ -2731,7 +2886,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   });
   document.addEventListener('focusout', () => { tip.hidden = true; });
 
-  window.addEventListener('hashchange', () => { render(); scrollTo(0, 0); tip.hidden = true; });
+  window.addEventListener('hashchange', () => { render(); scrollTo(0, 0); tip.hidden = true; pomoChip(); });
   // Al volver a la pestaña, trae lo último guardado desde otro dispositivo.
   document.addEventListener('visibilitychange', async () => {
     if (document.hidden || !S || dirty || inflight || modal().open) return;
@@ -2747,51 +2902,22 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   // ---------- ÍCONO DE LA APP: se dibuja acá mismo (canvas) y se usa para la pantalla de inicio.
-  const APP_ICONS = {
-    clasico: 'Clásico', tucolor: 'Tu color', cuaderno: 'Cuaderno', pizarron: 'Pizarrón', postit: 'Post-it', kraft: 'Papel madera', degrade: 'Degradé', neon: 'Neón',
-  };
-  const iconCache = {};
+  const APP_ICONS = { clasico: 'Clásico', tucolor: 'Tu color', degrade: 'Degradé', byn: 'Blanco y negro', propio: 'Personalizado' };
+  const iconColors = () => ({ g1: '#5B3FD9', g2: '#E2477F', bg: '#FFFFFF', fg: '#22305A', ...((S && S.settings.appIconColors) || {}) });
   function drawAppIcon(design, size) {
-    const key = `${design}|${size}|${design === 'tucolor' ? getComputedStyle(document.documentElement).getPropertyValue('--accent') : ''}`;
-    if (iconCache[key]) return iconCache[key];
+    const col = iconColors();
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#674EA7';
     const c = document.createElement('canvas'); c.width = c.height = size;
     const g = c.getContext('2d'); const u = size / 24;
-    const noise = (alpha, n = size * 6) => { for (let i = 0; i < n; i++) { g.fillStyle = `rgba(${Math.random() < 0.5 ? '255,255,255' : '0,0,0'},${Math.random() * alpha})`; g.fillRect(Math.random() * size, Math.random() * size, u * 0.25, u * 0.25); } };
-    const check = (color, width = 3, glow = 0) => {
-      g.save(); g.strokeStyle = color; g.lineWidth = width * u; g.lineCap = 'round'; g.lineJoin = 'round';
-      if (glow) { g.shadowColor = color; g.shadowBlur = glow * u; }
-      g.beginPath(); g.moveTo(6.5 * u, 12.6 * u); g.lineTo(10.4 * u, 16.4 * u); g.lineTo(17.6 * u, 8.4 * u); g.stroke(); g.restore();
-    };
-    const box = (fill, stroke, w = 1.6) => { g.save(); const r = 4 * u; const x = 3.6 * u; const y = 3.6 * u; const s2 = 16.8 * u; g.beginPath(); g.roundRect ? g.roundRect(x, y, s2, s2, r) : g.rect(x, y, s2, s2); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = w * u; g.stroke(); } g.restore(); };
-    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#674EA7';
-    if (design === 'tucolor') { g.fillStyle = accent; g.fillRect(0, 0, size, size); check('#fff'); }
-    else if (design === 'cuaderno') {
-      g.fillStyle = '#FBF8EF'; g.fillRect(0, 0, size, size);
-      g.strokeStyle = 'rgba(70,110,170,.22)'; g.lineWidth = Math.max(1, u * 0.12);
-      for (let i = 1; i < 12; i++) { g.beginPath(); g.moveTo(0, i * 2 * u); g.lineTo(size, i * 2 * u); g.stroke(); g.beginPath(); g.moveTo(i * 2 * u, 0); g.lineTo(i * 2 * u, size); g.stroke(); }
-      g.strokeStyle = 'rgba(220,70,80,.55)'; g.lineWidth = u * 0.25; g.beginPath(); g.moveTo(3 * u, 0); g.lineTo(3 * u, size); g.stroke();
-      box(null, '#22305A', 1.4); check('#22305A', 2.6);
-    } else if (design === 'pizarron') {
-      g.fillStyle = '#7A5230'; g.fillRect(0, 0, size, size);
-      g.fillStyle = '#244A3A'; g.fillRect(1.6 * u, 1.6 * u, size - 3.2 * u, size - 3.2 * u); noise(0.08, size * 10);
-      g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(4 * u, 17 * u, 10 * u, 1.2 * u);
-      box(null, 'rgba(240,240,230,.85)', 1.2); check('rgba(245,245,235,.95)', 2.6);
-    } else if (design === 'postit') {
-      const gr = g.createLinearGradient(0, 0, 0, size); gr.addColorStop(0, '#FFF07A'); gr.addColorStop(1, '#FFD93B');
-      g.fillStyle = gr; g.fillRect(0, 0, size, size); noise(0.05);
-      g.fillStyle = 'rgba(255,255,255,.55)'; g.save(); g.translate(12 * u, 2 * u); g.rotate(-0.06); g.fillRect(-5 * u, -1.2 * u, 10 * u, 2.6 * u); g.restore();
-      check('#1F3A93', 2.8);
-    } else if (design === 'kraft') {
-      g.fillStyle = '#C9A57A'; g.fillRect(0, 0, size, size); noise(0.12, size * 14);
-      box(null, '#3A2A1A', 1.2); check('#1E1A16', 2.8);
-    } else if (design === 'degrade') {
-      const gr = g.createLinearGradient(0, 0, size, size); gr.addColorStop(0, '#5B3FD9'); gr.addColorStop(1, '#E2477F');
-      g.fillStyle = gr; g.fillRect(0, 0, size, size); check('#fff');
-    } else if (design === 'neon') {
-      g.fillStyle = '#0B0B16'; g.fillRect(0, 0, size, size);
-      box(null, '#3CF0FF', 0.9); check('#3CF0FF', 2.4, 3);
-    } else { g.fillStyle = '#22305A'; g.fillRect(0, 0, size, size); check('#fff'); }
-    return (iconCache[key] = c.toDataURL('image/png'));
+    const check = (color) => { g.strokeStyle = color; g.lineWidth = 3 * u; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(6.5 * u, 12.6 * u); g.lineTo(10.4 * u, 16.4 * u); g.lineTo(17.6 * u, 8.4 * u); g.stroke(); };
+    let bg = '#22305A'; let fg = '#FFFFFF';
+    if (design === 'tucolor') bg = accent;
+    if (design === 'byn') { bg = '#111111'; fg = '#FFFFFF'; }
+    if (design === 'propio') { bg = col.bg; fg = col.fg; }
+    if (design === 'degrade') { const gr = g.createLinearGradient(0, 0, size, size); gr.addColorStop(0, col.g1); gr.addColorStop(1, col.g2); g.fillStyle = gr; } else g.fillStyle = bg;
+    g.fillRect(0, 0, size, size);
+    check(fg);
+    return c.toDataURL('image/png');
   }
   // Pone el ícono elegido en la pestaña, en "Agregar a inicio" del iPhone y en la instalación de Android.
   let manifestUrl = null;
@@ -2811,10 +2937,14 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     } catch (e) { /* si el navegador no deja, queda el ícono de siempre */ }
   }
   function appIconPickerHtml() {
-    const cur = S.settings.appIcon || 'clasico';
+    const cur = APP_ICONS[S.settings.appIcon] ? S.settings.appIcon : 'clasico';
+    const col = iconColors();
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const color = (f, lbl) => `<label class="icon-color">${lbl}<input type="color" value="${h(col[f])}" data-change="icon-color" data-f="${f}"></label>`;
     return `<div class="icon-picker" role="group" aria-label="Ícono de la app">${Object.entries(APP_ICONS).map(([k, n]) => `<button type="button" data-act="app-icon" data-v="${k}" aria-pressed="${cur === k}"><img src="${drawAppIcon(k, 112)}" alt="" width="56" height="56"><span>${n}</span></button>`).join('')}</div>
-      <p class="sub" style="margin-top:8px">${isStandalone() || ios ? 'Para que cambie en la pantalla de inicio: borrá el acceso de CursadOK y volvé a agregarlo (en Safari: Compartir → Agregar a inicio). Así funciona en el iPhone: el ícono se toma al agregarla.' : 'Se usa al instalarla. Si ya la tenés instalada, desinstalala y volvé a instalarla para ver el ícono nuevo.'}</p>`;
+      ${cur === 'degrade' ? `<div class="icon-colors">${color('g1', 'Color 1')}${color('g2', 'Color 2')}</div>` : ''}
+      ${cur === 'propio' ? `<div class="icon-colors">${color('bg', 'Fondo')}${color('fg', 'Tilde')}</div>` : ''}
+      <p class="sub" style="margin-top:8px">${isStandalone() || ios ? 'Para que cambie en la pantalla de inicio: borrá el acceso de CursadOK y volvé a agregarlo (en Safari: Compartir → Agregar a inicio). En el iPhone el ícono se toma al agregarla.' : 'Se usa al instalarla. Si ya la tenés instalada, desinstalala y volvé a instalarla para ver el ícono nuevo.'}</p>`;
   }
   function installHtml() {
     if (isStandalone()) return '<p class="sub">Ya la estás usando como app.</p>';

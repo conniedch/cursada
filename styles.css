@@ -1246,3 +1246,62 @@ body.is-auth .auth .card { box-shadow: 0 1px 0 var(--line), 0 18px 50px -18px co
 .icon-picker button { display: grid; justify-items: center; gap: 5px; padding: 8px 4px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: 600 12px var(--body); cursor: pointer; }
 .icon-picker img { width: 56px; height: 56px; border-radius: 13px; box-shadow: 0 2px 6px rgba(20, 12, 50, .18); }
 .icon-picker button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+
+/* Animaciones de la mascota, más tranquilas: respira apenas, parpadea a destiempo,
+   mira de reojo y de vez en cuando inclina la cabeza. */
+.pet-body { animation: pet-breathe2 4.2s ease-in-out infinite; }
+@keyframes pet-breathe2 { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.2px) scale(1.006, .996); } }
+.pet-btn .pet-svg { animation: pet-tilt 11s ease-in-out infinite; transform-origin: 50% 90%; }
+@keyframes pet-tilt { 0%, 62%, 100% { transform: rotate(0); } 68%, 76% { transform: rotate(-3deg); } 82% { transform: rotate(0); } }
+.pet-eyes { animation: pet-blink2 6.3s infinite, pet-look 13s ease-in-out infinite; }
+@keyframes pet-blink2 { 0%, 46%, 50%, 90%, 93.5%, 97%, 100% { transform: scaleY(1); } 48%, 92%, 95.5% { transform: scaleY(.08); } }
+@keyframes pet-look { 0%, 20%, 100% { translate: 0 0; } 26%, 40% { translate: -1.6px 0; } 46%, 58% { translate: 1.6px 0; } 64% { translate: 0 0; } }
+.pet-btn.jump .pet-body { animation: pet-hop .55s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes pet-hop { 0% { transform: translateY(0) scale(1, 1); } 20% { transform: translateY(0) scale(1.06, .92); } 55% { transform: translateY(-10px) scale(.97, 1.04); } 100% { transform: translateY(0) scale(1, 1); } }
+@media (prefers-reduced-motion: reduce) { .pet-btn .pet-svg, .pet-eyes { animation: none !important; } }
+
+/* Pomodoro */
+.pomo-main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: center; }
+.pomo-ring { position: relative; width: 190px; height: 190px; }
+.pomo-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.pomo-bg { fill: none; stroke: var(--card-2); stroke-width: 9; }
+.pomo-fg { fill: none; stroke: var(--accent); stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset .5s linear; }
+.pomo-break .pomo-fg, .pomo-long .pomo-fg { stroke: var(--ok-ink); }
+.pomo-read { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.pomo-read b { font: 600 40px/1 "DM Mono", monospace; letter-spacing: -.02em; color: var(--ink); }
+.pomo-read span { font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 4px; }
+.pomo-pet { position: absolute; right: -18px; bottom: -8px; width: 62px; height: 68px; }
+.pomo-pet .pet-svg { width: 100%; height: 100%; }
+.pomo-side { display: grid; gap: 12px; min-width: 0; }
+.pomo-presets button { font-size: 13px; padding: 5px 10px; }
+.pomo-btns { justify-content: flex-start; margin: 0; flex-wrap: wrap; }
+.pomo-sound { display: grid; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.pomo-sound .choice button { font-size: 13px; padding: 5px 10px; }
+.pomo-vol { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.pomo-vol input { flex: 1; max-width: 240px; accent-color: var(--accent); }
+.pomo.is-running .pomo-read b { color: var(--accent); }
+.pomo-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font: 600 13px "DM Mono", monospace; text-decoration: none; white-space: nowrap; margin-left: auto; }
+@media (max-width: 760px) {
+  .pomo-main { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .pomo-ring { width: 170px; height: 170px; }
+  .pomo-side { width: 100%; }
+  .pomo-btns { justify-content: center; }
+  .pomo-chip { margin-left: auto; margin-right: 6px; font-size: 12px; padding: 4px 9px; }
+}
+
+/* Animaciones sobrias (para un compa de estudio, no un dibujito):
+   sin saltos ni aleteos, sin lágrimas ni zetas que se mueven. Solo micro-movimientos. */
+.pet-wave, .pet-wave-tail, .pet-gatito .pet-tail:not(.pet-wave-tail), .pet-tear, .pet-z text, .pet-spark { animation: none !important; }
+.pet-body { animation: pet-still 6s ease-in-out infinite; }
+@keyframes pet-still { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.6px); } }
+.pet-btn .pet-svg { animation: pet-tilt2 14s ease-in-out infinite; }
+@keyframes pet-tilt2 { 0%, 70%, 100% { transform: rotate(0); } 75%, 84% { transform: rotate(-1.6deg); } 90% { transform: rotate(0); } }
+.pet-btn.jump .pet-body { animation: pet-nod .5s ease-out; }
+@keyframes pet-nod { 0% { transform: translateY(0) rotate(0); } 35% { transform: translateY(1.5px) rotate(2.5deg); } 100% { transform: translateY(0) rotate(0); } }
+.pet-fin { animation-duration: 2.4s; }
+.pet-swim { animation-duration: 5s; }
+.pet-bubbles circle { animation-duration: 5s; }
+.pet-z { opacity: .55; }
+.icon-colors { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+.icon-color { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.icon-color input { width: 44px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; cursor: pointer; }
