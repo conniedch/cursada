@@ -562,12 +562,6 @@
     if (m === 10 && d >= 24) return { kind: 'halloween' };
     if (m === 9 && d >= 18 && d <= 23) return { kind: 'spring' };
     if (m === 2 && d >= 12 && d <= 14) return { kind: 'love' };
-    // Algunos días hábiles (más o menos uno de cada cuatro, siempre el mismo para esa fecha): vincha con el día.
-    const dw = L.dow(t);
-    if (dw <= 4) {
-      const r = Math.abs(Math.sin((t.getFullYear() * 10000 + m * 100 + d) * 12.9898) * 43758.5453) % 1;
-      if (r < 0.25) return { kind: 'weekday', dow: dw };
-    }
     return null;
   }
   const INK = '#5A4636';
@@ -584,12 +578,6 @@
       if (season.kind === 'halloween') g += '<g transform="translate(103 112) scale(1.35)"><ellipse rx="12" ry="9.5" fill="#D9822B" stroke="#8A4A14" stroke-width="1"/><path d="M-4-9v18M4-9v18" stroke="#B0631C" stroke-width="1.2"/><path d="M0-9q1-5 4-6" stroke="#4E6A2A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M-6-2l2.2-2.6 2.2 2.6zM1.8-2l2.2-2.6 2.2 2.6z" fill="#3A1D05"/><path d="M-5 3q5 3.4 10 0q-5 1.8-10 0z" fill="#3A1D05"/></g>';
       if (season.kind === 'spring') g += '<g transform="translate(8 112) scale(1.35)">' + [['#E89AAE', 0, 0], ['#E8C766', 9, -3], ['#9CC3E0', 17, 1]].map(([c, x, y]) => `<path d="M${x} ${y + 2}v8" stroke="#6E8F4E" stroke-width="1.2"/><g transform="translate(${x} ${y}) scale(1.35)">${[0, 72, 144, 216, 288].map((r) => `<ellipse rx="2" ry="3.4" cy="-3" fill="${c}" transform="rotate(${r})"/>`).join('')}<circle r="1.6" fill="#F4E6B0"/></g>`).join('') + '</g>';
       if (season.kind === 'love') g += '<g transform="translate(102 20) scale(1.35)"><path d="M0 8C-10 0-10-8-4-9C-1-9.5 0-7 0-6C0-7 1-9.5 4-9C10-8 10 0 0 8z" fill="#C9586F" stroke="#7E2E40" stroke-width=".8"/></g>';
-      if (season.kind === 'weekday') {
-        const word = cap(L.DIAS[season.dow]);
-        const color = ['#4E6E9E', '#A04A6A', '#4E8A5E', '#B8742E', '#6B5B95'][season.dow];
-        const w = Math.max(30, word.length * 5.4 + 10);
-        g += `<g transform="translate(${4 + w * 0.68} 18) rotate(-5) scale(1.35)"><path d="M0-10v4" stroke="${INK}" stroke-width=".8"/><circle cy="-10.5" r="1.3" fill="${INK}"/><rect x="${-w / 2}" y="-6" width="${w}" height="13" rx="2" fill="#F4ECDD" stroke="${color}" stroke-width="1.4"/><text y="3.2" text-anchor="middle" font-size="8" font-weight="700" font-family="Georgia, serif" fill="${color}">${word}</text></g>`;
-      }
     }
     return g ? `<svg class="pet-around" viewBox="0 0 120 130" aria-hidden="true">${g}</svg>` : '';
   }
@@ -597,14 +585,14 @@
   const PET_MUG = `<g class="pet-mug" transform="translate(100 104) scale(1.3)"><g class="pet-steam" fill="none" stroke="#A39A92" stroke-width="1.1" stroke-linecap="round"><path d="M-3-3q-2.4-3.5 0-7t0-7"/><path d="M2.6-4q-2.4-3.5 0-7t0-6"/></g><path d="M-8 0h15v11a6 6 0 0 1-6 6h-3a6 6 0 0 1-6-6z" fill="#EDE6DA" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round"/><path d="M7 2.5a4.2 4.2 0 0 1 0 8.4" fill="none" stroke="${INK}" stroke-width="1.2"/><path d="M-6.5 2h12" stroke="#7A5638" stroke-width="2" stroke-linecap="round"/></g>`;
   function petSvg(kind, mood, opts = {}) {
     if (!PETS[kind]) kind = 'oso';
-    const pick = S && S.settings.petDecorPick && S.settings.petDecorPick.d === L.iso(today()) ? S.settings.petDecorPick.season : undefined;
+    const pick = S && S.settings.petDecorPick && S.settings.petDecorPick.d === L.iso(today()) && S.settings.petDecorPick.season && S.settings.petDecorPick.season.kind !== 'weekday' ? S.settings.petDecorPick.season : undefined;
     const season = opts.decor === false ? null : (opts.season !== undefined ? opts.season : (S && S.settings.petDecor !== false ? (pick !== undefined ? pick : petSeason()) : null));
     return `<span class="pet-svg pet-art pet-${kind} mood-${mood}"><img class="pet-img" src="icons/pets/${kind}.webp" alt="" draggable="false" decoding="async">${opts.decor === false ? '' : petAround(kind, mood, season, opts.coffee)}</span>`;
   }
   // Todos los detalles de fechas con tu mascota; tocando uno, lo lleva puesto hoy.
   function petDecorPreviewHtml(kind) {
     const t = today(); const dw = L.dow(t);
-    const opts = [['weekday', `Cartel de ${L.DIAS[dw <= 4 ? dw : 0]}`, { kind: 'weekday', dow: dw <= 4 ? dw : 0 }], ['xmas', 'Navidad', { kind: 'xmas' }], ['halloween', 'Halloween', { kind: 'halloween' }], ['newyear', 'Año Nuevo', { kind: 'newyear', year: t.getMonth() === 0 ? t.getFullYear() : t.getFullYear() + 1 }], ['spring', 'Día del Estudiante', { kind: 'spring' }], ['love', 'San Valentín', { kind: 'love' }]];
+    const opts = [['xmas', 'Navidad', { kind: 'xmas' }], ['halloween', 'Halloween', { kind: 'halloween' }], ['newyear', 'Año Nuevo', { kind: 'newyear', year: t.getMonth() === 0 ? t.getFullYear() : t.getFullYear() + 1 }], ['spring', 'Día del Estudiante', { kind: 'spring' }], ['love', 'San Valentín', { kind: 'love' }]];
     const pick = S.settings.petDecorPick && S.settings.petDecorPick.d === L.iso(t) ? S.settings.petDecorPick.season : null;
     return `<p class="section-label" style="margin:12px 0 4px">Detalles de fechas</p><p class="sub" style="margin:0 0 8px">Aparecen solos en su fecha. Tocá uno para que tu mascota lo lleve hoy.</p>
       <div class="decor-picker" role="group" aria-label="Detalle para hoy">${opts.map(([k, n, se]) => `<button type="button" data-act="decor-pick" data-k="${k}" aria-pressed="${!!pick && pick.kind === k}">${petSvg(kind, 'idle', { season: se })}<span>${h(n)}</span></button>`).join('')}${pick ? '<button type="button" class="decor-off" data-act="decor-pick" data-k="">Sacárselo</button>' : ''}</div>`;
@@ -2051,7 +2039,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <p class="sub" style="margin:2px 0 8px">Te acompaña en Hoy. Según cómo te va aparece con un libro, una nubecita o su café, y si la tocás te cuenta un chiste.</p>
       ${petPickerHtml(st.pet)}
       ${st.pet && st.petDecor !== false ? petDecorPreviewHtml(st.pet) : ''}
-      ${st.pet ? `<label class="check-line"><input type="checkbox" data-change="pet-decor" ${st.petDecor !== false ? 'checked' : ''}> Detalles de fechas: regalo en Navidad, calabaza en Halloween, gorrito en Año Nuevo, flores el Día del Estudiante y, algunos días de semana, un cartelito con el día</label>` : ''}
+      ${st.pet ? `<label class="check-line"><input type="checkbox" data-change="pet-decor" ${st.petDecor !== false ? 'checked' : ''}> Detalles de fechas: regalo en Navidad, calabaza en Halloween, gorrito en Año Nuevo, flores el Día del Estudiante y corazón en San Valentín</label>` : ''}
       <hr class="divider"><p class="section-label" style="margin-top:0">Frases motivadoras</p>
       <p class="sub" style="margin:2px 0 8px">Una frase por día en Hoy, según lo que te pase: un examen cerca, una racha, faltas justas o dudas anotadas.</p>
       <div class="choice" role="group" aria-label="Frases motivadoras"><button type="button" data-act="motivation" data-v="1" aria-pressed="${!!st.motivation}">Activadas</button><button type="button" data-act="motivation" data-v="" aria-pressed="${!st.motivation}">Desactivadas</button></div>
@@ -2273,7 +2261,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     'app-icon'(el) { S.settings.appIcon = el.dataset.v; save(); applyAppIcon(); if (el.dataset.v === 'clasico') { document.querySelector('link[rel="apple-touch-icon"]').href = 'icons/apple-touch-icon.png'; document.querySelector('link[rel="manifest"]').href = 'manifest.webmanifest'; } settingsDialog(); toast('Ícono elegido. Volvé a agregar CursadOK a la pantalla de inicio para verlo.'); },
     'decor-pick'(el) {
       const t = today(); const dw = L.dow(t); const k = el.dataset.k;
-      const map = { weekday: { kind: 'weekday', dow: dw <= 4 ? dw : 0 }, xmas: { kind: 'xmas' }, halloween: { kind: 'halloween' }, newyear: { kind: 'newyear', year: t.getMonth() === 0 ? t.getFullYear() : t.getFullYear() + 1 }, spring: { kind: 'spring' }, love: { kind: 'love' } };
+      const map = { xmas: { kind: 'xmas' }, halloween: { kind: 'halloween' }, newyear: { kind: 'newyear', year: t.getMonth() === 0 ? t.getFullYear() : t.getFullYear() + 1 }, spring: { kind: 'spring' }, love: { kind: 'love' } };
       S.settings.petDecorPick = k ? { d: L.iso(t), season: map[k] } : null;
       save(); render(); settingsDialog();
     },
