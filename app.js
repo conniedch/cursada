@@ -66,6 +66,8 @@
     if (!GREETS.includes(out.settings.greet)) out.settings.greet = 'Hola';
     if (!isHex(out.settings.custom.accent)) out.settings.custom.accent = '#674EA7';
     if (!isHex(out.settings.custom.second)) out.settings.custom.second = '';
+    const todayIso = L.iso(today());
+    out.todos = (out.todos || []).filter((x) => !x.doneOn || x.doneOn >= todayIso);
     out.classes = (out.classes || []).map((c) => {
       const co = out.courses.find((x) => x.id === c.course);
       return { ...c, mat: co ? co.subj : c.mat };
@@ -392,6 +394,27 @@
   function segButtons(key, state) {
     return `<div class="seg" role="group" aria-label="Estado de la clase">${['p', 'a', 'n', 'f'].map((s) => `<button data-act="mark" data-key="${key}" data-s="${s}" aria-pressed="${state === s}" aria-label="${STATE_WORD[s]}"><span class="g" aria-hidden="true">${STATE_GLYPH[s]}</span><span class="w">${STATE_WORD[s]}</span></button>`).join('')}</div>`;
   }
+  // Las clases de hoy en orden de hora, con los huecos libres entre una y otra.
+  const toMin = (x) => { const [a, b] = x.split(':').map(Number); return a * 60 + b; };
+  const durTxt = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60}` : ''}`);
+  function dayTimeline(todays) {
+    const timed = todays.filter((c) => c.cls.from && c.cls.to).sort((a, b) => a.cls.from.localeCompare(b.cls.from));
+    const untimed = todays.filter((c) => !(c.cls.from && c.cls.to));
+    let out = '';
+    timed.forEach((c, i) => {
+      out += classRow(c, `${c.cls.from} a ${c.cls.to}`);
+      const next = timed[i + 1];
+      if (next) {
+        const gap = toMin(next.cls.from) - toMin(c.cls.to);
+        if (gap >= 30) out += `<div class="gap-row"><span class="gap-line" aria-hidden="true"></span><span><b>Hueco libre</b> de ${c.cls.to} a ${next.cls.from} · ${durTxt(gap)}</span></div>`;
+      }
+    });
+    if (timed.length) out += `<p class="gap-end sub">Terminás a las ${timed[timed.length - 1].cls.to}.</p>`;
+    if (timed.length && untimed.length) out += '<p class="section-label" style="margin:12px 0 2px">Sin horario cargado</p>';
+    out += untimed.map((c) => classRow(c)).join('');
+    if (!timed.length) out += '<p class="sub gap-hint">Cargá a qué hora es cada clase en <button class="linkish" data-act="schedule">tu horario</button> y acá vas a ver tus huecos libres.</p>';
+    return out;
+  }
   function classRow(c, extra) {
     const note = S.cellNotes[c.key];
     const chip = note && note.t ? ` <button class="note-chip" data-act="cell" data-key="${c.key}" aria-label="Ver nota: ${h(note.t)}">nota</button>` : '';
@@ -594,7 +617,7 @@
       todayHtml = '<div class="card-head"><h2>Hoy</h2></div><div class="empty"><b>Todavía no cargaste tu horario.</b>Con tus clases, acá marcás si fuiste en un toque.</div><div class="actions" style="justify-content:flex-start"><button class="btn" data-act="schedule">Armar horario</button></div>';
     } else if (todays.length) {
       const done = todays.filter((c) => c.state).length;
-      todayHtml = `<div class="card-head"><h2>Hoy cursás</h2><span class="sub">${done} de ${todays.length} cargadas</span></div>${todays.map((c) => classRow(c)).join('')}`;
+      todayHtml = `<div class="card-head"><h2>Hoy cursás</h2><span class="sub">${done} de ${todays.length} cargadas</span></div>${dayTimeline(todays)}`;
     } else {
       const next = cells.find((c) => L.daysBetween(t, c.date) > 0 && c.state !== 'n');
       const msg = week && week.kind !== 'clases' ? `Esta semana es de ${week.kind}, sin clases en la grilla.` : 'No tenés clases hoy.';
@@ -619,13 +642,17 @@
       const co = a.course && course(a.course);
       return `<li class="cd${n <= 3 ? ' soon' : ''}"${co ? ` style="--mc:${colorOf(co.subj)}"` : ''}><span class="cd-n"><b>${n === 0 ? 'Hoy' : n}</b>${n ? `<small>${n === 1 ? 'día' : 'días'}</small>` : ''}</span><span class="cd-txt">${h(countdownText(a, n))}<span class="sub">${cap(longDate(L.parseDate(a.date)))}</span></span><button class="x" data-act="del-agenda" data-id="${h(a.id)}" aria-label="Borrar ${h(examPhrase(a))}">×</button></li>`;
     }).join('');
+    // Lo que tachás hoy queda tachado hasta mañana: así se ve lo que hiciste.
+    const tIso = L.iso(t);
     const pend = [
       ...pendingDated().filter((p) => L.daysBetween(t, L.parseDate(p.date)) >= 0).map((p) => ({ kind: 'mat', id: p.id, text: p.name, meta: `${kindOf(p).n} · ${matLabel(subjOfPractice(p))}`, date: p.date })),
-      ...(S.todos || []).map((x) => ({ kind: 'todo', id: x.id, text: x.text, meta: '', date: x.date || '' })),
-    ].sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+      ...S.practices.filter((p) => p.date && p.doneOn === tIso && isComplete(p)).map((p) => ({ kind: 'mat', id: p.id, text: p.name, meta: `${kindOf(p).n} · ${matLabel(subjOfPractice(p))}`, date: p.date, done: true })),
+      ...(S.todos || []).filter((x) => !x.doneOn || x.doneOn === tIso).map((x) => ({ kind: 'todo', id: x.id, text: x.text, meta: '', date: x.date || '', done: !!x.doneOn })),
+    ].sort((a, b) => Number(!!a.done) - Number(!!b.done) || (a.date || '9999').localeCompare(b.date || '9999'));
+    const openCount = pend.filter((x) => !x.done).length;
     const due = (d) => { if (!d) return ''; const n = L.daysBetween(t, L.parseDate(d)); return n < 0 ? '<span class="days-to late">venció</span>' : `<span class="days-to">${n === 0 ? 'hoy' : n === 1 ? 'mañana' : `${n} días`}</span>`; };
-    const pendHtml = `<section class="card"><div class="card-head"><h2>Pendientes</h2>${pend.length ? `<span class="sub">${pl(pend.length, 'cosa', 'cosas')}</span>` : ''}</div>
-      ${pend.length ? `<ul class="list todo-list">${pend.map((x) => `<li><button class="todo-check" data-act="${x.kind === 'mat' ? 'mat-done' : 'todo-done'}" data-id="${h(x.id)}" aria-label="Marcar como hecho: ${h(x.text)}">${icon('check')}</button><span class="todo-txt">${h(x.text)}${x.meta || x.date ? `<span class="sub">${h(x.meta)}${x.meta && x.date ? ' · ' : ''}${x.date ? `para el ${shortDate(L.parseDate(x.date))}` : ''}</span>` : ''}</span>${due(x.date)}</li>`).join('')}</ul>` : '<p class="sub">Nada pendiente. Sumá algo, o ponele fecha a un material en Estudio y aparece acá hasta que lo termines.</p>'}
+    const pendHtml = `<section class="card"><div class="card-head"><h2>Pendientes</h2>${pend.length ? `<span class="sub">${openCount ? pl(openCount, 'cosa', 'cosas') : '¡Todo hecho por hoy!'}</span>` : ''}</div>
+      ${pend.length ? `<ul class="list todo-list">${pend.map((x) => `<li class="${x.done ? 'is-done' : ''}"><button class="todo-check" data-act="${x.kind === 'mat' ? 'mat-done' : 'todo-done'}" data-id="${h(x.id)}" aria-pressed="${!!x.done}" aria-label="${x.done ? 'Desmarcar' : 'Marcar como hecho'}: ${h(x.text)}">${icon('check')}</button><span class="todo-txt">${h(x.text)}${x.meta || x.date ? `<span class="sub">${h(x.meta)}${x.meta && x.date ? ' · ' : ''}${x.date ? `para el ${shortDate(L.parseDate(x.date))}` : ''}</span>` : ''}</span>${x.done ? '<span class="days-to">hecho</span>' : due(x.date)}</li>`).join('')}</ul>` : '<p class="sub">Nada pendiente. Sumá algo, o ponele fecha a un material en Estudio y aparece acá hasta que lo termines.</p>'}
       <form data-form="todo" class="todo-add"><input name="text" required maxlength="120" placeholder="Agregá algo para hacer" aria-label="Nuevo pendiente"><input name="date" type="date" aria-label="Para cuándo (opcional)"><button class="btn small" type="submit">Agregar</button></form>
     </section>`;
     const dueRows = pendingDated().filter((p) => L.daysBetween(t, L.parseDate(p.date)) >= 0).sort((a, b) => a.date.localeCompare(b.date)).map((p) => {
@@ -1343,10 +1370,11 @@ Reglas:
       const k = `${it.dow}|${it.courseId}|${it.tipo}`;
       seen[k] = (seen[k] || 0) + 1;
       const base = `${it.tipo} ${label(co)}`;
-      S.classes.push({ id: uid('c'), name: groups[k] > 1 ? `${base} · bloque ${seen[k]}` : base, mat: co.subj, course: co.id, dow: it.dow });
+      S.classes.push({ id: uid('c'), name: groups[k] > 1 ? `${base} · bloque ${seen[k]}` : base, mat: co.subj, course: co.id, dow: it.dow, ...(it.from ? { from: it.from, to: it.to } : {}) });
     });
-    S.classes.sort((a, b) => a.dow - b.dow);
+    sortClasses();
   }
+  const sortClasses = () => S.classes.sort((a, b) => a.dow - b.dow || (a.from || '99').localeCompare(b.from || '99'));
   function recomputeWeeks() {
     const st = S.settings;
     if (!st.semFirst) return;
@@ -1389,15 +1417,15 @@ Reglas:
     return `Te paso mi horario de cursada de este cuatrimestre. Armalo con este formato exacto:
 
 Lunes
-Teórica - Nombre de la materia
-Práctica - Nombre de la materia
+Teórica - Nombre de la materia - 08:00 a 10:00
+Práctica - Nombre de la materia - 10:30 a 12:30
 Martes
-Tutorial - Nombre de la materia
+Tutorial - Nombre de la materia - 18:00 a 20:00
 
 Reglas:
-- Un renglón por clase: primero el tipo (Teórica, Práctica, Tutorial, Taller, Problemas…), un guion y la materia.
-- Si una materia tiene dos bloques el mismo día, escribí ese renglón dos veces.
-- Sin horarios, aulas ni profesores. Los días sin clases no los pongas.
+- Un renglón por clase: primero el tipo (Teórica, Práctica, Tutorial, Taller, Problemas…), un guion, la materia, otro guion y el horario con formato 08:00 a 10:00.
+- Si una materia tiene dos bloques el mismo día, un renglón por bloque, cada uno con su horario.
+- Sin aulas ni profesores. Si no se ve el horario de una clase, dejá el renglón sin horario. Los días sin clases no los pongas.
 ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; ')}.\n` : ''}- No inventes clases. Si algo no se lee, avisame antes de la lista.
 - Respondé con la lista dentro de un solo bloque de código.`;
   }
@@ -1405,7 +1433,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     if (!text.trim()) return '';
     const r = L.parseSchedule(text, L.subjects(S));
     const days = [...new Set(r.items.map((i) => i.dow))];
-    const list = days.map((d) => `<li><b>${cap(L.DIAS[d])}</b>${r.items.filter((i) => i.dow === d).map((i) => `${h(i.tipo)} ${h(label(course(i.courseId)))}`).join(' · ')}</li>`).join('');
+    const list = days.map((d) => `<li><b>${cap(L.DIAS[d])}</b>${r.items.filter((i) => i.dow === d).map((i) => `${h(i.tipo)} ${h(label(course(i.courseId)))}${i.from ? ` (${i.from} a ${i.to})` : ''}`).join(' · ')}</li>`).join('');
     return `${r.items.length ? `Encontré <b>${pl(r.items.length, 'clase', 'clases')}</b>.` : 'No encontré clases. Revisá que cada día esté como título.'}${r.unknown.length ? `<p class="auth-note">No reconocí estas materias: ${r.unknown.map(h).join(', ')}. Fijate que estén en tu plan, en Carrera.</p>` : ''}<ul class="plan-list">${list}</ul>${r.items.length ? `<div class="actions" style="justify-content:flex-start;margin-top:8px"><button type="button" class="btn" data-act="sched-apply">Agregar ${pl(r.items.length, 'clase', 'clases')}</button></div>` : ''}`;
   }
   function scheduleHtml(opts = {}) {
@@ -1432,12 +1460,14 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <div class="ok-line" id="sched-preview" aria-live="polite"></div>
     </section>`}
     <p class="section-label">Tus clases</p>
-    <div>${S.classes.map((c) => `<div class="cls-row"><span style="display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="dot" style="--mc:${colorOf(c.mat)}"></span>${h(c.name)} <span class="sub">${L.DIAS[c.dow]}</span></span><button class="linkish" data-act="del-class" data-id="${h(c.id)}" aria-label="Borrar ${h(c.name)}">Borrar</button></div>`).join('') || '<p class="sub">Todavía no agregaste clases.</p>'}</div>
+    <div>${S.classes.map((c) => `<div class="cls-row"><span style="display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="dot" style="--mc:${colorOf(c.mat)}"></span>${h(c.name)} <span class="sub">${L.DIAS[c.dow]}</span></span><span class="cls-time"><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="from" value="${h(c.from || '')}" aria-label="Empieza ${h(c.name)}"><span aria-hidden="true">a</span><input type="time" data-change="class-time" data-id="${h(c.id)}" data-f="to" value="${h(c.to || '')}" aria-label="Termina ${h(c.name)}"></span><button class="linkish" data-act="del-class" data-id="${h(c.id)}" aria-label="Borrar ${h(c.name)}">Borrar</button></div>`).join('') || '<p class="sub">Todavía no agregaste clases.</p>'}</div>
     ${cur.length ? `<form data-form="class"><div class="fields c2" style="margin-top:12px">
       <label class="field">Materia<select name="course">${cur.map((c) => `<option value="${h(c.id)}">${h(label(c))}</option>`).join('')}</select></label>
       <label class="field">Tipo de clase<input name="tipo" required value="Teórica" list="tipos"><datalist id="tipos"><option value="Teórica"><option value="Práctica"><option value="Tutorial"><option value="Problemas"><option value="Taller"></datalist></label>
       <label class="field">Día<select name="dow">${days.map((d, i) => `<option value="${i}">${d}</option>`).join('')}</select></label>
       <label class="field" style="align-content:end"><span style="display:flex;gap:7px;align-items:center;min-height:38px"><input type="checkbox" name="x2" style="width:auto"> Son dos bloques</span></label>
+      <label class="field">Desde (opcional)<input type="time" name="from"></label>
+      <label class="field">Hasta (opcional)<input type="time" name="to"></label>
     </div><div class="actions" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost" type="submit">Agregar clase</button></div></form>` : '<p class="sub" style="margin-top:8px">Marcá qué estás cursando en Carrera para poder agregar sus clases.</p>'}`;
   }
   function viewWizard() {
@@ -1863,12 +1893,14 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     'todo-done'(el) {
       const x = (S.todos || []).find((y) => y.id === el.dataset.id);
       if (!x) return;
-      mutate(() => { S.todos = S.todos.filter((y) => y !== x); }, `Hecho: ${x.text}`);
+      const was = !!x.doneOn;
+      mutate(() => { if (was) delete x.doneOn; else x.doneOn = L.iso(today()); }, was ? `Sin hacer: ${x.text}` : `Hecho: ${x.text}. Queda tachado hasta mañana.`);
     },
     'mat-done'(el) {
       const p = S.practices.find((y) => y.id === el.dataset.id);
       if (!p) return;
-      mutate(() => { p.known = true; if (!p.items.length) { p.items = [true]; p.single = true; } else p.items = p.items.map(() => true); }, `Terminado: ${p.name}`);
+      if (isComplete(p) && p.doneOn) { mutate(() => { p.items = p.items.map(() => false); delete p.doneOn; }, `Sin terminar: ${p.name}`); return; }
+      mutate(() => { p.known = true; p.doneOn = L.iso(today()); if (!p.items.length) { p.items = [true]; p.single = true; } else p.items = p.items.map(() => true); }, `Terminado: ${p.name}`);
     },
     tour: () => tourDialog(0),
     'tour-go'(el) { tourDialog(+el.dataset.i); },
@@ -1981,6 +2013,12 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
         if (!(n >= 1) || n > 300) { toast('Poné un número entre 1 y 300.'); return; }
         if (n < lastDone) { toast(`${p.name} tiene tildados hasta el ${lastDone}. Destildalos primero o poné un total mayor.`); el.value = p.known ? p.items.length : ''; return; }
         mutate(() => { p.known = true; p.items = Array.from({ length: n }, (_, i) => !!p.items[i]); }, `${p.name}: ${p.items.filter(Boolean).length} de ${n}`);
+      }
+      if (kind === 'class-time') {
+        const c = S.classes.find((x) => x.id === el.dataset.id);
+        if (!c) return;
+        mutate(() => { if (el.value) c[el.dataset.f] = el.value; else delete c[el.dataset.f]; sortClasses(); }, null);
+        return;
       }
       if (kind === 'my-phrases') { S.settings.myPhrases = el.value.slice(0, 2000); save(); render(); return; }
       if (kind === 'setting') {
@@ -2096,9 +2134,10 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       mutate(() => {
         ensureColor(co.subj);
         const base = `${d.tipo.trim()} ${label(co)}`;
-        if (d.x2) [1, 2].forEach((b) => S.classes.push({ id: uid('c'), name: `${base} · bloque ${b}`, mat: co.subj, course: co.id, dow: +d.dow }));
-        else S.classes.push({ id: uid('c'), name: base, mat: co.subj, course: co.id, dow: +d.dow });
-        S.classes.sort((a, b) => a.dow - b.dow);
+        const tm = d.from && d.to && d.from < d.to ? { from: d.from, to: d.to } : {};
+        if (d.x2) [1, 2].forEach((b) => S.classes.push({ id: uid('c'), name: `${base} · bloque ${b}`, mat: co.subj, course: co.id, dow: +d.dow, ...(b === 1 ? tm : {}) }));
+        else S.classes.push({ id: uid('c'), name: base, mat: co.subj, course: co.id, dow: +d.dow, ...tm });
+        sortClasses();
       }, inWizard() ? null : 'Clase agregada');
       reopen(scheduleDialog);
       return;
@@ -2191,7 +2230,8 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
   }
 
   (async function boot() {
-    render();
+    // Mientras se fija si ya entraste, queda el loader de index.html (sin mostrar el ingreso de golpe).
+    applyTheme();
     try {
       const r = await api('GET', '/api/me');
       if (Backend.isRecovery() && r.status === 200) { me = r.data.user; ui.recovery = true; render(); return; }

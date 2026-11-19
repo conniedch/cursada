@@ -240,6 +240,14 @@
     const nameWords = new Set([c.name, c.short].filter(Boolean).flatMap((n) => plain(n).split(' ')));
     return text.split(/\s+/).filter((w) => !nameWords.has(plain(w))).join(' ');
   }
+  // "8:00 a 10:00", "8 a 10 hs", "18.30-20.30" → { from: '08:00', to: '10:00' }. Solo si hay dos horas.
+  function timesIn(line) {
+    const m = /\b(\d{1,2})(?:[:.h](\d{2}))?\s*(?:hs?)?\s*(?:-|–|a|al|hasta)\s*(\d{1,2})(?:[:.h](\d{2}))?\s*(?:hs?)?\b/i.exec(line);
+    if (!m) return {};
+    const t = (hh, mm) => { const H = +hh; const M = +(mm || 0); return H <= 23 && M <= 59 ? `${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')}` : null; };
+    const from = t(m[1], m[2]); const to = t(m[3], m[4]);
+    return from && to && from < to ? { from, to } : {};
+  }
   function parseSchedule(text, courses) {
     let dow = null;
     const items = []; const unknown = [];
@@ -248,6 +256,7 @@
       let line = original.replace(/^\s*#{1,6}\s*/, '').replace(/\*\*|__/g, '').replace(/^\s*(?:[-*•·]|\d+[.)])\s+/, '').trim();
       const d = DAY_RE.exec(line);
       if (d) { dow = DAY_IDX[d[1].toLowerCase()] ?? DAY_IDX[d[1].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')]; line = line.slice(d[0].length).trim(); }
+      const times = timesIn(line);
       line = line.replace(TIME_RE, ' ').replace(/\s+/g, ' ').replace(/^[\s:,-]+|[\s:,-]+$/g, '');
       if (!line || dow === null || line.endsWith(':') || line.split(' ').length > 16) continue;
       const parts = line.split(/\s+[-–—|]\s+|\t+|:\s+/).map((x) => x.trim()).filter(Boolean);
@@ -268,7 +277,7 @@
         }
       }
       if (!found || score < 1.25) { unknown.push(line); continue; }
-      items.push({ dow, courseId: found.id, tipo: (tipo || 'Clase').replace(/^\w/, (ch) => ch.toUpperCase()) });
+      items.push({ dow, courseId: found.id, tipo: (tipo || 'Clase').replace(/^\w/, (ch) => ch.toUpperCase()), ...times });
     }
     return { items, unknown };
   }
@@ -367,5 +376,5 @@
     return { ok: true, value: n };
   }
 
-  root.CursadaLogic = { DIAS, MESES, parseDate, iso, addDays, daysBetween, dow, avg, fmt, pct, weekNumber, weekStart, cellDate, classWeeks, lastClassWeek, firstWeekOf, allCells, tally, materiaStats, streaks, absencesByDay, pendingPast, isApproved, isCurrent, estimate, subjects, careerStats, semesterAverages, needed, parseGrade, parseSchedule, parseDateLoose, parseCalendar, parseFechas, parseAll, weeksFromDates, improvements, slug, parsePlan, parseWeekList, buildWeeks };
+  root.CursadaLogic = { DIAS, MESES, parseDate, iso, addDays, daysBetween, dow, avg, fmt, pct, weekNumber, weekStart, cellDate, classWeeks, lastClassWeek, firstWeekOf, allCells, tally, materiaStats, streaks, absencesByDay, pendingPast, isApproved, isCurrent, estimate, subjects, careerStats, semesterAverages, needed, parseGrade, parseSchedule, timesIn, parseDateLoose, parseCalendar, parseFechas, parseAll, weeksFromDates, improvements, slug, parsePlan, parseWeekList, buildWeeks };
 })(typeof window !== 'undefined' ? window : globalThis);
