@@ -1350,3 +1350,7 @@ body.is-auth .auth .card { box-shadow: 0 1px 0 var(--line), 0 18px 50px -18px co
 .c-terracota { --pc: #CF9677; --pi: #3E1C0E; }
 .c-salvia { --pc: #BFC8AE; --pi: #2C3820; }
 .sticky-colors { flex-wrap: wrap; }
+/* Que los nombres largos ("Personalizado") no se salgan del recuadro */
+.icon-picker { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
+.icon-picker button { align-content: start; min-width: 0; }
+.icon-picker button span, .pet-picker button span { max-width: 100%; text-align: center; line-height: 1.2; overflow-wrap: anywhere; hyphens: auto; }
