@@ -1377,3 +1377,6 @@ body.is-auth .auth .card { box-shadow: 0 1px 0 var(--line), 0 18px 50px -18px co
 .decor-picker button span { text-align: center; line-height: 1.2; overflow-wrap: anywhere; }
 .decor-picker button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
 .decor-picker .decor-off { align-content: center; color: var(--muted); }
+.bday-field { margin-top: 12px; }
+.bday-row { display: flex; gap: 8px; }
+.bday-row select { flex: 1; min-width: 0; }

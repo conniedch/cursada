@@ -77,7 +77,7 @@
   function emptyState(user) {
     return {
       v: 2,
-      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', pet: '', petDecor: true, appIcon: 'clasico', appIconColors: { g1: '#5B3FD9', g2: '#E2477F', bg: '#FFFFFF', fg: '#22305A' }, pomo: { work: 25, brk: 5, sound: '', vol: 0.5 }, classLen: 120, motivation: false, myPhrases: '', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
+      settings: { name: (user.name || '').split(' ')[0], greet: 'Hola', university: '', career: '', entryYear: '', theme: 'tinta', font: 'moderna', progress: 'zigzag', pet: '', petDecor: true, birthday: '', appIcon: 'clasico', appIconColors: { g1: '#5B3FD9', g2: '#E2477F', bg: '#FFFFFF', fg: '#22305A' }, pomo: { work: 25, brk: 5, sound: '', vol: 0.5 }, classLen: 120, motivation: false, myPhrases: '', custom: { accent: '#674EA7', second: '', mode: 'light' }, minAtt: 0.75, semStart: L.iso(mondayOf(today())), termWord: 'Cuatrimestre', year: '', semFirst: '', semEnd: '', parcFrom: '', parcTo: '', finFrom: '', finTo: '', onboarded: false, wizStep: 0 },
       classes: [], weeks: L.buildWeeks(16, [], []), holidays: [], todos: [], att: {}, cellNotes: {}, weekNotes: {}, courses: [], practices: [], milestones: [], agenda: [], links: [], scratch: '', stickies: [], studyArchive: {}, pomodoros: [], matColors: {}, history: [],
     };
   }
@@ -523,25 +523,63 @@
   }
   // Al tocarla, la mascota tira chistes de estudiante (y alguno geek).
   const PET_JOKES = [
-    '¿Por qué el libro de matemática estaba triste? Tenía demasiados problemas.',
-    'Hay 10 tipos de personas: las que entienden binario y las que no.',
-    'Un átomo le dice a otro: "Perdí un electrón". "¿Seguro?" "Sí, estoy positivo".',
-    '¿Qué le dijo el 0 al 8? Lindo cinturón.',
+    // De facu y de estudiar
     'El profe dijo "esto no entra". Spoiler: entró.',
     'Mi método de estudio: abro el apunte, miro el celu, repito.',
     'Ctrl+Z no funciona en los parciales. Lo probé.',
-    'El grupo de la materia: 200 mensajes y ninguno responde cuándo es el parcial.',
+    'El grupo de la materia: 200 mensajes y ninguno dice cuándo es el parcial.',
     'Mi resumen tiene más resaltador que texto. Arte contemporáneo.',
-    'El café no es una bebida, es una dependencia funcional.',
     'Dormir 8 horas antes del parcial: leyenda urbana universitaria.',
-    'Si la vida te da limones, pedí la fórmula del volumen.',
     'Copiar es fácil. Entender lo que copiaste ya es nivel final.',
     'Fui a la biblioteca a estudiar. Volví con tres fotocopias y un amigo nuevo.',
+    'Hice un cronograma de estudio tan lindo que me cansé y no estudié.',
+    '"Esto lo vieron en el secundario", dice el profe. Mi secundario no se enteró.',
+    'Un trabajo práctico en grupo es un trabajo práctico de una persona con cuatro nombres.',
+    'Abrí el apunte y el apunte me abrió una crisis.',
+    'La fotocopiadora de la facu sabe más de mis materias que yo.',
+    'Estudiar con música: 3 horas armando la playlist, 10 minutos de estudio.',
+    'Si el parcial es a las 8, mi cerebro llega a las 10.',
+    '"Para el final entra todo". Todo es mucho, profe.',
+    // De escuela
+    '¿Por qué el libro de matemática estaba triste? Tenía demasiados problemas.',
+    'Profe: "¿Alguna pregunta?". Todo el curso: silencio. Después del examen: 47 preguntas.',
+    'En la escuela me enseñaron el teorema de Pitágoras. Todavía espero el momento de usarlo.',
+    '¿Qué le dijo el 0 al 8? Lindo cinturón.',
+    '¿Cuál es el colmo de un profe de matemática? Tener problemas sin resolver.',
+    '¿Por qué el lápiz no fue al recreo? Porque estaba sin punta.',
+    // Geek y de ciencia
+    'Hay 10 tipos de personas: las que entienden binario y las que no.',
+    'Un átomo le dice a otro: "Perdí un electrón". "¿Seguro?" "Sí, estoy positivo".',
     '¿Por qué el programador no estudió? Tenía un bug en la motivación.',
     'La entropía del universo aumenta. La de mi escritorio, también.',
+    'Si la vida te da limones, pedí la fórmula del volumen.',
+    '¿Por qué los fantasmas son malos mintiendo? Porque se les ve a través.',
+    // Generales, porque sí
+    'El café no es una bebida, es una dependencia funcional.',
+    '¿Qué hace una abeja en el gimnasio? ¡Zumba!',
+    '¿Cómo se despiden los químicos? Ácido un placer.',
+    '¿Qué le dijo una impresora a otra? ¿Esa hoja es tuya o es impresión mía?',
+    '¿Por qué el tomate no toma té? Porque es tomate.',
+    'Le pregunté a mi planta cómo estaba. No me contestó. Igual la riego.',
+    '¿Qué le dijo un techo a otro? Techo de menos.',
+    'Me compré una agenda para organizarme. Ahora tengo que organizar la agenda.',
+    '¿Cómo se llama el campeón de buceo japonés? Tokofondo. ¿Y el subcampeón? Kasitoko.',
+    'Hoy hice ejercicio: me levanté y fui hasta la heladera. Dos veces.',
   ];
+  // Mezcla los chistes sin repetir hasta que salieron todos.
+  function nextJoke() {
+    if (!ui.jokeDeck || !ui.jokeDeck.length) {
+      const deck = PET_JOKES.map((_, i) => i);
+      for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+      if (ui.lastJoke != null && deck[deck.length - 1] === ui.lastJoke) deck.unshift(deck.pop());
+      ui.jokeDeck = deck;
+    }
+    ui.lastJoke = ui.jokeDeck.pop();
+    return PET_JOKES[ui.lastJoke];
+  }
   function petLine(mood) {
     const t = today();
+    if (isBirthday(t)) { const n = S.settings.name ? `, ${S.settings.name}` : ''; const b = [`¡Feliz cumple${n}!`, 'Hoy se permite estudiar un poquito menos.', '¡Que este año apruebes todo!']; return b[(ui.petTap || 0) % b.length]; }
     const ex = S.agenda.map((a) => ({ a, n: L.daysBetween(t, L.parseDate(a.date)) })).filter((x) => x.n >= 0).sort((x, y) => x.n - y.n)[0];
     const lines = {
       sleepy: ['Zzz… vos también deberías dormir.', 'Ya es tarde. Mañana seguimos.'],
@@ -555,13 +593,17 @@
   // Las mascotas son ilustraciones (acuarela y lápiz de color, en icons/pets/). Los estados y las fechas
   // se muestran con detalles chiquitos alrededor, en el mismo tono: no se tocan las ilustraciones.
   // Disfraces según la fecha (se pueden apagar en Ajustes).
+  // Cumpleaños (día y mes, sin año): ese día la mascota festeja.
+  const isBirthday = (t = today()) => !!(S && S.settings.birthday) && S.settings.birthday === `${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  // Cada fecha se anticipa alrededor de un mes (Navidad desde mediados de noviembre).
   function petSeason(t = today()) {
+    if (isBirthday(t)) return { kind: 'bday' };
     const m = t.getMonth() + 1; const d = t.getDate();
     if ((m === 12 && d >= 27) || (m === 1 && d <= 3)) return { kind: 'newyear', year: m === 12 ? t.getFullYear() + 1 : t.getFullYear() };
-    if (m === 12 && d <= 26) return { kind: 'xmas' };
-    if (m === 10 && d >= 24) return { kind: 'halloween' };
-    if (m === 9 && d >= 18 && d <= 23) return { kind: 'spring' };
-    if (m === 2 && d >= 12 && d <= 14) return { kind: 'love' };
+    if ((m === 11 && d >= 15) || (m === 12 && d <= 26)) return { kind: 'xmas' };
+    if (m === 10) return { kind: 'halloween' };
+    if ((m === 8 && d >= 22) || (m === 9 && d <= 23)) return { kind: 'spring' };
+    if ((m === 1 && d >= 15) || (m === 2 && d <= 14)) return { kind: 'love' };
     return null;
   }
   const INK = '#5A4636';
@@ -577,6 +619,17 @@
       if (season.kind === 'newyear') g += `<g transform="translate(102 30) rotate(12) scale(1.35)"><path d="M-8 6L0-14 8 6z" fill="#6B5B95" stroke="${INK}" stroke-width=".8"/><path d="M-5.5 0h11M-3-6h6" stroke="#E2C766" stroke-width="1.6"/><circle cy="-15" r="2.4" fill="#E2C766"/></g><g transform="translate(96 46) rotate(-6) scale(1.35)"><rect x="-12" y="-6" width="24" height="11" rx="2" fill="#F4ECDD" stroke="${INK}" stroke-width=".8"/><text y="2.6" text-anchor="middle" font-size="7.5" font-weight="700" font-family="Georgia, serif" fill="${INK}">${season.year}</text></g>`;
       if (season.kind === 'halloween') g += '<g transform="translate(103 112) scale(1.35)"><ellipse rx="12" ry="9.5" fill="#D9822B" stroke="#8A4A14" stroke-width="1"/><path d="M-4-9v18M4-9v18" stroke="#B0631C" stroke-width="1.2"/><path d="M0-9q1-5 4-6" stroke="#4E6A2A" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M-6-2l2.2-2.6 2.2 2.6zM1.8-2l2.2-2.6 2.2 2.6z" fill="#3A1D05"/><path d="M-5 3q5 3.4 10 0q-5 1.8-10 0z" fill="#3A1D05"/></g>';
       if (season.kind === 'spring') g += '<g transform="translate(8 112) scale(1.35)">' + [['#E89AAE', 0, 0], ['#E8C766', 9, -3], ['#9CC3E0', 17, 1]].map(([c, x, y]) => `<path d="M${x} ${y + 2}v8" stroke="#6E8F4E" stroke-width="1.2"/><g transform="translate(${x} ${y}) scale(1.35)">${[0, 72, 144, 216, 288].map((r) => `<ellipse rx="2" ry="3.4" cy="-3" fill="${c}" transform="rotate(${r})"/>`).join('')}<circle r="1.6" fill="#F4E6B0"/></g>`).join('') + '</g>';
+      if (season.kind === 'bday') {
+        const letters = ['F', 'E', 'L', 'I', 'Z', '', 'C', 'U', 'M', 'P', 'L', 'E'];
+        const cols = ['#C9586F', '#E2B84A', '#6E9EC9', '#7FB08A', '#B88AC9'];
+        const step = 9.8; const x0 = 5;
+        g += `<path d="M2 6Q60 20 118 6" fill="none" stroke="${INK}" stroke-width=".8"/>` + letters.map((ch, i) => {
+          if (!ch) return '';
+          const x = x0 + i * step; const y = 6 + 14 * (1 - Math.pow((x - 60) / 58, 2)) * 0.5;
+          return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><path d="M-4.8 0h9.6L0 13z" fill="${cols[i % cols.length]}" stroke="${INK}" stroke-width=".5"/><text y="6.4" text-anchor="middle" font-size="6.6" font-weight="700" font-family="Georgia, serif" fill="#FFF8EC">${ch}</text></g>`;
+        }).join('');
+        g += `<g transform="translate(103 40) rotate(14) scale(1.35)"><path d="M-8 6L0-14 8 6z" fill="#C9586F" stroke="${INK}" stroke-width=".8"/><path d="M-5.5 0h11M-3-6h6" stroke="#F4ECDD" stroke-width="1.6"/><circle cy="-15" r="2.4" fill="#E2B84A"/></g>`;
+      }
       if (season.kind === 'love') g += '<g transform="translate(102 20) scale(1.35)"><path d="M0 8C-10 0-10-8-4-9C-1-9.5 0-7 0-6C0-7 1-9.5 4-9C10-8 10 0 0 8z" fill="#C9586F" stroke="#7E2E40" stroke-width=".8"/></g>';
     }
     return g ? `<svg class="pet-around" viewBox="0 0 120 130" aria-hidden="true">${g}</svg>` : '';
@@ -590,9 +643,15 @@
     return `<span class="pet-svg pet-art pet-${kind} mood-${mood}"><img class="pet-img" src="icons/pets/${kind}.webp" alt="" draggable="false" decoding="async">${opts.decor === false ? '' : petAround(kind, mood, season, opts.coffee)}</span>`;
   }
   // Todos los detalles de fechas con tu mascota; tocando uno, lo lleva puesto hoy.
+  // Fecha de cumpleaños: día y mes (el año no hace falta).
+  function birthdayField() {
+    const [mm, dd] = (S.settings.birthday || '-').split('-');
+    const meses = L.MESES;
+    return `<div class="field bday-field"><span>Tu cumpleaños (opcional)</span><span class="bday-row"><select data-change="bday" data-f="d" aria-label="Día"><option value="">Día</option>${Array.from({ length: 31 }, (_, i) => `<option value="${String(i + 1).padStart(2, '0')}"${dd === String(i + 1).padStart(2, '0') ? ' selected' : ''}>${i + 1}</option>`).join('')}</select><select data-change="bday" data-f="m" aria-label="Mes"><option value="">Mes</option>${meses.map((n, i) => `<option value="${String(i + 1).padStart(2, '0')}"${mm === String(i + 1).padStart(2, '0') ? ' selected' : ''}>${n}</option>`).join('')}</select></span><span class="sub" style="font-weight:400">Ese día tu mascota te festeja.</span></div>`;
+  }
   function petDecorPreviewHtml(kind) {
     const t = today(); const dw = L.dow(t);
-    const opts = [['xmas', 'Navidad', { kind: 'xmas' }], ['halloween', 'Halloween', { kind: 'halloween' }], ['newyear', 'Año Nuevo', { kind: 'newyear', year: t.getMonth() === 0 ? t.getFullYear() : t.getFullYear() + 1 }], ['spring', 'Día del Estudiante', { kind: 'spring' }], ['love', 'San Valentín', { kind: 'love' }]];
+    const opts = [['bday', 'Cumpleaños', { kind: 'bday' }], ['xmas', 'Navidad', { kind: 'xmas' }], ['halloween', 'Halloween', { kind: 'halloween' }], ['newyear', 'Año Nuevo', { kind: 'newyear', year: t.getMonth() === 0 ? t.getFullYear() : t.getFullYear() + 1 }], ['spring', 'Día del Estudiante', { kind: 'spring' }], ['love', 'San Valentín', { kind: 'love' }]];
     const pick = S.settings.petDecorPick && S.settings.petDecorPick.d === L.iso(t) ? S.settings.petDecorPick.season : null;
     return `<p class="section-label" style="margin:12px 0 4px">Detalles de fechas</p><p class="sub" style="margin:0 0 8px">Aparecen solos en su fecha. Tocá uno para que tu mascota lo lleve hoy.</p>
       <div class="decor-picker" role="group" aria-label="Detalle para hoy">${opts.map(([k, n, se]) => `<button type="button" data-act="decor-pick" data-k="${k}" aria-pressed="${!!pick && pick.kind === k}">${petSvg(kind, 'idle', { season: se })}<span>${h(n)}</span></button>`).join('')}${pick ? '<button type="button" class="decor-off" data-act="decor-pick" data-k="">Sacárselo</button>' : ''}</div>`;
@@ -1890,6 +1949,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       body = `<h1>Contanos de vos</h1><p class="lead">Con esto armamos tu panel. Lo podés cambiar cuando quieras.</p>
       <section class="card">
         <label class="field">Cómo te llamamos<input data-change="setting" data-f="name" value="${h(st.name)}" maxlength="40"></label>
+        ${birthdayField()}
         <p class="section-label">Cómo querés que te saludemos</p><div class="choice" style="margin-top:6px">${GREETS.map((g) => `<button data-act="greet" data-v="${g}" aria-pressed="${st.greet === g}">${g}</button>`).join('')}</div>
         <div class="fields c2">${comboField('Universidad', 'university', 'universities', st.university)}${comboField('Carrera', 'career', 'careers', st.career)}${yearField(st.entryYear)}
           <label class="field">Año que estás cursando<select data-change="setting" data-f="year"><option value="">Elegí</option>${['1', '2', '3', '4', '5', '6'].map((y) => `<option value="${y}"${String(st.year) === y ? ' selected' : ''}>${y}° año</option>`).join('')}</select></label></div>
@@ -2029,6 +2089,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <p class="section-label">Tu perfil</p>
       <div class="fields c2" style="margin-top:6px">
         <label class="field">Cómo te llamamos<input data-change="setting" data-f="name" value="${h(st.name)}" maxlength="40"></label>
+        ${birthdayField()}
         <label class="field">Saludo<select data-change="setting" data-f="greet">${GREETS.map((g) => `<option${st.greet === g ? ' selected' : ''}>${g}</option>`).join('')}</select></label>
         ${comboField('Universidad', 'university', 'universities', st.university)}
         ${comboField('Carrera', 'career', 'careers', st.career)}
@@ -2039,7 +2100,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       <p class="sub" style="margin:2px 0 8px">Te acompaña en Hoy. Según cómo te va aparece con un libro, una nubecita o su café, y si la tocás te cuenta un chiste.</p>
       ${petPickerHtml(st.pet)}
       ${st.pet && st.petDecor !== false ? petDecorPreviewHtml(st.pet) : ''}
-      ${st.pet ? `<label class="check-line"><input type="checkbox" data-change="pet-decor" ${st.petDecor !== false ? 'checked' : ''}> Detalles de fechas: regalo en Navidad, calabaza en Halloween, gorrito en Año Nuevo, flores el Día del Estudiante y corazón en San Valentín</label>` : ''}
+      ${st.pet ? `<label class="check-line"><input type="checkbox" data-change="pet-decor" ${st.petDecor !== false ? 'checked' : ''}> Detalles de fechas (desde un mes antes): regalo en Navidad, calabaza en Halloween, gorrito en Año Nuevo, flores el Día del Estudiante, corazón en San Valentín y banderines en tu cumpleaños</label>` : ''}
       <hr class="divider"><p class="section-label" style="margin-top:0">Frases motivadoras</p>
       <p class="sub" style="margin:2px 0 8px">Una frase por día en Hoy, según lo que te pase: un examen cerca, una racha, faltas justas o dudas anotadas.</p>
       <div class="choice" role="group" aria-label="Frases motivadoras"><button type="button" data-act="motivation" data-v="1" aria-pressed="${!!st.motivation}">Activadas</button><button type="button" data-act="motivation" data-v="" aria-pressed="${!st.motivation}">Desactivadas</button></div>
@@ -2250,8 +2311,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     'pet-tap'() {
       ui.petTap = (ui.petTap || 0) + 1;
       const pet = $('.pet'); if (!pet) return;
-      if (ui.jokeI == null) ui.jokeI = Math.floor(Math.random() * PET_JOKES.length);
-      pet.querySelector('.pet-bubble').textContent = PET_JOKES[ui.jokeI++ % PET_JOKES.length];
+      pet.querySelector('.pet-bubble').textContent = nextJoke();
       const b = pet.querySelector('.pet-btn'); b.classList.remove('jump'); void b.offsetWidth; b.classList.add('jump');
     },
     'class-len'(el) {
@@ -2261,7 +2321,7 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
     'app-icon'(el) { S.settings.appIcon = el.dataset.v; save(); applyAppIcon(); if (el.dataset.v === 'clasico') { document.querySelector('link[rel="apple-touch-icon"]').href = 'icons/apple-touch-icon.png'; document.querySelector('link[rel="manifest"]').href = 'manifest.webmanifest'; } settingsDialog(); toast('Ícono elegido. Volvé a agregar CursadOK a la pantalla de inicio para verlo.'); },
     'decor-pick'(el) {
       const t = today(); const dw = L.dow(t); const k = el.dataset.k;
-      const map = { xmas: { kind: 'xmas' }, halloween: { kind: 'halloween' }, newyear: { kind: 'newyear', year: t.getMonth() === 0 ? t.getFullYear() : t.getFullYear() + 1 }, spring: { kind: 'spring' }, love: { kind: 'love' } };
+      const map = { bday: { kind: 'bday' }, xmas: { kind: 'xmas' }, halloween: { kind: 'halloween' }, newyear: { kind: 'newyear', year: t.getMonth() === 0 ? t.getFullYear() : t.getFullYear() + 1 }, spring: { kind: 'spring' }, love: { kind: 'love' } };
       S.settings.petDecorPick = k ? { d: L.iso(t), season: map[k] } : null;
       save(); render(); settingsDialog();
     },
@@ -2548,6 +2608,13 @@ ${names.length ? `- Usá exactamente estos nombres de materia: ${names.join('; '
       if (kind === 'icon-color') { S.settings.appIconColors = { ...iconColors(), [el.dataset.f]: el.value }; save(); applyAppIcon(); settingsDialog(); return; }
       if (kind === 'pomo-subj') { pomo.subj = el.value; pomoKeep(); return; }
       if (kind === 'pomo-vol') { S.settings.pomo = { ...pomoCfg(), vol: +el.value }; save(); if (amb && actx) amb.master.gain.linearRampToValueAtTime(+el.value * 0.6, actx.currentTime + 0.2); return; }
+      if (kind === 'bday') {
+        const box = el.closest('.bday-field');
+        const d = box.querySelector('[data-f="d"]').value; const m = box.querySelector('[data-f="m"]').value;
+        S.settings.birthday = d && m ? `${m}-${d}` : '';
+        save(); if (!inWizard()) render();
+        return;
+      }
       if (kind === 'pet-decor') { S.settings.petDecor = el.checked; save(); render(); return; }
       if (kind === 'my-phrases') { S.settings.myPhrases = el.value.slice(0, 2000); save(); render(); return; }
       if (kind === 'setting') {

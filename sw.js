@@ -1,6 +1,6 @@
 // CursadOK: deja la app disponible aunque no haya señal.
 // Siempre pide primero la versión nueva; la copia guardada solo se usa sin conexión.
-const CACHE = 'cursadok-v31';
+const CACHE = 'cursadok-v32';
 const SHELL = ['./', 'index.html', 'styles.css', 'config.js', 'backend.js', 'catalog.js', 'beneficios.js', 'importer.js', 'logic.js', 'app.js', 'vendor/supabase.js', 'manifest.webmanifest', 'icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
