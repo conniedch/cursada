@@ -565,6 +565,27 @@
     'Me compré una agenda para organizarme. Ahora tengo que organizar la agenda.',
     '¿Cómo se llama el campeón de buceo japonés? Tokofondo. ¿Y el subcampeón? Kasitoko.',
     'Hoy hice ejercicio: me levanté y fui hasta la heladera. Dos veces.',
+    // Chistes malos, de los que dan ternura
+    '¿Cuál es el café más peligroso? El ex-preso.',
+    '¿Qué hace una vaca con los ojos cerrados? Leche concentrada.',
+    '¿Qué le dijo una pared a la otra? Nos vemos en la esquina.',
+    '¿Qué hace un perro con un taladro? Taladrando.',
+    '¿Qué le dice un pez a otro? Nada.',
+    '¿Cuál es el animal más antiguo? La cebra, porque está en blanco y negro.',
+    '¿Qué le dijo una uva verde a una morada? ¡Respirá!',
+    '¿Qué le dijo un semáforo a otro? No me mires que me estoy cambiando.',
+    '¿Cómo se dice pañuelo en japonés? Saka-moko.',
+    '¿Qué le dice una iguana a su hermana gemela? Somos iguanitas.',
+    '¿Cuál es el colmo de un electricista? Que su pareja se llame Luz y los hijos le sigan la corriente.',
+    '¿Qué le dijo el 1 al 10? Para ser como yo tenés que ser sincero.',
+    '¿Qué le dice un gusano a otro? Me voy a dar una vuelta a la manzana.',
+    '¿Por qué las focas miran siempre para arriba? Porque ahí están los focos.',
+    '¿Qué animal come con la cola? Todos. Ninguno se la saca para comer.',
+    '—¿Tenés wifi? —Sí. —¿Y la clave? —Pagarlo.',
+    '¿Qué hace un semáforo en el gimnasio? Se pone en forma.',
+    '¿Qué le dijo un jardinero a otro? Disfrutemos mientras podamos.',
+    '¿Cuál es el último animal que subió al arca de Noé? El del-fin.',
+    '¿Qué le dijo la luna al sol? Tan grande y no te dejan salir de noche.',
   ];
   // Mezcla los chistes sin repetir hasta que salieron todos.
   function nextJoke() {
